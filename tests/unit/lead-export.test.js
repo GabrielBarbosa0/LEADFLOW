@@ -48,9 +48,9 @@ describe('createLeadsCsv', () => {
     expect(csv).toContain('"Loja 06"');
     expect(csv).toContain('"02/10/2026";"14:30"');
     expect(csv).toContain('"Compareceu?"');
-    expect(csv).toContain('"Tipo do exame";"Forma de pagamento do exame";"Valor do exame"');
-    expect(csv).toContain('"Pago";"Pix + Cartão de crédito";"200"');
-    expect(csv).toContain('"14:30";"Pago";"Pix + Cartão de crédito";"200";"Sim"');
+    expect(csv).toContain('"Tipo do exame";"Forma de pagamento do exame";"Nome do pai (crediário)"');
+    expect(csv).toContain('"Pago";"Pix + Cartão de crédito";"";"";"";"200"');
+    expect(csv).toContain('"14:30";"Pago";"Pix + Cartão de crédito";"";"";"";"200";"Sim"');
     expect(csv).toContain('"Captação em campo"');
     expect(csv).toContain('"Ametropias"');
     expect(csv).toContain('"Miopia, Astigmatismo"');

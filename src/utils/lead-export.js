@@ -58,6 +58,9 @@ const CSV_COLUMNS = [
   ['Horário do pré-agendamento', (lead) => lead.appointmentTime],
   ['Tipo do exame', (lead) => lead.examPaymentType === 'courtesy' ? 'Cortesia' : 'Pago'],
   ['Forma de pagamento do exame', (lead) => lead.examPaymentType === 'courtesy' ? '' : examPaymentMethodsLabel(lead.examPaymentMethods || lead.examPaymentMethod)],
+  ['Nome do pai (crediário)', (lead) => lead.creditFatherName || ''],
+  ['Nome da mãe (crediário)', (lead) => lead.creditMotherName || ''],
+  ['Telefone auxiliar (crediário)', (lead) => formatBrazilianPhone(lead.creditAuxiliaryPhoneSearch || lead.creditAuxiliaryPhone || '')],
   ['Valor do exame', (lead) => Number.isFinite(Number(lead.examPrice))
     ? Number(lead.examPrice)
     : examPricing(lead.careRoute, lead.examPaymentType).examPrice],

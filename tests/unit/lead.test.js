@@ -394,8 +394,36 @@ describe('lead validation', () => {
 
   it('accepts known exam payment methods and rejects unknown values', () => {
     expect(createLeadUpdate({ ...validInput, examPaymentMethods: ['cash', 'pix'] }).data.examPaymentMethods).toEqual(['cash', 'pix']);
-    expect(createLeadUpdate({ ...validInput, examPaymentMethods: ['pix', 'bank-slip'] }).data.examPaymentMethods).toEqual(['pix', 'bank-slip']);
+    expect(createLeadUpdate({
+      ...validInput,
+      examPaymentMethods: ['pix', 'bank-slip'],
+      creditFatherName: 'Joao da Silva',
+      creditMotherName: 'Maria da Silva',
+      creditAuxiliaryPhone: '(81) 98888-7777'
+    }).data.examPaymentMethods).toEqual(['pix', 'bank-slip']);
     expect(validateLeadInput({ ...validInput, examPaymentMethods: ['pix', 'crypto'] }).errors.examPaymentMethods).toBeDefined();
+  });
+
+  it('persists optional boleto details when they are informed', () => {
+    const creditInput = {
+      ...validInput,
+      examPaymentMethods: ['bank-slip'],
+      creditFatherName: 'João da Silva',
+      creditMotherName: 'Maria da Silva',
+      creditAuxiliaryPhone: '(81) 98888-7777'
+    };
+
+    expect(validateLeadInput(creditInput).isValid).toBe(true);
+    expect(createLeadUpdate(creditInput).data).toMatchObject({
+      creditFatherName: 'João da Silva',
+      creditMotherName: 'Maria da Silva',
+      creditAuxiliaryPhone: '+5581988887777',
+      creditAuxiliaryPhoneSearch: '81988887777'
+    });
+    expect(validateLeadInput({ ...creditInput, creditFatherName: '', creditMotherName: '', creditAuxiliaryPhone: '' }).isValid).toBe(true);
+    expect(validateLeadInput({ ...creditInput, creditAuxiliaryPhone: '8198' }).errors).toMatchObject({
+      creditAuxiliaryPhone: expect.any(String)
+    });
   });
 
   it('rejects ophthalmology appointments outside configured weekdays', () => {

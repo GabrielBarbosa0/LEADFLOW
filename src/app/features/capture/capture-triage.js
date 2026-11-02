@@ -64,6 +64,7 @@ export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
   const selectedPaymentMethods = Array.isArray(values.examPaymentMethods)
     ? values.examPaymentMethods
     : [values.examPaymentMethod].filter(Boolean);
+  const showCreditFields = pricing.examPaymentType === 'paid' && selectedPaymentMethods.includes('bank-slip');
   const paymentMethodOptions = EXAM_PAYMENT_METHODS.map((method) => `<label class="ametropia-option checkbox-label">
     <input type="checkbox" name="examPaymentMethods" value="${method.id}" ${selectedPaymentMethods.includes(method.id) ? 'checked' : ''} ${pricing.examPaymentType === 'courtesy' ? 'disabled' : ''} />
     <span>${method.label}</span>
@@ -105,6 +106,11 @@ export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
     </div>
     <div class="field-row exam-payment-method-row" data-exam-payment-method-row ${pricing.examPaymentType === 'courtesy' ? 'hidden' : ''}>
       <fieldset class="field ametropia-field exam-payment-method-field" data-field="examPaymentMethods"><legend>Forma de pagamento do exame</legend><small>Marque todas as formas que serão utilizadas.</small><div class="ametropia-options exam-payment-method-options">${paymentMethodOptions}</div><small class="field-error"></small></fieldset>
+    </div>
+    <div class="field-row credit-details-fields" data-credit-details-fields ${showCreditFields ? '' : 'hidden'}>
+      <div class="field" data-field="creditFatherName"><label for="${idPrefix}-credit-father-name">Nome do pai (opcional)</label><input id="${idPrefix}-credit-father-name" name="creditFatherName" maxlength="120" autocomplete="off" value="${escapeHtml(values.creditFatherName || '')}" ${showCreditFields ? '' : 'disabled'} /><small class="field-error"></small></div>
+      <div class="field" data-field="creditMotherName"><label for="${idPrefix}-credit-mother-name">Nome da mãe (opcional)</label><input id="${idPrefix}-credit-mother-name" name="creditMotherName" maxlength="120" autocomplete="off" value="${escapeHtml(values.creditMotherName || '')}" ${showCreditFields ? '' : 'disabled'} /><small class="field-error"></small></div>
+      <div class="field" data-field="creditAuxiliaryPhone"><label for="${idPrefix}-credit-auxiliary-phone">Telefone auxiliar (opcional)</label><input id="${idPrefix}-credit-auxiliary-phone" name="creditAuxiliaryPhone" type="tel" inputmode="numeric" maxlength="16" autocomplete="tel" placeholder="(00) 00000-0000" value="${escapeHtml(values.creditAuxiliaryPhone || '')}" ${showCreditFields ? '' : 'disabled'} /><small class="field-error"></small></div>
     </div>
     <div class="eye-route-status ${triage.careRoute === 'ophthalmologist' ? 'is-ophthalmology' : ''}" data-eye-route-status ${triage.careRoute === 'ophthalmologist' ? '' : 'hidden'}><i data-lucide="stethoscope"></i><span>Encaminhamento para oftalmologista. A agenda mostrará somente os dias configurados.</span></div>
   </section>`;
@@ -184,11 +190,20 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
     };
     const paymentMethodRow = section.querySelector('[data-exam-payment-method-row]');
     const paymentMethodInputs = [...form.querySelectorAll('[name="examPaymentMethods"]')];
+    const creditDetailsFields = section.querySelector('[data-credit-details-fields]');
+    const creditInputs = [...form.querySelectorAll('[name="creditFatherName"], [name="creditMotherName"], [name="creditAuxiliaryPhone"]')];
     const isCourtesy = pricing.examPaymentType === 'courtesy';
     paymentMethodRow.hidden = isCourtesy;
     paymentMethodInputs.forEach((input) => {
       input.disabled = isCourtesy;
       if (isCourtesy) input.checked = false;
+    });
+    const usesStoreCredit = !isCourtesy && paymentMethodInputs.some((input) => input.value === 'bank-slip' && input.checked);
+    creditDetailsFields.hidden = !usesStoreCredit;
+    creditInputs.forEach((input) => {
+      input.disabled = !usesStoreCredit;
+      input.required = false;
+      if (!usesStoreCredit) input.value = '';
     });
     price.textContent = pricing.examPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     section.querySelector('[data-exam-price-value]').value = String(pricing.examPrice);
@@ -205,6 +220,7 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
     refresh();
   });
   form.elements.examPaymentType?.addEventListener('change', refresh);
+  form.querySelectorAll('[name="examPaymentMethods"]').forEach((input) => input.addEventListener('change', refresh));
   form.querySelectorAll('[name="pathologyIds"]').forEach((input) => input.addEventListener('change', refresh));
   refresh();
 }

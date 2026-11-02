@@ -6,6 +6,7 @@ import { bindTransportFields } from './capture-transport.js';
 
 export function initializeCaptureForm(form, options) {
   const phoneInput = form.elements.phone;
+  const creditAuxiliaryPhoneInput = form.elements.creditAuxiliaryPhone;
   const notesInput = form.elements.notes;
   const appointmentDateInput = form.elements.appointmentDate;
   restoreNewLeadDraft(form, options.draft);
@@ -15,6 +16,9 @@ export function initializeCaptureForm(form, options) {
   bindBirthDateInput(form);
   phoneInput.addEventListener('input', () => {
     phoneInput.value = formatBrazilianPhone(phoneInput.value);
+  });
+  creditAuxiliaryPhoneInput?.addEventListener('input', () => {
+    creditAuxiliaryPhoneInput.value = formatBrazilianPhone(creditAuxiliaryPhoneInput.value);
   });
   notesInput.addEventListener('input', () => {
     if (notesCount) notesCount.textContent = notesInput.value.length;

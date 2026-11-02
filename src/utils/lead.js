@@ -299,6 +299,14 @@ export function validateLeadInput(input, options = {}) {
   if (pricing.examPaymentType === 'paid' && invalidPaymentMethod) {
     errors.examPaymentMethods = 'Selecione somente formas de pagamento válidas.';
   }
+  const usesStoreCredit = examPaymentMethods.includes('bank-slip');
+  const creditFatherName = usesStoreCredit ? String(input.creditFatherName || '').trim() : '';
+  const creditMotherName = usesStoreCredit ? String(input.creditMotherName || '').trim() : '';
+  const creditAuxiliaryPhoneValue = usesStoreCredit ? String(input.creditAuxiliaryPhone || '').trim() : '';
+  const creditAuxiliaryPhone = creditAuxiliaryPhoneValue ? normalizeBrazilianPhone(creditAuxiliaryPhoneValue) : null;
+  if (creditAuxiliaryPhoneValue && !creditAuxiliaryPhone) {
+    errors.creditAuxiliaryPhone = 'Informe um telefone auxiliar válido com DDD.';
+  }
   if (!triage.eyeSurgeryStatus) {
     errors.eyeSurgeryStatus = 'Informe se o cliente já realizou cirurgia nos olhos.';
   }
@@ -366,7 +374,13 @@ export function validateLeadInput(input, options = {}) {
     diabetes,
     triage,
     pricing,
-    examPaymentMethods
+    examPaymentMethods,
+    credit: {
+      fatherName: creditFatherName,
+      motherName: creditMotherName,
+      auxiliaryPhone: creditAuxiliaryPhone?.e164 || '',
+      auxiliaryPhoneSearch: creditAuxiliaryPhone?.search || ''
+    }
   };
 }
 
@@ -428,6 +442,10 @@ export function createQuickLeadDocument(input, profile, installationId, now = ne
       careRouteReasons: ['manual'],
       examPaymentType: 'paid',
       examPaymentMethods: [],
+      creditFatherName: '',
+      creditMotherName: '',
+      creditAuxiliaryPhone: '',
+      creditAuxiliaryPhoneSearch: '',
       examPrice: EXAM_PRICES[careRoute],
       needsTransport: false,
       hasCompanion: false,
@@ -497,6 +515,10 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
       careRouteReasons: Array.isArray(input.careRouteReasons) ? input.careRouteReasons : [],
       examPaymentType: validation.pricing.examPaymentType,
       examPaymentMethods: validation.examPaymentMethods,
+      creditFatherName: validation.credit.fatherName,
+      creditMotherName: validation.credit.motherName,
+      creditAuxiliaryPhone: validation.credit.auxiliaryPhone,
+      creditAuxiliaryPhoneSearch: validation.credit.auxiliaryPhoneSearch,
       examPrice: validation.pricing.examPrice,
       needsTransport: validation.needsTransport,
       hasCompanion: validation.hasCompanion,
@@ -565,6 +587,10 @@ export function createLeadUpdate(input) {
       careRouteOverride: validation.triage.careRouteOverride,
       examPaymentType: validation.pricing.examPaymentType,
       examPaymentMethods: validation.examPaymentMethods,
+      creditFatherName: validation.credit.fatherName,
+      creditMotherName: validation.credit.motherName,
+      creditAuxiliaryPhone: validation.credit.auxiliaryPhone,
+      creditAuxiliaryPhoneSearch: validation.credit.auxiliaryPhoneSearch,
       examPrice: validation.pricing.examPrice,
       needsTransport: validation.needsTransport,
       hasCompanion: validation.hasCompanion,
