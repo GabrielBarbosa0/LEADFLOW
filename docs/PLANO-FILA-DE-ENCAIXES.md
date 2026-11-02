@@ -2,11 +2,11 @@
 
 ## Status
 
-Primeira versao operacional implementada em 30/10/2026.
+Primeira versao operacional atualizada em 02/11/2026.
 
-Esta entrega inclui acesso pela pagina inicial, pesquisa por nome ou CPF, selecao de cadastro existente, criacao da entrada, fila diaria por unidade, estados de chamada e atendimento, encerramentos justificados, historico do lead e regras de seguranca no Firestore. Permanecem para evolucoes posteriores: cadastro rapido dentro do proprio fluxo, prioridade manual, alerta de conflito com o proximo horario, conversao para agendamento futuro e indicadores gerenciais.
+Esta entrega inclui acesso pela pagina inicial, pesquisa por nome ou CPF, selecao de cadastro existente, cadastro rapido dentro do proprio fluxo, criacao da entrada, fila diaria por unidade, estados de chamada e atendimento, encerramentos justificados, historico do lead e regras de seguranca no Firestore. Permanecem para evolucoes posteriores: prioridade manual, alerta de conflito com o proximo horario, conversao para agendamento futuro e indicadores gerenciais.
 
-Este documento registra a proposta operacional para receber clientes presenciais que solicitam atendimento no mesmo dia, especialmente em dias de grande movimento. A implementacao devera ser validada com a recepcao e com os profissionais responsaveis antes de ser iniciada.
+Este documento registra a operacao implementada para receber clientes presenciais que solicitam atendimento no mesmo dia, especialmente em dias de grande movimento. O uso em campo deve ser validado com a recepcao e com os profissionais responsaveis antes da liberacao ampla.
 
 ## Contexto
 
@@ -50,11 +50,11 @@ Um cliente da lista de espera podera futuramente ser convidado para um horario l
 
 ## Experiencia proposta
 
-### Acesso pela agenda
+### Acesso pela pagina inicial
 
-A pagina **Agenda de exames** devera apresentar o botao **Novo encaixe** e uma area propria chamada **Fila de encaixes**.
+A pagina inicial apresenta o botao **Novo encaixe rapido**, que abre uma tela propria da fila do dia. A fila permanece visualmente separada da agenda regular para evitar que um encaixe seja interpretado como horario confirmado.
 
-Os agendamentos regulares continuarao organizados pelos horarios reservados. A fila devera ficar visualmente separada para evitar que um encaixe seja interpretado como um horario confirmado.
+Os agendamentos regulares continuam organizados pelos horarios reservados; a fila nao cria documentos em `appointmentSlots`.
 
 ### Criacao de um encaixe
 
@@ -203,21 +203,12 @@ Eventos anteriores nao poderao ser apagados ou reescritos silenciosamente.
 
 ## Permissoes
 
-Permissoes candidatas:
+Permissao implementada: `walkins.manage`.
 
-- `walk_ins.view`: visualizar a fila da unidade permitida;
-- `walk_ins.create`: adicionar um cliente a fila;
-- `walk_ins.call`: chamar e iniciar atendimento;
-- `walk_ins.complete`: concluir ou encerrar uma entrada;
-- `walk_ins.prioritize`: alterar prioridade com justificativa;
-- `walk_ins.manage_all`: administrar encaixes de todas as unidades permitidas.
-
-Direcao inicial:
-
-- atendente de balcao: visualizar, criar, chamar e concluir na unidade permitida;
-- gestor de loja: todas as acoes nas unidades permitidas;
+- atendente de balcao: visualizar, criar, chamar, iniciar, concluir e encerrar na unidade permitida;
+- gestor de loja: as mesmas acoes nas unidades permitidas;
 - administrador: todas as acoes em todas as unidades;
-- colaborador e MEI: somente visualizar quando houver necessidade operacional aprovada;
+- telemarketing, colaborador e MEI: nenhum acesso a fila;
 - usuario sem permissao: nenhum acesso direto a colecao.
 
 As regras deverao ser aplicadas no Firestore, nao somente na interface. O usuario nao podera alterar loja, autor ou horarios de auditoria para ampliar o proprio acesso.
@@ -315,7 +306,7 @@ A primeira versao nao precisa enviar notificacoes externas nem mensagens automat
 - [x] Adicionar o botao **Novo encaixe rapido** na pagina inicial.
 - [x] Implementar pesquisa por nome e CPF.
 - [x] Reutilizar o cadastro existente.
-- [ ] Iniciar cadastro rapido dentro da tela de encaixes.
+- [x] Iniciar cadastro rapido dentro da tela de encaixes.
 - [x] Criar a lista de clientes aguardando.
 - [x] Implementar desistencia, impossibilidade e cancelamento.
 
@@ -336,10 +327,10 @@ A primeira versao nao precisa enviar notificacoes externas nem mensagens automat
 
 ### Etapa 5: verificacao
 
-- [ ] Testes unitarios das regras de estado e prioridade.
-- [ ] Testes das regras do Firestore por perfil e unidade.
+- [x] Testes unitarios das regras de estado e fluxo basico.
+- [x] Testes das regras do Firestore por perfil e unidade.
 - [ ] Testes de concorrencia ao chamar o proximo cliente.
-- [ ] Testes ponta a ponta do cadastro ate a conclusao.
+- [x] Testes ponta a ponta do cadastro existente e do cadastro rapido ate a conclusao.
 - [ ] Testes de regressao da agenda regular e dos `appointmentSlots`.
 - [ ] Verificacao visual em desktop e celular.
 - [ ] Piloto acompanhado em uma unidade antes da liberacao geral.

@@ -4,7 +4,7 @@
 | --- | --- |
 | Documento | Technical Design Document (TDD) |
 | Projeto | FascinLead |
-| Versao | 3.0 |
+| Versao | 3.1 |
 | Status | Em implementacao |
 | Data | 02/11/2026 |
 | Responsavel | Oticas Fascinante |
@@ -53,7 +53,8 @@ O sistema permite cadastro rapido e oferece uma capacidade experimental de capta
 | --- | --- | --- |
 | Colaborador | Realizar abordagens na rua | Criar, consultar e corrigir os proprios cadastros; realizar retornos e acompanhar as proprias metas |
 | MEI | Atuar como captador externo | Mesmas permissoes iniciais do colaborador, com dias e cotas de agendamento configuraveis por loja e periodo do dia |
-| Atendente de balcao | Operar a agenda da unidade | Criar cadastros, consultar a agenda e registrar comparecimento ou falta |
+| Atendente de balcao | Operar a agenda e encaixes da unidade | Criar e corrigir cadastros da unidade, consultar agenda, registrar comparecimento ou falta e gerenciar a fila de encaixes |
+| Telemarketing | Acompanhar clientes das unidades permitidas | Consultar cadastros, agenda e retornos da equipe em modo somente leitura; manter os proprios cadastros e retornos; sem exclusao, dashboard, gestao ou encaixes |
 | Gestor de Unidades | Acompanhar unidades permitidas | Consultar e exportar registros, administrar metas, agenda, relatorios e retornos conforme as permissoes ativas |
 | Administrador | Administrar o FascinLead | Todas as permissoes sempre ativas; gerencia acessos, cargos, configuracoes, metas e todos os registros |
 
@@ -266,7 +267,7 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 
 ### RF-15 - Perfis e permissoes
 
-- O sistema fornece os perfis padrao Colaborador, MEI, Gestor de Unidades, Atendente Balcão e Administrador.
+- O sistema fornece os perfis padrao Colaborador, MEI, Gestor de Unidades, Telemarketing, Atendente Balcão e Administrador.
 - Colaborador e Atendente de balcao ficam vinculados a uma unidade operacional, usada automaticamente nos novos cadastros.
 - Gestores podem receber uma ou mais unidades permitidas; quando possuirem mais de uma, escolhem a loja de destino em cada captacao. A unidade principal sempre pertence a essa lista e muda automaticamente quando a unidade principal anterior e desmarcada.
 - MEI e um captador externo sem loja principal operacional. O acesso define uma ou mais unidades permitidas, e a loja de destino e obrigatoria em cada novo cadastro.
@@ -276,6 +277,16 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 - Perfis personalizados podem ser criados, editados e inativados com nome, alcance e permissoes proprias.
 - Os perfis padrao possuem acao de restauracao; Administrador conserva todas as permissoes.
 - Dependencias de permissao sao normalizadas, por exemplo relatorios e dashboard exigem acesso a gestao.
+
+### RF-16 - Fila de encaixes
+
+- Gestores, administradores e Atendentes de Balcao podem acessar a fila de encaixes das unidades permitidas; Colaborador, MEI e Telemarketing nao possuem esse acesso.
+- A entrada e acessada pelo atalho `Novo encaixe rapido` na pagina inicial e representa somente clientes presenciais do dia, sem ocupar um horario regular da agenda.
+- A pessoa responsavel pode pesquisar pelo nome ou CPF, reutilizar um cadastro existente ou criar o cliente rapidamente sem sair da tela. O cadastro rapido exige nome e telefone; CPF e opcional, e dados clinicos permanecem incompletos ate a complementacao posterior.
+- Cada entrada registra unidade, servico, profissional, motivo, observacao opcional, chegada e responsavel pela criacao.
+- Um mesmo lead nao pode entrar duas vezes na fila da mesma data. O fluxo de estado permitido e `waiting -> called -> in_service -> completed`, com encerramentos alternativos `gave_up`, `not_accommodated` e `cancelled` que exigem justificativa quando aplicavel.
+- Cada criacao e transicao gera um evento imutavel no historico do lead. A fila permanece separada dos horarios regulares e nao cria documentos em `appointmentSlots`.
+- Prioridade manual, alerta de risco contra o proximo horario regular, conversao para agendamento futuro e indicadores por periodo permanecem como evolucoes posteriores.
 
 ## 4. Requisitos nao funcionais
 
@@ -438,6 +449,7 @@ FASCINLEAD/
 11. `Retornos`: faltas vencidas, acesso do captador ao WhatsApp e acompanhamento da equipe pelo gestor.
 12. `Metas`: criacao em modal, edicao, duplicacao, exclusao e acompanhamento individual ou da equipe.
 13. `Configuracoes`: agenda, servicos, perfis e permissoes, restritos a administradores.
+14. `Encaixes`: fila diaria de clientes presenciais, separada da agenda regular e restrita a Gestor, Administrador e Atendente Balcao.
 
 ### 6.2 Navegacao mobile
 
@@ -672,7 +684,9 @@ Essa colecao evita aumentar a complexidade das regras de atualizacao de `leads`.
 }
 ```
 
-Perfis do sistema usam IDs estaveis (`system-captor`, `system-mei`, `system-manager`, `system-receptionist` e `system-admin`). Perfis personalizados sao documentos do Firestore. O administrador sempre recebe todas as permissoes conhecidas independentemente do vetor salvo.
+Perfis do sistema usam IDs estaveis (`system-captor`, `system-mei`, `system-manager`, `system-telemarketing`, `system-receptionist` e `system-admin`). Perfis personalizados sao documentos do Firestore. O administrador sempre recebe todas as permissoes conhecidas independentemente do vetor salvo.
+
+O esquema de permissoes atual e a versao 3. `walkins.manage` permite criar, consultar e transicionar a fila de encaixes das unidades permitidas e esta presente somente em Gestor, Atendente Balcao e Administrador. Telemarketing preserva os recursos proprios de captacao e retorno e recebe `leads.view_stores`, `appointments.view` e `followups.team` para consulta multi-loja, mas nao recebe `management.view`, `dashboard.view`, `leads.delete` nem `walkins.manage`. A interface aplica o mesmo conjunto de permissoes e as regras do Firestore limitam a colecao `appointmentWalkIns` aos perfis autorizados.
 
 A acao de excluir um lead e controlada pela permissao `leads.delete`, disponivel para perfis personalizados de dados proprios e de unidades, e nao pela rota usada para abrir o cadastro. Em qualquer tela de detalhes autorizada, o botao permanece logo abaixo de `Salvar alteracoes` e usa o mesmo modal de confirmacao. O alcance do perfil continua limitando quais leads podem ser visualizados e excluidos. A exclusao definitiva remove no mesmo lote o lead e os blocos reservados em `appointmentSlots`; cadastros ainda exclusivamente locais sao removidos da fila offline.
 
@@ -742,6 +756,40 @@ O progresso nao e gravado no documento. Ele e calculado a partir dos leads sincr
 - `appointmentSlots`: `storeId ASC, appointmentDate ASC`.
 - `appointmentReminders`: `storeId ASC, appointmentDate ASC`.
 - `appointmentServices`: `storeIds ARRAY_CONTAINS, active ASC`.
+
+### 7.12 Colecao `appointmentWalkIns`
+
+Cada documento representa uma entrada operacional na fila de encaixes da data e do lead. O identificador e deterministico (`{queueDate}__{leadId}`), impedindo uma segunda entrada para o mesmo cliente na mesma data. A colecao nao replica dados pessoais ou clinicos: essas informacoes continuam no documento referenciado em `leads`.
+
+```json
+{
+  "leadId": "uuid-do-lead",
+  "storeId": "loja-06",
+  "queueDate": "2026-11-02",
+  "serviceId": "service-id",
+  "serviceName": "Exame de vista",
+  "professionalType": "optometrist",
+  "reason": "Cliente presencial solicitou exame imediato",
+  "notes": "",
+  "status": "waiting",
+  "priority": 0,
+  "priorityReason": "",
+  "arrivedAt": "Timestamp",
+  "calledAt": null,
+  "startedAt": null,
+  "completedAt": null,
+  "closedReason": "",
+  "convertedAppointmentLeadId": "",
+  "createdAt": "Timestamp",
+  "createdByUid": "firebase-uid",
+  "createdByName": "Nome do usuario",
+  "updatedAt": "Timestamp",
+  "updatedByUid": "firebase-uid",
+  "schemaVersion": 1
+}
+```
+
+As transicoes de estado sao protegidas pelas regras do Firestore e usam timestamp do servidor. A operacao atual permite `waiting -> called -> in_service -> completed`; tambem permite encerrar como `gave_up`, `not_accommodated` ou `cancelled`, com motivo de encerramento. A fila pode ser filtrada pela unidade permitida e mantem a ordem por prioridade e chegada. A criacao e cada transicao escrevem eventos no subdocumento `leads/{leadId}/history`.
 
 Novos indices somente deverao ser adicionados a partir de consultas reais. Cada tela de gestao deve exigir periodo para evitar consultas amplas.
 
@@ -946,6 +994,8 @@ Mensagens ao usuario devem ser simples e acionaveis. Detalhes tecnicos podem usa
 - triagem oftalmologica, transporte e retornos;
 - serializacao de leads pendentes sem data e horario;
 - normalizacao do sinalizador de cadastro offline, desativado por padrao.
+- origem de registro importado do Captar e compatibilidade com documentos legados identificados por migracao;
+- estados, validacao e apresentacao da fila de encaixes, incluindo o cadastro rapido presencial.
 
 ### 14.2 Regras e integracao
 
@@ -963,6 +1013,7 @@ Mensagens ao usuario devem ser simples e acionaveis. Detalhes tecnicos podem usa
 - API rejeita token ausente ou invalido;
 - API pagina os leads e valida filtros, lojas e cursores;
 - CPF e informacoes de saude nao aparecem na resposta padrao.
+- fila de encaixes aceita somente perfis e transicoes permitidos para a unidade do usuario.
 
 ### 14.3 Ponta a ponta
 
@@ -980,6 +1031,7 @@ Mensagens ao usuario devem ser simples e acionaveis. Detalhes tecnicos podem usa
 - exportacao do gestor;
 - sessao expirada ou acesso revogado;
 - layout em 360 x 800, 390 x 844, tablet e desktop.
+- fluxo de encaixe com cliente existente e com cadastro rapido presencial.
 
 ### 14.4 Criterios para piloto
 
@@ -1126,6 +1178,7 @@ O MVP estara apto para piloto quando:
 | ADR-024 | Separar escala da loja, oftalmologista e transporte | Cada recurso possui disponibilidade semanal independente e precisa |
 | ADR-025 | Separar unidades permitidas do usuario e loja de destino do lead | Suporta gestores multi-loja e MEI externo sem perder o isolamento e a atribuicao operacional de cada captacao |
 | ADR-026 | Compartilhar agenda do consultorio e transporte entre Loja 02 e Loja 06 | As duas unidades ficam em Surubim e utilizam os mesmos recursos; Loja 04 e Loja 05 permanecem independentes |
+| ADR-027 | Modelar encaixes como uma fila diaria separada | Preserva a agenda regular e seus blocos de reserva, enquanto registra clientes presenciais, seus estados e a auditoria operacional sem inventar horarios |
 
 ## 20. Pendencias de produto e operacao
 
