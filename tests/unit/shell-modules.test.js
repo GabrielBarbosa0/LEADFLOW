@@ -42,9 +42,9 @@ describe('application shell modules', () => {
       pendingFollowUps: () => []
     });
 
-    expect(receptionistMarkup).toContain('Novo encaixe rapido');
-    expect(telemarketingMarkup).not.toContain('Novo encaixe rapido');
-    expect(telemarketingMarkup).not.toContain('Painel de gestao');
+    expect(receptionistMarkup).toContain('Novo encaixe rápido');
+    expect(telemarketingMarkup).not.toContain('Novo encaixe rápido');
+    expect(telemarketingMarkup).not.toContain('Painel de gestão');
   });
 
   it('keeps navigation active state and management grouping', () => {

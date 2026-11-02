@@ -5,7 +5,7 @@ export function syncAgendaSidebarHeight() {
   const calendarPanel = agendaLayout?.querySelector('.calendar-panel');
   if (!agendaLayout || !calendarPanel) return;
 
-  if (window.matchMedia('(max-width: 760px)').matches) {
+  if (window.matchMedia('(max-width: 1000px)').matches) {
     agendaLayout.style.removeProperty('--agenda-calendar-height');
     return;
   }
