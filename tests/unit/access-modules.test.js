@@ -86,6 +86,28 @@ describe('access feature modules', () => {
     expect(markup).not.toContain('id="access-email" name="email" type="email" maxlength="254" autocomplete="email" value="maria@example.com" placeholder="nome@exemplo.com" readonly');
   });
 
+  it('shows the primary-store selector for a collaborator access', () => {
+    const access = {
+      email: 'colaborador@example.com',
+      displayName: 'Colaborador da Loja 06',
+      role: 'captor',
+      roleProfileId: 'system-captor',
+      storeId: 'loja-06',
+      storeIds: ['loja-02', 'loja-06'],
+      active: true
+    };
+    const markup = accessView({
+      access: accessState({ accesses: [access], editorOpen: true, editingEmail: access.email }),
+      profile: { role: 'admin', email: 'admin@example.com', storeId: 'loja-02' },
+      roleProfiles: roleProfiles(),
+      allowed: true
+    });
+
+    expect(markup).toContain('id="access-primary-store-field"');
+    expect(markup).toContain('<label for="access-store">Unidade principal</label>');
+    expect(markup).toContain('<option value="loja-06" selected>Loja 06 - Surubim</option>');
+  });
+
   it('filters collaborators by an accent-insensitive name, email, and store', () => {
     const accesses = [
       { displayName: 'Márcia Souza', email: 'marcia@example.com', role: 'captor', storeIds: ['loja-02'] },

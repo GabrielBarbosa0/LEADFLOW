@@ -53,7 +53,7 @@ function syncAccessStorePicker(form, state, creatingAccess) {
   const picker = document.querySelector('#access-stores-field');
   const primaryStoreField = document.querySelector('#access-primary-store-field');
   if (picker) picker.hidden = !multiStore;
-  if (primaryStoreField) primaryStoreField.hidden = captor;
+  if (primaryStoreField) primaryStoreField.hidden = false;
 
   if (creatingAccess) {
     const passwordInput = form.elements.password;
@@ -73,16 +73,12 @@ function syncAccessStorePicker(form, state, creatingAccess) {
     form.querySelectorAll('[name="storeIds"]').forEach((input) => { input.checked = true; });
   }
   const selectedStoreIds = new FormData(form).getAll('storeIds');
-  if (manager) {
+  if (multiStore && !selectedStoreIds.length) {
     const primary = form.querySelector(`[name="storeIds"][value="${form.elements.storeId.value}"]`);
     if (primary) primary.checked = true;
-  } else if (multiStore && !selectedStoreIds.length) {
+  } else if (multiStore && !selectedStoreIds.includes(form.elements.storeId.value)) {
     const primary = form.querySelector(`[name="storeIds"][value="${form.elements.storeId.value}"]`);
     if (primary) primary.checked = true;
-  }
-  if (captor) {
-    const firstStore = new FormData(form).getAll('storeIds')[0];
-    if (firstStore) form.elements.storeId.value = firstStore;
   }
 }
 
@@ -117,12 +113,6 @@ export function bindAccessEvents({ state, render, showToast }) {
         return;
       }
       const selectedStoreIds = new FormData(form).getAll('storeIds');
-      if (selected?.baseRole === 'captor') {
-        const firstStore = selectedStoreIds[0];
-        if (firstStore) form.elements.storeId.value = firstStore;
-        return;
-      }
-      if (selected?.baseRole !== 'manager') return;
       if (!selectedStoreIds.length) {
         input.checked = true;
         return;

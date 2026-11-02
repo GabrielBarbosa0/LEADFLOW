@@ -44,10 +44,6 @@ export function validateAccess(values, roleProfiles = [], options = {}) {
   let storeId = String(values.storeId || '').trim().toLowerCase();
   const requestedStoreIds = Array.isArray(values.storeIds) ? values.storeIds : [values.storeIds].filter(Boolean);
   const normalizedRequestedStoreIds = [...new Set(requestedStoreIds.map((item) => String(item).trim().toLowerCase()))];
-  if (isCaptor) storeId = normalizedRequestedStoreIds[0] || '';
-  if (role === 'manager' && normalizedRequestedStoreIds.length && !normalizedRequestedStoreIds.includes(storeId)) {
-    storeId = normalizedRequestedStoreIds[0];
-  }
   const errors = {};
 
   if (displayName.length < 2 || displayName.length > 120) {
@@ -76,17 +72,15 @@ export function validateAccess(values, roleProfiles = [], options = {}) {
     errors.role = 'Escolha um perfil válido.';
   }
 
-  if (!STORE_IDS.has(storeId)) {
-    if (isCaptor) errors.storeIds = 'Escolha ao menos uma unidade permitida.';
-    else errors.storeId = 'Escolha uma loja válida.';
-  }
-
   const storeIds = role === 'admin' || isTelemarketing
     ? [...STORE_IDS]
     : role === 'manager' || isCaptor
-      ? [...new Set([storeId, ...normalizedRequestedStoreIds].filter(Boolean))]
+      ? normalizedRequestedStoreIds
       : [storeId];
-  if (isCaptor && !storeIds.length) errors.storeIds = 'Escolha ao menos uma unidade permitida.';
+  if (storeIds.length && !storeIds.includes(storeId)) storeId = storeIds[0];
+
+  if (!STORE_IDS.has(storeId)) errors.storeId = 'Escolha uma unidade principal válida.';
+  if ((role === 'manager' || isCaptor) && !storeIds.length) errors.storeIds = 'Escolha ao menos uma unidade permitida.';
   if (storeIds.some((item) => !STORE_IDS.has(item))) errors.storeIds = 'Escolha apenas unidades válidas.';
 
   return {

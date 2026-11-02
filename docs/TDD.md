@@ -211,7 +211,7 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 - Cada item possui `Abrir WhatsApp`, que abre uma conversa individual com uma mensagem humanizada ja preenchida em nome do usuario conectado. O envio permanece manual e depende da confirmacao da pessoa responsavel pela agenda.
 - Depois do envio, a pessoa responsavel usa `Marcar como feito`. A tela separa `Pendentes` e `Feitos` e registra data, usuario e a chave do agendamento atual; um reagendamento futuro volta a ficar pendente automaticamente. Em caso de marcacao acidental, `Desfazer` remove somente essa conclusao e devolve o lembrete para `Pendentes`.
 - Esta primeira versao nao usa API oficial ou nao oficial do WhatsApp, nao dispara mensagens em lote e nao registra automaticamente que o cliente confirmou. A abertura do link tambem nao deve ser tratada como comprovante de envio.
-- O administrador configura, em `Acessos da equipe`, uma ou mais unidades permitidas para cada gestor. O administrador nao possui restricao de unidade e o captador permanece vinculado somente a loja principal.
+- O administrador configura, em `Acessos da equipe`, as unidades permitidas e uma unidade principal para cada acesso. A unidade principal sempre precisa pertencer a lista permitida; quando ela for removida, o sistema assume outra unidade permitida. Administradores e Telemarketing continuam com acesso a todas as unidades, mas tambem possuem uma unidade principal para contexto e valores padrao.
 - A consulta e limitada a um mes e a 500 resultados para preservar as cotas gratuitas do Firestore.
 - Administradores configuram por loja o modo controlado ou livre, a duracao da consulta e o inicio e fim do expediente.
 - O modo controlado e o padrao e oferece ao captador somente intervalos livres que caibam integralmente no expediente.
@@ -269,9 +269,9 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 
 - O sistema fornece os perfis padrao Colaborador, MEI, Gestor de Unidades, Telemarketing, Atendente Balcão e Administrador.
 - Colaborador e Atendente de balcao ficam vinculados a uma unidade operacional, usada automaticamente nos novos cadastros.
-- Gestores podem receber uma ou mais unidades permitidas; quando possuirem mais de uma, escolhem a loja de destino em cada captacao. A unidade principal sempre pertence a essa lista e muda automaticamente quando a unidade principal anterior e desmarcada.
-- MEI e um captador externo sem loja principal operacional. O acesso define uma ou mais unidades permitidas, e a loja de destino e obrigatoria em cada novo cadastro.
-- Administradores possuem acesso a todas as unidades e tambem escolhem explicitamente a loja de destino ao cadastrar um lead.
+- Todos os acessos possuem uma unidade principal, escolhida pela administracao e sempre contida em `storeIds`. Para perfis com uma unica unidade permitida, ela e usada automaticamente nos novos cadastros. Para perfis com mais de uma unidade permitida, incluindo Colaborador e MEI, a unidade principal define o contexto inicial e a pessoa escolhe a loja de destino quando o fluxo exigir essa decisao.
+- Gestores podem receber uma ou mais unidades permitidas; quando possuirem mais de uma, escolhem a loja de destino em cada captacao. Se a unidade principal for desmarcada, o sistema usa outra unidade permitida.
+- Administradores e Telemarketing possuem todas as unidades permitidas e tambem escolhem explicitamente a loja de destino ao cadastrar um lead; a unidade principal nao restringe esse alcance.
 - Todo lead conserva um unico `storeId`; o vinculo multi-loja pertence ao usuario e nunca torna o lead compartilhado entre lojas.
 - Perfis nao administrativos podem ter permissoes ativadas ou desativadas individualmente.
 - Perfis personalizados podem ser criados, editados e inativados com nome, alcance e permissoes proprias.
@@ -551,7 +551,7 @@ O identificador do documento sera o e-mail normalizado em letras minusculas.
 
 Essa colecao resolve a autorizacao do primeiro acesso: o e-mail e liberado antes do login, e o usuario autenticado cria seu perfil somente se os dados coincidirem com a autorizacao.
 
-`storeIds` representa as unidades que o usuario pode acessar e usar como destino. Para perfis vinculados a uma unica loja, `storeId` e `storeIds[0]` coincidem. Para MEI, `storeId` e mantido apenas como compatibilidade interna e recebe a primeira unidade permitida; a interface nao apresenta essa unidade como loja principal. Administradores recebem todas as unidades.
+`storeIds` representa as unidades que o usuario pode acessar e usar como destino. `storeId` e a unidade principal de todos os acessos, sempre incluida em `storeIds`; para um acesso de unidade unica, os dois campos coincidem. Administradores e Telemarketing recebem todas as unidades em `storeIds`, sem que a unidade principal limite o alcance deles.
 
 ### 7.4 Colecao `users`
 

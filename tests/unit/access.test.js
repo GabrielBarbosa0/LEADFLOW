@@ -70,7 +70,7 @@ describe('access validation', () => {
     });
 
     expect(result.isValid).toBe(true);
-    expect(result.data.storeIds).toEqual(['loja-06', 'loja-02']);
+    expect(result.data.storeIds).toEqual(['loja-02', 'loja-06']);
   });
 
   it('always grants telemarketing access to every store', () => {
@@ -78,7 +78,7 @@ describe('access validation', () => {
       displayName: 'Equipe Telemarketing',
       email: 'telemarketing@example.com',
       roleProfileId: 'system-telemarketing',
-      storeId: 'loja-06',
+      storeId: 'loja-05',
       storeIds: ['loja-06']
     }, SYSTEM_ROLE_PROFILES);
 
@@ -101,23 +101,23 @@ describe('access validation', () => {
     expect(result.data.storeIds).toEqual(['loja-06']);
   });
 
-  it('treats MEI as an external captor with multiple permitted stores', () => {
+  it('preserves the selected primary store for MEI with multiple permitted stores', () => {
     const roleProfiles = [{ id: 'system-mei', baseRole: 'captor', active: true }];
     const result = validateAccess({
       displayName: 'Captadora MEI',
       email: 'mei@example.com',
       phone: '81999999999',
       roleProfileId: 'system-mei',
-      storeId: 'loja-06',
+      storeId: 'loja-05',
       storeIds: ['loja-02', 'loja-05']
     }, roleProfiles);
 
     expect(result.isValid).toBe(true);
-    expect(result.data.storeId).toBe('loja-02');
+    expect(result.data.storeId).toBe('loja-05');
     expect(result.data.storeIds).toEqual(['loja-02', 'loja-05']);
   });
 
-  it('gives a collaborator the same permitted-store selection as MEI', () => {
+  it('preserves the selected primary store for a collaborator with multiple permitted stores', () => {
     const roleProfiles = [{ id: 'system-captor', baseRole: 'captor', active: true }];
     const result = validateAccess({
       displayName: 'Colaborador Externo',
@@ -129,7 +129,7 @@ describe('access validation', () => {
     }, roleProfiles);
 
     expect(result.isValid).toBe(true);
-    expect(result.data.storeId).toBe('loja-04');
+    expect(result.data.storeId).toBe('loja-06');
     expect(result.data.storeIds).toEqual(['loja-04', 'loja-06']);
   });
 
