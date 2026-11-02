@@ -33,7 +33,7 @@ test('opens the daily walk-in queue from a full-width standard home action', asy
   await expect(page.getByRole('heading', { name: 'Fila de encaixes' })).toBeVisible();
   await expect(page.getByPlaceholder('Nome ou CPF')).toBeVisible();
   const today = page.locator('.walk-in-today');
-  const back = page.getByRole('button', { name: 'Voltar ao inicio' });
+  const back = page.getByRole('button', { name: 'Voltar ao início' });
   const [todayBox, backBox] = await Promise.all([today.boundingBox(), back.boundingBox()]);
   expect(todayBox.x).toBeLessThan(backBox.x);
 
@@ -64,7 +64,7 @@ test('opens the daily walk-in queue from a full-width standard home action', asy
   await page.getByRole('button', { name: 'Buscar' }).click();
   await expect(page.getByText('Nenhum cadastro encontrado', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Cadastrar cliente rapidamente' }).click();
-  await expect(page.getByText('CADASTRO RAPIDO', { exact: true })).toBeVisible();
+  await expect(page.getByText('CADASTRO RÁPIDO', { exact: true })).toBeVisible();
   await expect(page.locator('#walk-in-quick-name')).toHaveValue('Cliente de Encaixe');
   await page.locator('#walk-in-quick-phone').fill('81999994321');
   await page.locator('#walk-in-quick-cpf').fill('52998224725');

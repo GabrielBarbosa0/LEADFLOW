@@ -7,7 +7,7 @@ export const WALK_IN_STATUS_LABELS = Object.freeze({
   in_service: 'Em atendimento',
   completed: 'Atendido',
   gave_up: 'Desistiu',
-  not_accommodated: 'Nao foi possivel encaixar',
+  not_accommodated: 'Não foi possível encaixar',
   cancelled: 'Cancelado'
 });
 
@@ -15,7 +15,7 @@ export const WALK_IN_REASONS = Object.freeze([
   'Cliente presencial solicitou exame imediato',
   'Cliente precisa de atendimento no mesmo dia',
   'Oportunidade entre atendimentos',
-  'Orientacao da recepcao',
+  'Orientação da recepção',
   'Outro motivo operacional'
 ]);
 
@@ -47,12 +47,12 @@ export function validateWalkInDraft(values = {}) {
   const errors = {};
   if (!data.leadId) errors.leadId = 'Selecione um cliente.';
   if (!data.storeId) errors.storeId = 'Selecione a unidade.';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(data.queueDate)) errors.queueDate = 'A data da fila e invalida.';
-  if (!data.serviceId || data.serviceId.length > 120) errors.serviceId = 'Selecione o servico.';
-  if (data.serviceName.length < 2 || data.serviceName.length > 80) errors.serviceName = 'Selecione um servico valido.';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data.queueDate)) errors.queueDate = 'A data da fila é inválida.';
+  if (!data.serviceId || data.serviceId.length > 120) errors.serviceId = 'Selecione o serviço.';
+  if (data.serviceName.length < 2 || data.serviceName.length > 80) errors.serviceName = 'Selecione um serviço válido.';
   if (!['optometrist', 'ophthalmologist'].includes(data.professionalType)) errors.professionalType = 'Selecione o profissional.';
   if (data.reason.length < 5 || data.reason.length > 240) errors.reason = 'Informe o motivo do encaixe.';
-  if (data.notes.length > 500) errors.notes = 'A observacao deve ter no maximo 500 caracteres.';
+  if (data.notes.length > 500) errors.notes = 'A observação deve ter no máximo 500 caracteres.';
   return { data, errors, isValid: Object.keys(errors).length === 0 };
 }
 

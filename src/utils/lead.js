@@ -48,8 +48,8 @@ export const EYE_SURGERY_STATUS_OPTIONS = [
 export const EYE_SURGERIES = [
   { id: '', label: 'Selecione' },
   { id: 'cataract', label: 'Catarata' },
-  { id: 'refractive', label: 'Cirurgia refrativa (correcao de grau)' },
-  { id: 'corneal-transplant', label: 'Transplante de cornea' },
+  { id: 'refractive', label: 'Cirurgia refrativa (correção de grau)' },
+  { id: 'corneal-transplant', label: 'Transplante de córnea' },
   { id: 'other', label: 'Outra' }
 ];
 
@@ -377,9 +377,9 @@ export function validateQuickLeadInput(input = {}) {
   const customerCpf = normalizeCpf(input.customerCpf);
 
   if (fullName.length < 2) errors.fullName = 'Informe o nome do cliente.';
-  if (fullName.length > 120) errors.fullName = 'Use no maximo 120 caracteres.';
+  if (fullName.length > 120) errors.fullName = 'Use no máximo 120 caracteres.';
   if (!phone) errors.phone = 'Informe um telefone com DDD.';
-  if (customerCpf && !isValidCpf(customerCpf)) errors.customerCpf = 'Informe um CPF valido.';
+  if (customerCpf && !isValidCpf(customerCpf)) errors.customerCpf = 'Informe um CPF válido.';
 
   return {
     errors,

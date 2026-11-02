@@ -101,7 +101,7 @@ describe('walk-in queue', () => {
       services: [service],
       canCreate: true
     });
-    expect(markup).toContain('CADASTRO RAPIDO');
+    expect(markup).toContain('CADASTRO RÁPIDO');
     expect(markup).toContain('walk-in-quick-name');
     expect(markup).toContain('Cadastrar e adicionar a fila');
     expect(markup).not.toContain('data-route="new"');
