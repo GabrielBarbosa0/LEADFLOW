@@ -65,6 +65,11 @@ describe('leads feature modules', () => {
     expect(leadsView({ leads, search: '988887777', canCreate: true })).toContain('João Santos');
   });
 
+  it('shows a marker for a Captar import', () => {
+    const markup = leadsView({ leads: [sampleLead({ recordOrigin: 'captar_import' })] });
+    expect(markup).toContain('Importado do Captar');
+  });
+
   it('selects the configured service and renders free appointment time', () => {
     const lead = sampleLead();
     const state = scheduleState({
@@ -91,6 +96,21 @@ describe('leads feature modules', () => {
     expect(markup).toContain('Maria Silva');
     expect(markup).toContain('Excluir lead');
     expect(markup).toContain('edit-appointment-time-field');
+  });
+
+  it('shows the Captar origin in the lead detail summary', () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const markup = leadDetailView({
+      lead: sampleLead({ recordOrigin: 'captar_import' }),
+      managementMode: false,
+      canManage: false,
+      profileRole: 'captor',
+      scheduleState: scheduleState(),
+      appointmentTimeMarkup: '<div id="edit-appointment-time-field"></div>',
+      canDelete: false
+    });
+    expect(markup).toContain('Origem do registro');
+    expect(markup).toContain('Importado do Captar');
   });
 
   it('preserves original data when a manager only reschedules', () => {

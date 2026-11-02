@@ -1,4 +1,5 @@
 import { formatBrazilianPhone } from '../../../utils/phone.js';
+import { leadOriginLabel } from '../../../utils/lead-origin.js';
 import { escapeHtml, offlineSyncDetail, syncLabel } from '../../shared/formatters.js';
 
 export function leadsView({ leads, search = '', dataError = '', canCreate = false }) {
@@ -12,9 +13,10 @@ export function leadsView({ leads, search = '', dataError = '', canCreate = fals
   const list = filtered.length
     ? filtered.map((lead) => {
         const [label, tone] = syncLabel(lead);
+        const originLabel = leadOriginLabel(lead);
         return `<button class="lead-item" type="button" data-open-lead-id="${escapeHtml(lead.id)}" aria-label="Ver cadastro de ${escapeHtml(lead.fullName)}">
           <div class="lead-avatar">${escapeHtml(lead.fullName[0]?.toUpperCase() || '?')}</div>
-          <div class="lead-content"><strong>${escapeHtml(lead.fullName)}</strong><span>${escapeHtml(formatBrazilianPhone(lead.phoneSearch))}</span><small>${escapeHtml(offlineSyncDetail(lead) || lead.interestLabel || 'Interesse não informado')}</small></div>
+          <div class="lead-content"><strong>${escapeHtml(lead.fullName)}</strong><span>${escapeHtml(formatBrazilianPhone(lead.phoneSearch))}</span><small>${escapeHtml(offlineSyncDetail(lead) || lead.interestLabel || 'Interesse não informado')}</small>${originLabel ? `<small class="lead-origin-label"><i data-lucide="archive"></i>${escapeHtml(originLabel)}</small>` : ''}</div>
           <span class="status-badge status-${tone}">${label}</span>
           <i class="lead-chevron" data-lucide="chevron-right"></i>
         </button>`;

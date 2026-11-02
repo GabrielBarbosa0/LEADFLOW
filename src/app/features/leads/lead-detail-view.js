@@ -1,4 +1,5 @@
 import { INTERESTS } from '../../../utils/lead.js';
+import { leadOriginLabel } from '../../../utils/lead-origin.js';
 import { formatBrazilianPhone } from '../../../utils/phone.js';
 import { servicesForStore } from '../../../utils/service-catalog.js';
 import { formatBrazilianCpf } from '../../../utils/savwin-matching.js';
@@ -36,6 +37,7 @@ export function leadDetailView({
   }
 
   const [syncStatus, syncTone] = managementMode ? ['Sincronizado', 'success'] : syncLabel(lead);
+  const originLabel = leadOriginLabel(lead);
   const managerReschedule = managementMode && profileRole === 'manager' && !canEditClinical;
   const offlineEdit = !navigator.onLine;
   const locked = managerReschedule || offlineEdit || readOnly ? 'disabled' : '';
@@ -57,6 +59,7 @@ export function leadDetailView({
     <section class="lead-detail-summary" aria-label="Informações do cadastro">
       <div><span>Status</span><strong class="status-badge status-${syncTone}">${syncStatus}</strong></div>
       <div><span>Loja</span><strong>${escapeHtml(storeLabel(lead.storeId))}</strong></div>
+      ${originLabel ? `<div><span>Origem do registro</span><strong class="lead-origin-badge"><i data-lucide="archive"></i>${escapeHtml(originLabel)}</strong></div>` : ''}
       <button class="lead-history-summary" type="button" data-open-lead-history aria-haspopup="dialog"><span>Histórico do lead</span><strong>Ver histórico</strong><small>Ver todas as alterações</small></button>
     </section>
     <form id="edit-lead-form" class="form-panel" data-lead-id="${escapeHtml(lead.id)}" data-management="${managementMode}" data-read-only="${readOnly}" novalidate>

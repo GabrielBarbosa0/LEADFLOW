@@ -4,9 +4,9 @@
 | --- | --- |
 | Documento | Technical Design Document (TDD) |
 | Projeto | FascinLead |
-| Versao | 2.9 |
+| Versao | 3.0 |
 | Status | Em implementacao |
-| Data | 30/10/2026 |
+| Data | 02/11/2026 |
 | Responsavel | Oticas Fascinante |
 
 ### Manutencao deste documento
@@ -618,6 +618,7 @@ O identificador sera um UUID gerado no dispositivo. Isso torna a gravacao idempo
   "hasCompanion": false,
   "transportSeats": 1,
   "source": "street",
+  "recordOrigin": "captar_import (opcional; imutavel)",
   "capturedAtClient": "2026-09-28T13:45:00.000Z",
   "createdAtServer": "Timestamp ou null enquanto offline",
   "updatedAtServer": "Timestamp ou null enquanto offline",
@@ -631,6 +632,8 @@ O identificador sera um UUID gerado no dispositivo. Isso torna a gravacao idempo
 ```
 
 `phoneSearch` facilita a busca autorizada, mas nao deve ser exibido como campo separado. Nao sera criada uma chave unica baseada no telefone, pois uma mesma pessoa pode ser abordada legitimamente em momentos diferentes.
+
+`source` descreve o canal operacional da captacao, enquanto `recordOrigin` descreve a procedencia do documento. Os registros trazidos da agenda legada recebem `recordOrigin: "captar_import"`; esse campo e imutavel para usuarios comuns, aparece como marcador visual e sera a referencia para o arquivamento do ciclo anterior. A rotina `mark:captar-leads` reconhece registros legados pelo ID iniciado em `captar-` ou por `installationId: "captar-migration"`, executa em simulacao por padrao e somente grava quando recebe `--apply`.
 
 Para leads captados offline, `appointmentDate` e `appointmentTime` permanecem vazios. A escolha posterior de horario ocorre somente online e cria os documentos correspondentes em `appointmentSlots`.
 
@@ -1020,6 +1023,7 @@ Rules, indices e Callable Functions nao fazem parte desse workflow estatico. A p
 | `npm run migrate:appointment-services` | Preencher o servico de agendamento em registros anteriores |
 | `npm run migrate:appointment-blocks` | Converter agendamentos existentes para reservas em blocos de 10 minutos |
 | `npm run migrate:captar` | Importar agenda do Captar para o FascinLead |
+| `npm run mark:captar-leads` | Identificar os leads legados importados do Captar; use `-- --apply` somente apos revisar a simulacao |
 | `npm run sync:captar-team` | Sincronizar membros da equipe do Captar com os acessos autorizados |
 | `npm run reset:team-passwords` | Aplicar a senha inicial aos usuarios nao administradores existentes |
 

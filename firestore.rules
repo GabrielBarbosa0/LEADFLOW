@@ -479,7 +479,7 @@ service cloud.firestore {
     function leadIdentityIsUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
         'capturedByUid', 'capturedByName', 'storeId', 'capturedAtClient',
-        'createdAtServer', 'installationId', 'source', 'schemaVersion',
+        'createdAtServer', 'installationId', 'source', 'schemaVersion', 'recordOrigin',
         'consentGiven', 'consentAtClient'
       ]);
     }

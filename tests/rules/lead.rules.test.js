@@ -495,6 +495,14 @@ describe('lead correction rules', () => {
     }));
   });
 
+  it('does not let a non-administrator change the record origin', async () => {
+    const db = authenticatedDb('captor-uid', 'captor@example.com');
+    await assertFails(updateDoc(doc(db, 'leads', 'lead-test'), {
+      recordOrigin: 'captar_import',
+      updatedAtServer: Timestamp.now()
+    }));
+  });
+
   it('accepts new mutable lead fields without requiring a rules allowlist update', async () => {
     const db = authenticatedDb('captor-uid', 'captor@example.com');
     await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {

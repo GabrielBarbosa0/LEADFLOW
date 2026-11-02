@@ -1967,6 +1967,30 @@ svg {
   color: var(--muted);
 }
 
+.lead-origin-label,
+.lead-origin-badge {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  color: #5d4a14 !important;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.lead-origin-label svg,
+.lead-origin-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lead-origin-badge {
+  padding: 5px 8px;
+  border: 1px solid #ecd08a;
+  border-radius: 6px;
+  background: var(--amber-soft);
+}
+
 .status-success {
   color: var(--success-dark);
   background: var(--success-soft);

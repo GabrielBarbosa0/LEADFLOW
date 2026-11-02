@@ -200,6 +200,7 @@ function buildWrites(data, existingLeadIds, existingSlotIds) {
       appointmentDurationMinutes: { type: 'integer', value: duration },
       notes: buildNotes(appointment, client, salesperson),
       source: 'street',
+      recordOrigin: 'captar_import',
       capturedAtClient: timestamp(createdAt),
       createdAtServer: { type: 'timestamp', value: createdAt },
       updatedAtServer: { type: 'timestamp', value: appointment.updated_at || createdAt },

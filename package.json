@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "migrate:captar": "node scripts/migrate-captar-schedule.js",
+    "mark:captar-leads": "node scripts/mark-captar-leads.js",
     "migrate:appointment-services": "node scripts/migrate-appointment-services.js",
     "migrate:appointment-blocks": "node scripts/migrate-appointment-blocks.js",
     "sync:captar-team": "node scripts/sync-captar-team.js",
