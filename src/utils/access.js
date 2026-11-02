@@ -35,6 +35,7 @@ export function validateAccess(values, roleProfiles = [], options = {}) {
   const savwinCode = String(values.savwinCode || '').trim();
   const roleProfileId = String(values.roleProfileId || '');
   const selectedProfile = roleProfiles.find((profile) => profile.id === roleProfileId && profile.active !== false);
+  const isTelemarketing = selectedProfile?.id === 'system-telemarketing';
   const role = selectedProfile?.baseRole || String(values.role || '');
   const isCaptor = selectedProfile?.baseRole === 'captor';
   const password = options.requirePassword && role !== 'admin'
@@ -80,7 +81,7 @@ export function validateAccess(values, roleProfiles = [], options = {}) {
     else errors.storeId = 'Escolha uma loja válida.';
   }
 
-  const storeIds = role === 'admin'
+  const storeIds = role === 'admin' || isTelemarketing
     ? [...STORE_IDS]
     : role === 'manager' || isCaptor
       ? [...new Set([storeId, ...normalizedRequestedStoreIds].filter(Boolean))]

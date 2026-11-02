@@ -1,5 +1,5 @@
 {
-  "permissionSchemaVersion": 2,
+  "permissionSchemaVersion": 3,
   "profiles": [
     {
       "id": "system-captor",
@@ -44,10 +44,26 @@
         "leads.clinical_update",
         "appointments.view",
         "appointments.attendance",
+        "walkins.manage",
         "followups.team",
         "goals.manage",
         "dashboard.view",
         "leads.export"
+      ]
+    },
+    {
+      "id": "system-telemarketing",
+      "name": "Telemarketing",
+      "scope": "stores",
+      "baseRole": "manager",
+      "permissions": [
+        "leads.create",
+        "leads.view_own",
+        "leads.edit_own",
+        "followups.own",
+        "leads.view_stores",
+        "appointments.view",
+        "followups.team"
       ]
     },
     {
@@ -65,6 +81,7 @@
         "leads.clinical_update",
         "appointments.view",
         "appointments.attendance",
+        "walkins.manage",
         "followups.team"
       ]
     },
@@ -83,6 +100,7 @@
         "leads.clinical_update",
         "appointments.view",
         "appointments.attendance",
+        "walkins.manage",
         "followups.team",
         "goals.manage",
         "dashboard.view",

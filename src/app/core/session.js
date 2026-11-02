@@ -113,6 +113,12 @@ export function resetSessionState(state, {
     filter: 'pending',
     updatingId: ''
   };
+  state.walkIns = {
+    loading: false, loaded: false, saving: false, error: '', records: [], services: [],
+    serviceId: '', storeId: '', storeFilter: '', selectedLeadId: '', searchQuery: '',
+    searchLoading: false, searchSearched: false, searchError: '', searchResults: [],
+    quickCreate: false, quickDraft: {}, updatingId: ''
+  };
   state.appointmentCreate = {
     loading: false,
     saving: false,

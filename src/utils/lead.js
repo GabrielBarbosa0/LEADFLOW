@@ -370,6 +370,94 @@ export function validateLeadInput(input, options = {}) {
   };
 }
 
+export function validateQuickLeadInput(input = {}) {
+  const errors = {};
+  const fullName = String(input.fullName || '').trim();
+  const phone = normalizeBrazilianPhone(input.phone);
+  const customerCpf = normalizeCpf(input.customerCpf);
+
+  if (fullName.length < 2) errors.fullName = 'Informe o nome do cliente.';
+  if (fullName.length > 120) errors.fullName = 'Use no maximo 120 caracteres.';
+  if (!phone) errors.phone = 'Informe um telefone com DDD.';
+  if (customerCpf && !isValidCpf(customerCpf)) errors.customerCpf = 'Informe um CPF valido.';
+
+  return {
+    errors,
+    isValid: Object.keys(errors).length === 0,
+    fullName,
+    phone,
+    customerCpf
+  };
+}
+
+export function createQuickLeadDocument(input, profile, installationId, now = new Date()) {
+  const validation = validateQuickLeadInput(input);
+  if (!validation.isValid) return { ...validation, data: null };
+
+  const careRoute = input.professionalType === 'ophthalmologist' ? 'ophthalmologist' : 'optometrist';
+  return {
+    errors: {},
+    isValid: true,
+    data: {
+      fullName: validation.fullName,
+      preferredName: '',
+      phone: validation.phone.e164,
+      phoneSearch: validation.phone.search,
+      customerCpf: validation.customerCpf,
+      customerRg: '',
+      birthDate: '',
+      birthMonthDay: '',
+      sex: '',
+      street: '',
+      streetNumber: '',
+      neighborhood: '',
+      city: '',
+      state: 'PE',
+      addressReference: '',
+      interestId: 'eye-exam',
+      interestLabel: 'Exame de vista',
+      ametropiaIds: ['unknown'],
+      pathologyIds: ['unknown'],
+      diabetesLevel: null,
+      diabetesNeedsMedicalAlert: false,
+      eyeSurgeryStatus: '',
+      eyeSurgeryType: '',
+      eyeSurgeryDetails: '',
+      careRoute,
+      careRouteOverride: careRoute,
+      careRouteReasons: ['manual'],
+      examPaymentType: 'paid',
+      examPaymentMethods: [],
+      examPrice: EXAM_PRICES[careRoute],
+      needsTransport: false,
+      hasCompanion: false,
+      companionCount: 0,
+      transportSeats: 0,
+      appointmentDate: '',
+      appointmentTime: '',
+      funnelStage: 'awaiting_appointment',
+      funnelReasonCode: '',
+      funnelUpdatedAtClient: now.toISOString(),
+      appointmentCycle: 0,
+      appointmentSchedulingMode: 'free',
+      appointmentDurationMinutes: Number(input.appointmentDurationMinutes) || 20,
+      appointmentServiceId: String(input.serviceId || '').trim(),
+      appointmentServiceName: String(input.serviceName || 'Exame de vista').trim().slice(0, 80),
+      notes: String(input.notes || '').trim().slice(0, 500),
+      registrationMode: 'quick_walk_in',
+      registrationCompleted: false,
+      source: 'street',
+      capturedAtClient: now.toISOString(),
+      capturedByUid: profile.uid,
+      capturedByName: profile.displayName,
+      storeId: profile.storeId,
+      installationId,
+      appVersion: '0.1.0',
+      schemaVersion: 1
+    }
+  };
+}
+
 export function createLeadDocument(input, profile, installationId, now = new Date()) {
   const validation = validateLeadInput(input, { requireBirthDate: true });
   if (!validation.isValid) return { ...validation, data: null };

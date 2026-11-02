@@ -42,8 +42,20 @@ service cloud.firestore {
     function hasPermission(permission) {
       return isPrimaryAdmin() || (activeUser() && (
         userProfile().role == 'admin'
-        || (('permissions' in userProfile()) && permission in userProfile().permissions)
-        || (!('permissions' in userProfile()) && legacyPermission(permission))
+        || (('permissions' in userProfile())
+          && permission in userProfile().permissions
+          && (
+            !('roleProfileId' in userProfile())
+            || userProfile().roleProfileId != 'system-telemarketing'
+            || permission in [
+              'leads.create', 'leads.view_own', 'leads.edit_own', 'followups.own',
+              'leads.view_stores', 'appointments.view', 'followups.team'
+            ]
+          ))
+        || (!('permissions' in userProfile())
+          && (!('roleProfileId' in userProfile())
+            || userProfile().roleProfileId != 'system-telemarketing')
+          && legacyPermission(permission))
       ));
     }
 
@@ -141,7 +153,13 @@ service cloud.firestore {
         && (!('addressReference' in data) || (data.addressReference is string && data.addressReference.size() <= 160))
         && (!('examPrice' in data) || (data.examPrice is number && data.examPrice >= 0 && data.examPrice <= 100000))
         && data.birthDate is string
-        && data.birthDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && (data.birthDate.matches('^\\d{4}-\\d{2}-\\d{2}$') || (
+          data.birthDate == ''
+          && data.registrationMode == 'quick_walk_in'
+          && data.registrationCompleted == false
+        ))
+        && (!('registrationMode' in data) || data.registrationMode in ['quick_walk_in'])
+        && (!('registrationCompleted' in data) || data.registrationCompleted is bool)
         && (!('birthMonthDay' in data) || (data.birthMonthDay is string
           && data.birthMonthDay.matches('^\\d{2}-\\d{2}$')))
         && (!('needsTransport' in data) || data.needsTransport is bool)
@@ -199,6 +217,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           'leadId', 'storeId', 'eventType', 'funnelStage', 'reasonCode',
           'benefitType', 'benefitValue', 'benefitLabel',
+          'description', 'walkInId',
           'actorUid', 'actorName', 'actorRole', 'occurredAtClient',
           'occurredAtServer', 'schemaVersion'
         ])
@@ -208,7 +227,10 @@ service cloud.firestore {
           'lead_created', 'appointment_scheduled', 'appointment_rescheduled',
           'appointment_cancelled', 'appointment_reminder_sent',
           'appointment_attended', 'appointment_missed', 'follow_up_contacted',
-          'birthday_benefit_planned', 'birthday_congratulated'
+          'birthday_benefit_planned', 'birthday_congratulated',
+          'walk_in_created', 'walk_in_called', 'walk_in_in_service',
+          'walk_in_completed', 'walk_in_gave_up',
+          'walk_in_not_accommodated', 'walk_in_cancelled'
         ]
         && data.funnelStage in [
           'captured', 'awaiting_appointment', 'scheduled', 'confirmation',
@@ -221,6 +243,8 @@ service cloud.firestore {
         && (!('benefitValue' in data) || (data.benefitValue is number
           && data.benefitValue >= 0 && data.benefitValue <= 100000))
         && (!('benefitLabel' in data) || (data.benefitLabel is string && data.benefitLabel.size() <= 80))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500))
+        && (!('walkInId' in data) || (data.walkInId is string && data.walkInId.size() <= 180))
         && data.actorUid is string
         && data.actorName is string
         && data.actorName.size() >= 2
@@ -243,6 +267,8 @@ service cloud.firestore {
             && hasPermission('management.view'))
           || (managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
             && hasPermission('appointments.view'))
+          || (managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+            && hasPermission('leads.view_stores'))
           || isAdmin()
         );
     }
@@ -346,6 +372,88 @@ service cloud.firestore {
         && activeUser()
         && hasPermission('leads.create')
         && userHasStore(resource.data.storeId);
+    }
+
+    function canManageWalkInStore(storeId) {
+      return isAdmin() || (managerHasStore(storeId) && (
+        (('roleProfileId' in userProfile())
+          && userProfile().roleProfileId in ['system-manager', 'system-receptionist'])
+        || (!('roleProfileId' in userProfile()) && userProfile().role == 'manager')
+      ));
+    }
+
+    function validWalkIn(data) {
+      return data.keys().hasOnly([
+          'leadId', 'storeId', 'queueDate', 'serviceId', 'serviceName',
+          'professionalType', 'reason', 'notes', 'status', 'priority',
+          'priorityReason', 'arrivedAt', 'calledAt', 'startedAt', 'completedAt',
+          'closedReason', 'convertedAppointmentLeadId', 'createdAt',
+          'createdByUid', 'createdByName', 'updatedAt', 'updatedByUid',
+          'schemaVersion'
+        ])
+        && data.leadId is string
+        && data.leadId.size() >= 1
+        && data.leadId.size() <= 128
+        && data.storeId is string
+        && data.queueDate is string
+        && data.queueDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.serviceId is string
+        && data.serviceId.size() >= 1
+        && data.serviceId.size() <= 120
+        && data.serviceName is string
+        && data.serviceName.size() >= 2
+        && data.serviceName.size() <= 80
+        && data.professionalType in ['optometrist', 'ophthalmologist']
+        && data.reason is string
+        && data.reason.size() >= 5
+        && data.reason.size() <= 240
+        && data.notes is string
+        && data.notes.size() <= 500
+        && data.status in ['waiting', 'called', 'in_service', 'completed', 'gave_up', 'not_accommodated', 'cancelled']
+        && data.priority is int
+        && data.priority >= 0
+        && data.priority <= 100
+        && data.priorityReason is string
+        && data.priorityReason.size() <= 240
+        && data.arrivedAt is timestamp
+        && (data.calledAt == null || data.calledAt is timestamp)
+        && (data.startedAt == null || data.startedAt is timestamp)
+        && (data.completedAt == null || data.completedAt is timestamp)
+        && data.closedReason is string
+        && data.closedReason.size() <= 500
+        && data.convertedAppointmentLeadId is string
+        && data.convertedAppointmentLeadId.size() <= 128
+        && data.createdAt is timestamp
+        && data.createdByUid is string
+        && data.createdByName is string
+        && data.createdByName.size() >= 2
+        && data.createdByName.size() <= 120
+        && data.updatedAt is timestamp
+        && data.updatedByUid is string
+        && data.schemaVersion == 1;
+    }
+
+    function validWalkInTransition() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'calledAt', 'startedAt', 'completedAt', 'closedReason',
+          'updatedAt', 'updatedByUid'
+        ])
+        && request.resource.data.updatedByUid == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && (
+          (resource.data.status == 'waiting' && request.resource.data.status == 'called'
+            && resource.data.calledAt == null && request.resource.data.calledAt == request.time)
+          || (resource.data.status == 'called' && request.resource.data.status == 'in_service'
+            && resource.data.startedAt == null && request.resource.data.startedAt == request.time)
+          || (resource.data.status == 'in_service' && request.resource.data.status == 'completed'
+            && resource.data.completedAt == null && request.resource.data.completedAt == request.time)
+          || (resource.data.status in ['waiting', 'called']
+            && request.resource.data.status in ['gave_up', 'not_accommodated', 'cancelled']
+            && request.resource.data.closedReason.size() >= 3)
+          || (resource.data.status == 'in_service'
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.closedReason.size() >= 3)
+        );
     }
 
     function validAppointmentReminder(data) {
@@ -608,6 +716,27 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /appointmentWalkIns/{walkInId} {
+      allow get, list: if activeUser() && canManageWalkInStore(resource.data.storeId);
+      allow create: if activeUser()
+        && validWalkIn(request.resource.data)
+        && canManageWalkInStore(request.resource.data.storeId)
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.priority == 0
+        && request.resource.data.arrivedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.updatedByUid == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId))
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.storeId == request.resource.data.storeId;
+      allow update: if activeUser()
+        && validWalkIn(request.resource.data)
+        && canManageWalkInStore(resource.data.storeId)
+        && validWalkInTransition();
+      allow delete: if false;
+    }
+
     match /leads/{leadId} {
       allow create: if isAdmin() || (
         activeUser()
@@ -621,6 +750,7 @@ service cloud.firestore {
         (resource.data.capturedByUid == request.auth.uid && hasPermission('leads.view_own'))
         || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
         || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('leads.view_stores'))
         || isAdmin()
       );
 
@@ -658,6 +788,11 @@ service cloud.firestore {
               && hasPermission('leads.create'))
             || (managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
               && hasPermission('management.view'))
+            || (request.resource.data.eventType.matches('^walk_in_.*$')
+              && canManageWalkInStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId))
+            || (!request.resource.data.eventType.matches('^walk_in_.*$')
+              && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+              && hasPermission('appointments.view'))
           );
         allow update, delete: if false;
       }

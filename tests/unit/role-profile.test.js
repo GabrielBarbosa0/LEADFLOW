@@ -11,8 +11,8 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(2);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 2)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(3);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 3)).toBe(true);
   });
 
   it('keeps the administrator profile with every permission', () => {
@@ -47,6 +47,7 @@ describe('role profiles', () => {
       'leads.clinical_update',
       'appointments.view',
       'appointments.attendance',
+      'walkins.manage',
       'followups.team'
     ]);
     expect(receptionist.permissions).not.toContain('dashboard.view');
@@ -54,6 +55,33 @@ describe('role profiles', () => {
     expect(receptionist.permissions).not.toContain('leads.delete');
     expect(systemRoleProfileForId('system-receptionist')).toBe(receptionist);
     expect(systemRoleProfileForId('missing-profile')).toBeNull();
+  });
+
+  it('keeps telemarketing read-only across stores without management, deletion or walk-ins', () => {
+    const telemarketing = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-telemarketing');
+
+    expect(telemarketing).toMatchObject({
+      name: 'Telemarketing',
+      scope: 'stores',
+      baseRole: 'manager',
+      system: true
+    });
+    expect(telemarketing.permissions).toContain('leads.view_stores');
+    expect(telemarketing.permissions).toContain('appointments.view');
+    expect(telemarketing.permissions).not.toContain('management.view');
+    expect(telemarketing.permissions).not.toContain('dashboard.view');
+    expect(telemarketing.permissions).not.toContain('leads.delete');
+    expect(telemarketing.permissions).not.toContain('walkins.manage');
+    expect(hasPermission({
+      role: 'manager',
+      roleProfileId: 'system-telemarketing',
+      permissions: ['management.view', 'leads.delete', 'walkins.manage']
+    }, 'management.view')).toBe(false);
+    expect(hasPermission({
+      role: 'manager',
+      roleProfileId: 'system-telemarketing',
+      permissions: ['management.view', 'leads.delete', 'walkins.manage']
+    }, 'walkins.manage')).toBe(false);
   });
 
   it('creates an own-data profile without team permissions', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { birthMonthDay, calculateAge, createLeadDocument, createLeadUpdate, examPricing, ophthalmologyTriage, validateLeadInput } from '../../src/utils/lead.js';
+import { birthMonthDay, calculateAge, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPricing, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
 
 const validInput = {
   fullName: 'Cliente Exemplo',
@@ -63,6 +63,31 @@ describe('lead validation', () => {
   it('normalizes an optional RG and limits its length', () => {
     expect(createLeadUpdate(validInput).data.customerRg).toBe('12.345.678-X');
     expect(validateLeadInput({ ...validInput, customerRg: '1'.repeat(21) }).errors.customerRg).toBeDefined();
+  });
+
+  it('creates an explicitly incomplete quick walk-in registration without inventing clinical data', () => {
+    const input = {
+      fullName: 'Cliente de Encaixe',
+      phone: '(81) 99999-4321',
+      customerCpf: '529.982.247-25',
+      professionalType: 'optometrist',
+      serviceId: 'eye-exam',
+      serviceName: 'Exame de vista',
+      notes: 'Chegou sem agendamento'
+    };
+    expect(validateQuickLeadInput(input).isValid).toBe(true);
+    const result = createQuickLeadDocument(input, profile, 'installation-test', new Date('2026-10-30T12:00:00Z'));
+    expect(result.data).toMatchObject({
+      fullName: 'Cliente de Encaixe',
+      customerCpf: '52998224725',
+      birthDate: '',
+      sex: '',
+      registrationMode: 'quick_walk_in',
+      registrationCompleted: false,
+      appointmentDate: '',
+      appointmentTime: ''
+    });
+    expect(result.data.pathologyIds).toEqual(['unknown']);
   });
 
   it('limits the address reference to 160 characters', () => {

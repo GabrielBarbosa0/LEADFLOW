@@ -4,13 +4,14 @@ import { markFollowUpContactStarted, subscribeToTeamFollowUps } from '../service
 import { loadRoleProfiles } from '../services/role-profile-service.js';
 import { deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
 import { APPOINTMENTS_QUERY_LIMIT, loadUpcomingAppointments, markAppointmentReminderDone, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
+import { createQuickWalkIn, createWalkIn, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
 import { ensureDefaultAppointmentServices, loadAppointmentServices } from '../services/service-catalog-service.js';
 import { consultLocalSavwinSales, isLocalSavwinEnabled } from '../services/savwin-service.js';
 import { downloadLeadsCsv } from '../utils/lead-export.js';
 import { monthKeyFromDate, monthRange, shiftMonth } from '../utils/calendar.js';
 import { formatBrazilianPhone } from '../utils/phone.js';
-import { examPricing } from '../utils/lead.js';
+import { examPricing, validateQuickLeadInput } from '../utils/lead.js';
 import { buildAppointmentSlots, DEFAULT_STORE_SCHEDULE } from '../utils/schedule.js';
 import { followUpAppointmentKey } from '../utils/follow-up.js';
 import { STORES } from '../utils/stores.js';
@@ -18,6 +19,7 @@ import { profileStoreIds } from '../utils/permissions.js';
 import { SYSTEM_ROLE_PROFILES, hasPermission as profileHasPermission } from '../utils/role-profile.js';
 import { formatBrazilianCpf } from '../utils/savwin-matching.js';
 import { defaultAppointmentService, servicesForStore } from '../utils/service-catalog.js';
+import { validateWalkInDraft, WALK_IN_CLOSED_STATUSES } from '../utils/walk-in.js';
 import { currentRoute, currentRouteParam, navigate } from './router.js';
 import {
   formatAppointmentDate,
@@ -62,6 +64,7 @@ import { appointmentsView as renderAppointmentsView } from './features/appointme
 import { handleConfirmationClick } from './features/appointments/confirmation-events.js';
 import { normalizeConfirmationDays } from './features/appointments/confirmation-period.js';
 import { confirmationsView as renderConfirmationsView } from './features/appointments/confirmations-view.js';
+import { walkInsView as renderWalkInsView } from './features/walk-ins/walk-ins-view.js';
 import { findManagementLead as selectManagementLead, loadManagementRecords, validateManagementPeriod } from './features/management/management-data.js';
 import { createDefaultManagementFilters as buildDefaultManagementFilters, filterManagementRecords } from './features/management/management-filters.js';
 import { handleManagementClick, initializeManagementFilters } from './features/management/management-events.js';
@@ -148,6 +151,7 @@ function canAccessRoute(route) {
     dashboard: () => hasAccess('dashboard.view'),
     appointments: () => hasAccess('appointments.view'),
     confirmations: () => hasAccess('appointments.view'),
+    'walk-ins': () => hasAccess('walkins.manage'),
     access: () => isAdmin(),
     goals: () => hasAccess('goals.view_own') || hasAccess('goals.manage'),
     settings: () => isAdmin()
@@ -184,7 +188,7 @@ function homeView() {
 }
 
 function appView() {
-  const pages = { home: homeView, new: newLeadView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
+  const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
   const page = pages[state.route] || homeView;
   return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}`, canManage, hasAccess, pendingFollowUps });
 }
@@ -295,6 +299,10 @@ function leadDetailView() {
   const lead = managementMode
     ? findManagementLead(leadId)
     : state.leads.find((item) => item.id === leadId);
+  const readOnly = Boolean(lead
+    && lead.capturedByUid !== state.profile?.uid
+    && hasAccess('leads.view_stores')
+    && !hasAccess('leads.edit_all'));
   return renderLeadDetailView({
     lead,
     managementMode,
@@ -304,6 +312,7 @@ function leadDetailView() {
     appointmentTimeMarkup: lead ? leadDetailAppointmentTimeField(lead) : '',
     canDelete: hasAccess('leads.delete'),
     canEditClinical: hasAccess('leads.clinical_update'),
+    readOnly,
     history: state.leadHistory
   });
 }
@@ -464,6 +473,24 @@ function confirmationsView() {
     confirmations: state.confirmations,
     profileName: state.profile?.displayName || '',
     queryLimit: APPOINTMENTS_QUERY_LIMIT
+  });
+}
+
+function allowedWalkInStores() {
+  return isAdmin() ? STORES : STORES.filter((store) => profileStoreIds(state.profile).includes(store.id));
+}
+
+function selectedWalkInLead() {
+  return state.walkIns.searchResults.find((lead) => lead.id === state.walkIns.selectedLeadId) || null;
+}
+
+function walkInsView() {
+  return renderWalkInsView({
+    walkIns: state.walkIns,
+    selectedLead: selectedWalkInLead(),
+    allowedStores: allowedWalkInStores(),
+    services: state.walkIns.services,
+    canCreate: hasAccess('leads.create')
   });
 }
 function appointmentCreateSchedule() {
@@ -777,8 +804,14 @@ function bindPageEvents() {
         refreshLeadDetailAppointmentTime(existingLeadForDetail());
       }
     });
+    if (editLeadForm.dataset.readOnly === 'true') {
+      editLeadForm.querySelectorAll('input, select, textarea, button[type="submit"]').forEach((control) => {
+        control.disabled = true;
+      });
+    }
     editLeadForm.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (editLeadForm.dataset.readOnly === 'true') return;
       if (!navigator.onLine) {
         showToast('Conecte-se à internet para alterar ou agendar este cadastro.', 'danger', 'wifi-off');
         return;
@@ -928,6 +961,195 @@ function bindPageEvents() {
       render();
     });
   }
+
+  const walkInSearchForm = document.querySelector('#walk-in-search-form');
+  if (walkInSearchForm) {
+    const searchInput = walkInSearchForm.elements.query;
+    searchInput?.addEventListener('input', () => {
+      state.walkIns.searchQuery = searchInput.value;
+      const error = walkInSearchForm.querySelector('#walk-in-search-error');
+      if (error) error.textContent = '';
+    });
+    walkInSearchForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const queryText = String(searchInput?.value || '').trim();
+      const validationError = validateLeadSearch(queryText);
+      if (validationError) {
+        const error = walkInSearchForm.querySelector('#walk-in-search-error');
+        if (error) error.textContent = validationError;
+        searchInput?.focus();
+        return;
+      }
+      state.walkIns = {
+        ...state.walkIns,
+        searchQuery: queryText,
+        searchLoading: true,
+        searchSearched: false,
+        searchError: '',
+        searchResults: [],
+        selectedLeadId: '',
+        quickCreate: false,
+        quickDraft: {}
+      };
+      render();
+      try {
+        const results = state.demoMode
+          ? searchDemoLeads(state.leads, queryText, state.profile)
+          : await searchLeadAppointments(queryText);
+        state.walkIns = { ...state.walkIns, searchLoading: false, searchSearched: true, searchResults: results };
+      } catch (error) {
+        state.walkIns = {
+          ...state.walkIns,
+          searchLoading: false,
+          searchSearched: true,
+          searchError: error?.code === 'functions/permission-denied'
+            ? 'Seu perfil nao possui permissao para pesquisar clientes.'
+            : 'Nao foi possivel realizar a pesquisa.',
+          searchResults: []
+        };
+      }
+      render();
+    });
+  }
+
+  const walkInQuickClientForm = document.querySelector('#walk-in-quick-client-form');
+  if (walkInQuickClientForm) {
+    bindCpfInput(walkInQuickClientForm);
+    walkInQuickClientForm.elements.phone?.addEventListener('input', (event) => {
+      event.target.value = formatBrazilianPhone(event.target.value);
+    });
+    walkInQuickClientForm.addEventListener('input', () => {
+      state.walkIns.quickDraft = Object.fromEntries(new FormData(walkInQuickClientForm));
+    });
+  }
+
+  const walkInCreateForm = document.querySelector('#walk-in-create-form');
+  if (walkInCreateForm) {
+    walkInCreateForm.querySelector('#walk-in-store:not(:disabled)')?.addEventListener('change', (event) => {
+      state.walkIns.storeId = event.target.value;
+      state.walkIns.serviceId = servicesForStore(state.walkIns.services, event.target.value)[0]?.id || '';
+      if (walkInQuickClientForm) state.walkIns.quickDraft = Object.fromEntries(new FormData(walkInQuickClientForm));
+      render();
+    });
+    walkInCreateForm.elements.serviceId?.addEventListener('change', (event) => {
+      state.walkIns.serviceId = event.target.value;
+    });
+    walkInCreateForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!navigator.onLine && !state.demoMode) {
+        showToast('Conecte-se a internet para criar um encaixe.', 'danger', 'wifi-off');
+        return;
+      }
+      const values = Object.fromEntries(new FormData(walkInCreateForm));
+      let selectedLead = selectedWalkInLead();
+      const quickCreate = state.walkIns.quickCreate === true;
+      const quickValues = quickCreate && walkInQuickClientForm
+        ? Object.fromEntries(new FormData(walkInQuickClientForm))
+        : null;
+      if (quickCreate) {
+        const quickValidation = validateQuickLeadInput(quickValues || {});
+        const firstInvalidQuickField = setFieldErrors(walkInQuickClientForm, quickValidation.errors);
+        if (!quickValidation.isValid) {
+          state.walkIns.quickDraft = quickValues || {};
+          showToast('Revise os dados essenciais do novo cliente.', 'danger', 'circle-alert');
+          revealFirstFormError(firstInvalidQuickField);
+          return;
+        }
+      }
+      const service = state.walkIns.services.find((item) => item.id === values.serviceId);
+      values.leadId = selectedLead?.id || (quickCreate ? 'quick-registration' : '');
+      values.storeId = selectedLead?.storeId || values.storeId;
+      values.queueDate = toLocalDateInput(new Date());
+      values.serviceName = service?.name || '';
+      if ((!selectedLead && !quickCreate) || !profileStoreIds(state.profile).includes(values.storeId)) {
+        showToast('Selecione um cliente de uma unidade permitida.', 'danger', 'circle-alert');
+        return;
+      }
+      const validation = validateWalkInDraft(values);
+      const firstInvalidField = setFieldErrors(walkInCreateForm, validation.errors);
+      if (!validation.isValid) {
+        showToast('Revise os dados do encaixe antes de adicionar a fila.', 'danger', 'circle-alert');
+        revealFirstFormError(firstInvalidField);
+        return;
+      }
+      state.walkIns.quickDraft = quickValues || {};
+      state.walkIns.saving = true;
+      render();
+      try {
+        let reusedExistingLead = false;
+        if (quickCreate && quickValues.customerCpf) {
+          const cpfResults = state.demoMode
+            ? searchDemoLeads(state.leads, quickValues.customerCpf, state.profile)
+            : await searchLeadAppointments(quickValues.customerCpf);
+          const cpfDigits = String(quickValues.customerCpf).replace(/\D/g, '');
+          const duplicate = cpfResults.find((item) => String(item.customerCpf || '').replace(/\D/g, '') === cpfDigits);
+          if (duplicate) {
+            if (duplicate.storeId !== values.storeId) {
+              const error = new Error('Cadastro localizado em outra unidade.');
+              error.code = 'walk-in-duplicate-other-store';
+              throw error;
+            }
+            selectedLead = duplicate;
+            values.leadId = duplicate.id;
+            reusedExistingLead = true;
+          }
+        }
+
+        if (quickCreate && !reusedExistingLead) {
+          const result = await createQuickWalkIn(state.profile, quickValues, values, { demoMode: state.demoMode });
+          if (!result.isValid) throw Object.assign(new Error('Dados invalidos.'), { code: 'walk-in-invalid', result });
+          selectedLead = result.lead;
+          values.leadId = result.lead.id;
+          if (state.demoMode) state.leads = [result.lead, ...state.leads];
+        } else if (!state.demoMode) {
+          const result = await createWalkIn(state.profile, values);
+          if (!result.isValid) throw Object.assign(new Error('Dados invalidos.'), { code: 'walk-in-invalid' });
+        }
+
+        if (state.demoMode) {
+          const now = new Date();
+          state.walkIns.records = [{
+            ...values,
+            id: `${values.queueDate}__${values.leadId}`,
+            status: 'waiting', priority: 0, arrivedAt: now, createdAt: now,
+            createdByUid: state.profile.uid, createdByName: state.profile.displayName,
+            updatedAt: now, updatedByUid: state.profile.uid, lead: selectedLead, schemaVersion: 1
+          }, ...state.walkIns.records];
+        }
+        state.walkIns = {
+          ...state.walkIns,
+          saving: false,
+          selectedLeadId: '',
+          searchQuery: '',
+          searchSearched: false,
+          searchResults: [],
+          serviceId: '',
+          quickCreate: false,
+          quickDraft: {}
+        };
+        showToast(reusedExistingLead
+          ? 'O cadastro ja existia e o cliente foi adicionado a fila.'
+          : quickCreate
+            ? 'Cliente cadastrado e adicionado a fila de encaixes.'
+            : 'Cliente adicionado a fila de encaixes.', 'success', 'circle-check');
+      } catch (error) {
+        state.walkIns.saving = false;
+        showToast(error?.code === 'walk-in-already-exists'
+          ? 'Este cliente ja possui um encaixe registrado hoje.'
+          : error?.code === 'walk-in-duplicate-other-store'
+            ? 'Este CPF ja pertence a um cadastro de outra unidade permitida. Selecione o cadastro existente para continuar.'
+          : error?.code === 'permission-denied'
+            ? 'Seu perfil nao pode criar encaixes nesta unidade.'
+            : 'Nao foi possivel adicionar o cliente a fila.', 'danger', 'circle-alert');
+      }
+      render();
+    });
+  }
+
+  document.querySelector('#walk-in-store-filter')?.addEventListener('change', (event) => {
+    state.walkIns.storeFilter = event.target.value;
+    render();
+  });
 
   bindAuthenticationForm({ state, render });
 
@@ -1276,6 +1498,59 @@ function stopConfirmationsSubscription() {
   stopConfirmationsLive(state);
 }
 
+function stopWalkInsSubscription() {
+  state.unsubscribeWalkIns?.();
+  state.unsubscribeWalkIns = null;
+}
+
+async function startWalkInsSubscription() {
+  stopWalkInsSubscription();
+  if (state.route !== 'walk-ins' || !hasAccess('walkins.manage')) return;
+  state.walkIns.loading = true;
+  state.walkIns.error = '';
+  render();
+  try {
+    if (state.demoMode) {
+      state.walkIns.services = [defaultAppointmentService(profileStoreIds(state.profile), DEFAULT_STORE_SCHEDULE.appointmentDurationMinutes)];
+      state.walkIns.loaded = true;
+      state.walkIns.loading = false;
+      render();
+      return;
+    }
+    state.walkIns.services = await loadAppointmentServices(state.profile);
+    state.unsubscribeWalkIns = subscribeToWalkIns(
+      state.profile,
+      toLocalDateInput(new Date()),
+      (records) => {
+        state.walkIns.records = records;
+        state.walkIns.loaded = true;
+        state.walkIns.loading = false;
+        state.walkIns.error = '';
+        render();
+      },
+      (error) => {
+        state.walkIns.loading = false;
+        state.walkIns.error = error?.code === 'permission-denied'
+          ? 'Seu perfil nao pode consultar a fila desta unidade.'
+          : 'Nao foi possivel carregar a fila de encaixes.';
+        render();
+      }
+    );
+  } catch (error) {
+    state.walkIns.loading = false;
+    state.walkIns.error = error?.code === 'permission-denied'
+      ? 'Seu perfil nao possui acesso a fila de encaixes.'
+      : 'Nao foi possivel preparar a fila de encaixes.';
+    render();
+  }
+}
+
+function ensureWalkInsData() {
+  if (state.route === 'walk-ins' && hasAccess('walkins.manage') && !state.walkIns.loaded && !state.walkIns.loading) {
+    startWalkInsSubscription();
+  }
+}
+
 function startConfirmationsSubscription() {
   return startConfirmationsLive({ state, render, hasAccess, subscribe: subscribeToAppointmentConfirmations });
 }
@@ -1371,6 +1646,7 @@ function refreshAuthorizedData() {
   ensureManagementData();
   ensureAppointmentsData();
   ensureConfirmationsData();
+  ensureWalkInsData();
   ensureNewLeadSchedule();
   ensureLeadDetailSchedule();
   ensureLeadDetailHistory();
@@ -1401,6 +1677,7 @@ function authControllerDependencies() {
     stopFollowUpScheduleSubscription,
     stopAppointmentsSubscription,
     stopConfirmationsSubscription,
+    stopWalkInsSubscription,
     stopNewLeadScheduleSubscriptions,
     stopLeadHistorySubscription: () => stopLeadHistorySubscription(state),
     synchronizePendingRegistrations,
@@ -1471,6 +1748,78 @@ async function handleAction(action) {
 
 export async function startApp() {
   document.addEventListener('click', async (event) => {
+    const quickWalkInCreateButton = event.target.closest('[data-walk-in-quick-create]');
+    if (quickWalkInCreateButton && hasAccess('leads.create')) {
+      const storeId = state.walkIns.storeId || allowedWalkInStores()[0]?.id || '';
+      state.walkIns.quickCreate = true;
+      state.walkIns.quickDraft = {};
+      state.walkIns.selectedLeadId = '';
+      state.walkIns.storeId = storeId;
+      state.walkIns.serviceId = servicesForStore(state.walkIns.services, storeId)[0]?.id || '';
+      render();
+      document.querySelector('#walk-in-quick-name')?.focus();
+      return;
+    }
+    const quickWalkInCancelButton = event.target.closest('[data-walk-in-quick-cancel]');
+    if (quickWalkInCancelButton) {
+      state.walkIns.quickCreate = false;
+      state.walkIns.quickDraft = {};
+      render();
+      return;
+    }
+    const selectWalkInLeadButton = event.target.closest('[data-walk-in-select-lead]');
+    if (selectWalkInLeadButton && !selectWalkInLeadButton.disabled) {
+      const lead = state.walkIns.searchResults.find((item) => item.id === selectWalkInLeadButton.dataset.walkInSelectLead);
+      if (!lead || !profileStoreIds(state.profile).includes(lead.storeId)) return;
+      state.walkIns.selectedLeadId = lead.id;
+      state.walkIns.quickCreate = false;
+      state.walkIns.quickDraft = {};
+      state.walkIns.storeId = lead.storeId;
+      state.walkIns.serviceId = servicesForStore(state.walkIns.services, lead.storeId)[0]?.id || '';
+      render();
+      return;
+    }
+    const walkInTransitionButton = event.target.closest('[data-walk-in-transition]');
+    if (walkInTransitionButton && !walkInTransitionButton.disabled) {
+      const item = state.walkIns.records.find((record) => record.id === walkInTransitionButton.dataset.walkInId);
+      const nextStatus = walkInTransitionButton.dataset.walkInTransition;
+      if (!item) return;
+      let reason = '';
+      if (WALK_IN_CLOSED_STATUSES.includes(nextStatus) && nextStatus !== 'completed') {
+        reason = window.prompt('Informe o motivo deste encerramento:')?.trim() || '';
+        if (!reason) return;
+      }
+      state.walkIns.updatingId = item.id;
+      render();
+      try {
+        if (state.demoMode) {
+          const now = new Date();
+          state.walkIns.records = state.walkIns.records.map((record) => record.id === item.id ? {
+            ...record,
+            status: nextStatus,
+            closedReason: reason,
+            ...(nextStatus === 'called' ? { calledAt: now } : {}),
+            ...(nextStatus === 'in_service' ? { startedAt: now } : {}),
+            ...(nextStatus === 'completed' ? { completedAt: now } : {}),
+            updatedAt: now,
+            updatedByUid: state.profile.uid
+          } : record);
+        } else {
+          await transitionWalkIn(state.profile, item, nextStatus, reason);
+        }
+        showToast(nextStatus === 'completed' ? 'Atendimento concluido.' : 'Fila de encaixes atualizada.', 'success', 'circle-check');
+      } catch (error) {
+        showToast(error?.code === 'walk-in-stale-state'
+          ? 'Este encaixe ja foi atualizado por outra pessoa.'
+          : error?.code === 'permission-denied'
+            ? 'Seu perfil nao pode alterar este encaixe.'
+            : 'Nao foi possivel atualizar o encaixe.', 'danger', 'circle-alert');
+      } finally {
+        state.walkIns.updatingId = '';
+        render();
+      }
+      return;
+    }
     const searchLeadButton = event.target.closest('[data-search-open-lead]');
     if (searchLeadButton && !searchLeadButton.disabled) {
       const result = state.leadSearch.results.find((item) => item.id === searchLeadButton.dataset.searchOpenLead);
@@ -1482,6 +1831,9 @@ export async function startApp() {
           : await loadSearchLead(result.id);
         if (!lead) throw new Error('not-found');
         if (lead.capturedByUid === state.profile?.uid && hasAccess('leads.view_own')) {
+          if (!state.leads.some((item) => item.id === lead.id)) state.leads = [lead, ...state.leads];
+          navigate('lead', lead.id);
+        } else if (hasAccess('leads.view_stores')) {
           if (!state.leads.some((item) => item.id === lead.id)) state.leads = [lead, ...state.leads];
           navigate('lead', lead.id);
         } else if (canManage()) {
@@ -1754,6 +2106,7 @@ export async function startApp() {
     refreshAuthorizedData,
     stopAppointmentsSubscription,
     stopConfirmationsSubscription,
+    stopWalkInsSubscription,
     stopNewLeadScheduleSubscriptions,
     stopLeadHistorySubscription: () => stopLeadHistorySubscription(state),
     handleConnectivity: handleConnectivityChange,

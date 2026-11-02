@@ -21,10 +21,12 @@ export const PERMISSION_GROUPS = [
   {
     label: 'Equipe e unidades',
     permissions: [
+      { id: 'leads.view_stores', label: 'Consultar cadastros das unidades', scopes: ['stores'] },
       { id: 'management.view', label: 'Acessar a gestão de leads', scopes: ['stores'] },
       { id: 'leads.clinical_update', label: 'Atualizar dados clinicos do lead', scopes: ['stores'] },
       { id: 'appointments.view', label: 'Visualizar a agenda de exames', scopes: ['stores'] },
       { id: 'appointments.attendance', label: 'Registrar comparecimento e falta', scopes: ['stores'] },
+      { id: 'walkins.manage', label: 'Gerenciar encaixes do consultório', scopes: ['stores'] },
       { id: 'followups.team', label: 'Acompanhar retornos da equipe', scopes: ['stores'] },
       { id: 'goals.manage', label: 'Criar e editar metas da equipe', scopes: ['stores'] },
       { id: 'dashboard.view', label: 'Visualizar dashboard', scopes: ['stores'] },
@@ -69,6 +71,17 @@ export function permissionsForProfile(profile) {
 }
 
 export function hasPermission(profile, permission) {
+  if (profile?.role === 'admin') return true;
+  if (profile?.roleProfileId === 'system-telemarketing') {
+    return [
+      'leads.create', 'leads.view_own', 'leads.edit_own', 'followups.own',
+      'leads.view_stores', 'appointments.view', 'followups.team'
+    ].includes(permission);
+  }
+  if (permission === 'walkins.manage') {
+    return ['system-manager', 'system-receptionist'].includes(profile?.roleProfileId)
+      || (profile?.role === 'manager' && !profile?.roleProfileId);
+  }
   return permissionsForProfile(profile).includes(permission);
 }
 
@@ -83,7 +96,7 @@ export function normalizeRolePermissions(scope, values = []) {
   const allowed = new Set(permissionsForScope(scope));
   const requested = Array.isArray(values) ? values.map(String) : [];
   const permissions = [...new Set(requested.filter((permission) => allowed.has(permission)))];
-  const managementDependents = ['leads.clinical_update', 'followups.team', 'goals.manage', 'dashboard.view', 'leads.export'];
+  const managementDependents = ['leads.clinical_update', 'goals.manage', 'dashboard.view', 'leads.export'];
   if (permissions.some((permission) => managementDependents.includes(permission)) && allowed.has('management.view') && !permissions.includes('management.view')) {
     permissions.push('management.view');
   }

@@ -58,6 +58,14 @@
       ]
     },
     {
+      "collectionGroup": "appointmentWalkIns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storeId", "order": "ASCENDING" },
+        { "fieldPath": "queueDate", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "appointmentServices",
       "queryScope": "COLLECTION",
       "fields": [

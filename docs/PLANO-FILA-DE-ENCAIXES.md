@@ -2,7 +2,9 @@
 
 ## Status
 
-Planejado, sem implementacao iniciada.
+Primeira versao operacional implementada em 30/10/2026.
+
+Esta entrega inclui acesso pela pagina inicial, pesquisa por nome ou CPF, selecao de cadastro existente, criacao da entrada, fila diaria por unidade, estados de chamada e atendimento, encerramentos justificados, historico do lead e regras de seguranca no Firestore. Permanecem para evolucoes posteriores: cadastro rapido dentro do proprio fluxo, prioridade manual, alerta de conflito com o proximo horario, conversao para agendamento futuro e indicadores gerenciais.
 
 Este documento registra a proposta operacional para receber clientes presenciais que solicitam atendimento no mesmo dia, especialmente em dias de grande movimento. A implementacao devera ser validada com a recepcao e com os profissionais responsaveis antes de ser iniciada.
 
@@ -302,24 +304,25 @@ A primeira versao nao precisa enviar notificacoes externas nem mensagens automat
 
 ### Etapa 1: dados e seguranca
 
-- [ ] Definir o modelo final da colecao.
-- [ ] Criar validadores e normalizacao de estados.
-- [ ] Criar regras do Firestore e testes no emulador.
-- [ ] Criar eventos de historico e auditoria.
-- [ ] Garantir idempotencia nas transicoes de estado.
+- [x] Definir o modelo inicial da colecao.
+- [x] Criar validadores e normalizacao de estados.
+- [x] Criar regras do Firestore e testes no emulador.
+- [x] Criar eventos de historico e auditoria.
+- [x] Garantir transicoes de estado validadas no cliente e no Firestore.
 
 ### Etapa 2: fila basica
 
-- [ ] Adicionar o botao **Novo encaixe** na agenda.
-- [ ] Implementar pesquisa por nome e CPF.
-- [ ] Reutilizar o cadastro existente ou iniciar cadastro rapido.
-- [ ] Criar a lista de clientes aguardando.
-- [ ] Implementar desistencia, impossibilidade e cancelamento.
+- [x] Adicionar o botao **Novo encaixe rapido** na pagina inicial.
+- [x] Implementar pesquisa por nome e CPF.
+- [x] Reutilizar o cadastro existente.
+- [ ] Iniciar cadastro rapido dentro da tela de encaixes.
+- [x] Criar a lista de clientes aguardando.
+- [x] Implementar desistencia, impossibilidade e cancelamento.
 
 ### Etapa 3: operacao do atendimento
 
-- [ ] Implementar **Chamar proximo**.
-- [ ] Registrar inicio e termino reais.
+- [x] Implementar chamada individual seguindo a ordem da fila.
+- [x] Registrar inicio e termino reais.
 - [ ] Exibir risco de conflito com o proximo agendamento.
 - [ ] Exigir justificativa para prioridade e excecoes.
 - [ ] Permitir conversao para agendamento futuro.

@@ -24,6 +24,29 @@ describe('application shell modules', () => {
     expect(markup).not.toContain('Acessos da equipe');
   });
 
+  it('shows walk-ins only to profiles with the dedicated permission', () => {
+    const receptionistMarkup = homeView({
+      state,
+      hasAccess: (permission) => permission === 'walkins.manage',
+      canManage: () => false,
+      canManageGoals: () => false,
+      isAdmin: () => false,
+      pendingFollowUps: () => []
+    });
+    const telemarketingMarkup = homeView({
+      state,
+      hasAccess: (permission) => ['leads.create', 'leads.view_stores', 'appointments.view'].includes(permission),
+      canManage: () => false,
+      canManageGoals: () => false,
+      isAdmin: () => false,
+      pendingFollowUps: () => []
+    });
+
+    expect(receptionistMarkup).toContain('Novo encaixe rapido');
+    expect(telemarketingMarkup).not.toContain('Novo encaixe rapido');
+    expect(telemarketingMarkup).not.toContain('Painel de gestao');
+  });
+
   it('keeps navigation active state and management grouping', () => {
     const navigation = bottomNavigation({ state: { ...state, route: 'dashboard' }, hasAccess, canManage: () => true, pendingFollowUps: () => [] });
     expect(navigation).toContain('Gestão');

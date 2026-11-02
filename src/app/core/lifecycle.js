@@ -59,6 +59,7 @@ export async function startLifecycle({
   refreshAuthorizedData,
   stopAppointmentsSubscription,
   stopConfirmationsSubscription,
+  stopWalkInsSubscription,
   stopNewLeadScheduleSubscriptions,
   stopLeadHistorySubscription,
   handleConnectivity,
@@ -77,6 +78,7 @@ export async function startLifecycle({
     if (previousRoute === 'management-lead' && state.route !== 'management-lead') state.management.activeLead = null;
     if (state.route !== 'appointments') stopAppointmentsSubscription();
     if (state.route !== 'confirmations') stopConfirmationsSubscription();
+    if (state.route !== 'walk-ins') stopWalkInsSubscription?.();
     if (!['lead', 'management-lead'].includes(state.route)) stopLeadHistorySubscription?.();
     if (state.route !== 'new') {
       stopNewLeadScheduleSubscriptions();

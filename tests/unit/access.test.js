@@ -73,6 +73,19 @@ describe('access validation', () => {
     expect(result.data.storeIds).toEqual(['loja-06', 'loja-02']);
   });
 
+  it('always grants telemarketing access to every store', () => {
+    const result = validateAccess({
+      displayName: 'Equipe Telemarketing',
+      email: 'telemarketing@example.com',
+      roleProfileId: 'system-telemarketing',
+      storeId: 'loja-06',
+      storeIds: ['loja-06']
+    }, SYSTEM_ROLE_PROFILES);
+
+    expect(result.isValid).toBe(true);
+    expect(result.data.storeIds).toEqual(['loja-02', 'loja-04', 'loja-05', 'loja-06']);
+  });
+
   it('moves the manager primary store when only another permitted store remains', () => {
     const result = validateAccess({
       displayName: 'Gestor da Loja 06',

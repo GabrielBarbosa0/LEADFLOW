@@ -21,7 +21,14 @@ export const FUNNEL_EVENT_LABELS = Object.freeze({
   appointment_missed: 'Falta registrada',
   follow_up_contacted: 'Retorno iniciado',
   birthday_benefit_planned: 'Beneficio de aniversario planejado',
-  birthday_congratulated: 'Cliente parabenizado'
+  birthday_congratulated: 'Cliente parabenizado',
+  walk_in_created: 'Encaixe criado',
+  walk_in_called: 'Cliente chamado para encaixe',
+  walk_in_in_service: 'Atendimento do encaixe iniciado',
+  walk_in_completed: 'Encaixe atendido',
+  walk_in_gave_up: 'Desistencia do encaixe',
+  walk_in_not_accommodated: 'Encaixe nao realizado',
+  walk_in_cancelled: 'Encaixe cancelado'
 });
 
 export function funnelStageLabel(stage) {

@@ -28,7 +28,8 @@ const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
 const accessSyncEnabled = import.meta.env.VITE_ENABLE_ACCESS_SYNC === 'true'
-  || import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+  || import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
+  || import.meta.env.PROD;
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();

@@ -17,6 +17,7 @@ function normalizeEmail(value) {
 function systemProfileForAccess(access = {}) {
   const assigned = SYSTEM_ROLE_PROFILES.get(String(access.roleProfileId || ''));
   if (assigned) return assigned;
+  if (access.roleProfileId) return null;
   return systemRoleConfig.profiles.find((profile) => profile.baseRole === access.role) || null;
 }
 
@@ -345,7 +346,9 @@ function searchResultForLead(snapshot, caller) {
   const lead = snapshot.data();
   const ownsLead = lead.capturedByUid === caller.uid;
   const canManageLead = caller.role === 'admin'
-    || (caller.role === 'manager' && caller.permissions.includes('management.view') && caller.storeIds.includes(lead.storeId));
+    || (caller.role === 'manager'
+      && (caller.permissions.includes('management.view') || caller.permissions.includes('leads.view_stores'))
+      && caller.storeIds.includes(lead.storeId));
   return {
     id: snapshot.id,
     fullName: String(lead.fullName || ''),

@@ -22,6 +22,7 @@ export function leadDetailView({
   appointmentTimeMarkup,
   canDelete,
   canEditClinical = false,
+  readOnly = false,
   inDialog = false,
   history = { loading: false, error: '', records: [], stage: '' }
 }) {
@@ -29,7 +30,7 @@ export function leadDetailView({
     return '<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>Seu perfil não pode alterar leads da equipe.</span></div>';
   }
 
-  const backRoute = managementMode ? 'management' : 'leads';
+  const backRoute = readOnly ? 'search' : managementMode ? 'management' : 'leads';
   if (!lead) {
     return `<section class="page-toolbar"><button class="back-button" type="button" data-route="${backRoute}" aria-label="Voltar"><i data-lucide="arrow-left"></i></button></section><div class="notice notice-warning"><i data-lucide="info"></i><span>Cadastro não encontrado. Volte para a lista e tente novamente.</span></div>`;
   }
@@ -37,7 +38,10 @@ export function leadDetailView({
   const [syncStatus, syncTone] = managementMode ? ['Sincronizado', 'success'] : syncLabel(lead);
   const managerReschedule = managementMode && profileRole === 'manager' && !canEditClinical;
   const offlineEdit = !navigator.onLine;
-  const locked = managerReschedule || offlineEdit ? 'disabled' : '';
+  const locked = managerReschedule || offlineEdit || readOnly ? 'disabled' : '';
+  const renderedAppointmentTimeMarkup = readOnly
+    ? appointmentTimeMarkup.replace(/<select\b(?![^>]*\bdisabled\b)/g, '<select disabled').replace(/<input\b(?![^>]*\bdisabled\b)/g, '<input disabled')
+    : appointmentTimeMarkup;
   const showAmetropiaFields = scheduleState.storeId === lead.storeId && scheduleState.settings.showAmetropiaFields;
   const interests = INTERESTS.map((item) => `<option value="${item.id}" ${lead.interestId === item.id ? 'selected' : ''}>${item.label}</option>`).join('');
   const selectedService = selectedLeadDetailService(lead, scheduleState);
@@ -55,8 +59,8 @@ export function leadDetailView({
       <div><span>Loja</span><strong>${escapeHtml(storeLabel(lead.storeId))}</strong></div>
       <button class="lead-history-summary" type="button" data-open-lead-history aria-haspopup="dialog"><span>Histórico do lead</span><strong>Ver histórico</strong><small>Ver todas as alterações</small></button>
     </section>
-    <form id="edit-lead-form" class="form-panel" data-lead-id="${escapeHtml(lead.id)}" data-management="${managementMode}" novalidate>
-      ${offlineEdit ? '<div class="notice notice-warning"><i data-lucide="wifi-off"></i><span>O cadastro pode ser consultado offline, mas alterações e agendamento exigem internet.</span></div>' : ''}
+    <form id="edit-lead-form" class="form-panel" data-lead-id="${escapeHtml(lead.id)}" data-management="${managementMode}" data-read-only="${readOnly}" novalidate>
+      ${readOnly ? '<div class="notice notice-info"><i data-lucide="eye"></i><span>Consulta somente leitura. Este perfil não pode alterar nem excluir o cadastro.</span></div>' : offlineEdit ? '<div class="notice notice-warning"><i data-lucide="wifi-off"></i><span>O cadastro pode ser consultado offline, mas alterações e agendamento exigem internet.</span></div>' : ''}
       <input name="schedulingMode" type="hidden" value="${escapeHtml(scheduleState.settings.schedulingMode || lead.appointmentSchedulingMode || 'controlled')}" />
       ${triageConfigFields(scheduleState.settings)}
       <input name="appointmentDurationMinutes" type="hidden" value="${selectedService.durationMinutes}" />
@@ -82,11 +86,11 @@ export function leadDetailView({
       ${eyeTriageFields(lead, scheduleState.settings, 'edit-lead-eye')}
       ${transportFields(lead, scheduleState.settings, 'edit-lead-transport', Boolean(locked))}
       <div class="field-row appointment-fields">
-        <div class="field" data-field="appointmentDate"><label for="edit-appointmentDate">Data do pré-agendamento</label><input id="edit-appointmentDate" name="appointmentDate" type="date" min="${toLocalDateInput(new Date())}" value="${escapeHtml(scheduleState.appointmentDate || lead.appointmentDate)}" ${offlineEdit ? 'disabled' : ''} /><small class="schedule-date-status">${offlineEdit ? 'Conecte-se para escolher uma data.' : ''}</small><small class="field-error"></small></div>
-        ${appointmentTimeMarkup}
+        <div class="field" data-field="appointmentDate"><label for="edit-appointmentDate">Data do pré-agendamento</label><input id="edit-appointmentDate" name="appointmentDate" type="date" min="${toLocalDateInput(new Date())}" value="${escapeHtml(scheduleState.appointmentDate || lead.appointmentDate)}" ${offlineEdit || readOnly ? 'disabled' : ''} /><small class="schedule-date-status">${offlineEdit ? 'Conecte-se para escolher uma data.' : ''}</small><small class="field-error"></small></div>
+        ${renderedAppointmentTimeMarkup}
       </div>
       <div class="field" data-field="notes"><label for="edit-notes">Observação rápida</label><textarea id="edit-notes" name="notes" maxlength="500" rows="3" ${locked}>${escapeHtml(lead.notes)}</textarea><small class="field-hint"><span id="edit-notes-count">${String(lead.notes || '').length}</span>/500</small><small class="field-error"></small></div>
-      <button class="button button-primary button-block" type="submit" ${offlineEdit ? 'disabled' : ''}><i data-lucide="save"></i><span>${managerReschedule ? 'Salvar reagendamento' : 'Salvar alterações'}</span></button>
+      ${readOnly ? '' : `<button class="button button-primary button-block" type="submit" ${offlineEdit ? 'disabled' : ''}><i data-lucide="save"></i><span>${managerReschedule ? 'Salvar reagendamento' : 'Salvar alterações'}</span></button>`}
       ${canDelete ? `<button class="button button-danger button-block" type="button" data-delete-lead="${escapeHtml(lead.id)}"><i data-lucide="trash-2"></i><span>Excluir lead</span></button>` : ''}
       <p class="form-footnote"><i data-lucide="shield-check"></i> Autor, loja e data original permanecem preservados.</p>
     </form>

@@ -48,6 +48,7 @@ export async function handleAuthenticationAction(action, dependencies) {
     stopFollowUpScheduleSubscription,
     stopAppointmentsSubscription,
     stopConfirmationsSubscription,
+    stopWalkInsSubscription,
     stopNewLeadScheduleSubscriptions,
     createDefaultManagementFilters,
     createDefaultGoalDraft,
@@ -125,6 +126,7 @@ export async function handleAuthenticationAction(action, dependencies) {
   state.unsubscribeLeads = null;
   stopAppointmentsSubscription();
   stopConfirmationsSubscription();
+  stopWalkInsSubscription?.();
   stopNewLeadScheduleSubscriptions();
   stopOfflineCaptureSubscription();
   stopFollowUpScheduleSubscription();
@@ -149,7 +151,8 @@ export async function startAuthenticationController(dependencies) {
     refreshAuthorizedData,
     hasAccess,
     stopAppointmentsSubscription,
-    stopConfirmationsSubscription
+    stopConfirmationsSubscription,
+    stopWalkInsSubscription
   } = dependencies;
 
   if (hasDemoSession(devMode)) {
@@ -204,6 +207,7 @@ export async function startAuthenticationController(dependencies) {
         if (!hasAccess('appointments.view')) {
           stopAppointmentsSubscription();
           stopConfirmationsSubscription();
+          stopWalkInsSubscription?.();
         }
         subscribeProfileLeads();
         startOfflineCaptureSubscription();
