@@ -5342,6 +5342,33 @@ svg {
   gap: 16px;
 }
 
+@media (max-width: 1200px) and (min-width: 1001px) {
+  .calendar-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .calendar-navigation {
+    justify-content: space-between;
+  }
+
+  .calendar-toolbar-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .calendar-store-filter {
+    min-width: 0;
+  }
+
+  .calendar-store-filter select {
+    width: auto;
+    min-width: 0;
+    flex: 1;
+  }
+}
+
 @media (max-width: 1000px) and (min-width: 761px) {
   .agenda-layout {
     grid-template-columns: minmax(0, 1fr);

@@ -1166,7 +1166,7 @@ test('shows complete transport details in appointment cards', async ({ page }, t
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
   await page.locator(`[data-appointment-date="${appointmentDate}"]`).click();
   const transport = page.locator('.appointment-transport');
-  await expect(transport).toContainText('Transporte + acompanhante');
+  await expect(transport).toContainText('Transporte + Acompanhante');
   await expect(page.locator('.transport-day-summary')).toContainText('1 cliente · 2 assentos');
   expect(await transport.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('appointment-transport.png'), fullPage: true });
