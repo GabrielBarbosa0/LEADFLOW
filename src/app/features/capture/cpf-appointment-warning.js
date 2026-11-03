@@ -1,4 +1,5 @@
 import { isValidCpf, normalizeCpf } from '../../../utils/savwin-matching.js';
+import { hasActiveAppointment as hasUncancelledAppointment } from '../../../utils/appointment-cancellation.js';
 
 export const CPF_APPOINTMENT_WARNING = 'Já existe um agendamento ativo vinculado a este CPF.';
 
@@ -10,13 +11,7 @@ export function localDateKey(now = new Date()) {
 }
 
 export function hasActiveAppointment(lead = {}, today = localDateKey()) {
-  const attendance = String(lead.appointmentAttendance || 'pending');
-  return Boolean(
-    lead.appointmentDate
-    && lead.appointmentTime
-    && String(lead.appointmentDate) >= today
-    && !['attended', 'missed'].includes(attendance)
-  );
+  return hasUncancelledAppointment(lead, today);
 }
 
 export function hasDemoCpfAppointment(leads = [], cpf = '', today = localDateKey()) {

@@ -22,6 +22,7 @@ export function leadDetailView({
   scheduleState,
   appointmentTimeMarkup,
   canDelete,
+  canCancelAppointment = false,
   canEditClinical = false,
   readOnly = false,
   inDialog = false,
@@ -41,7 +42,9 @@ export function leadDetailView({
   const managerReschedule = managementMode && profileRole === 'manager' && !canEditClinical;
   const offlineEdit = !navigator.onLine;
   const locked = managerReschedule || offlineEdit || readOnly ? 'disabled' : '';
-  const renderedAppointmentTimeMarkup = readOnly
+  const appointmentCancelled = lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled';
+  const scheduleLocked = readOnly || appointmentCancelled;
+  const renderedAppointmentTimeMarkup = scheduleLocked
     ? appointmentTimeMarkup.replace(/<select\b(?![^>]*\bdisabled\b)/g, '<select disabled').replace(/<input\b(?![^>]*\bdisabled\b)/g, '<input disabled')
     : appointmentTimeMarkup;
   const showAmetropiaFields = scheduleState.storeId === lead.storeId && scheduleState.settings.showAmetropiaFields;
@@ -88,12 +91,14 @@ export function leadDetailView({
       <fieldset class="field ametropia-field" ${locked}><legend>Patologias e condições de saúde</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${pathologyOptions(lead.pathologyIds || [])}</div></fieldset>
       ${eyeTriageFields(lead, scheduleState.settings, 'edit-lead-eye')}
       ${transportFields(lead, scheduleState.settings, 'edit-lead-transport', Boolean(locked))}
+      ${appointmentCancelled ? '<div class="notice notice-warning"><i data-lucide="calendar-x"></i><span>Este agendamento foi cancelado. Data e horário ficam preservados no histórico.</span></div>' : ''}
       <div class="field-row appointment-fields">
-        <div class="field" data-field="appointmentDate"><label for="edit-appointmentDate">Data do pré-agendamento</label><input id="edit-appointmentDate" name="appointmentDate" type="date" min="${toLocalDateInput(new Date())}" value="${escapeHtml(scheduleState.appointmentDate || lead.appointmentDate)}" ${offlineEdit || readOnly ? 'disabled' : ''} /><small class="schedule-date-status">${offlineEdit ? 'Conecte-se para escolher uma data.' : ''}</small><small class="field-error"></small></div>
+        <div class="field" data-field="appointmentDate"><label for="edit-appointmentDate">Data do pré-agendamento</label><input id="edit-appointmentDate" name="appointmentDate" type="date" min="${toLocalDateInput(new Date())}" value="${escapeHtml(scheduleState.appointmentDate || lead.appointmentDate)}" ${offlineEdit || scheduleLocked ? 'disabled' : ''} /><small class="schedule-date-status">${offlineEdit ? 'Conecte-se para escolher uma data.' : ''}</small><small class="field-error"></small></div>
         ${renderedAppointmentTimeMarkup}
       </div>
       <div class="field" data-field="notes"><label for="edit-notes">Observação rápida</label><textarea id="edit-notes" name="notes" maxlength="500" rows="3" ${locked}>${escapeHtml(lead.notes)}</textarea><small class="field-hint"><span id="edit-notes-count">${String(lead.notes || '').length}</span>/500</small><small class="field-error"></small></div>
       ${readOnly ? '' : `<button class="button button-primary button-block" type="submit" ${offlineEdit ? 'disabled' : ''}><i data-lucide="save"></i><span>${managerReschedule ? 'Salvar reagendamento' : 'Salvar alterações'}</span></button>`}
+      ${canCancelAppointment ? `<button class="button button-danger button-block" type="button" data-cancel-appointment="${escapeHtml(lead.id)}" ${offlineEdit ? 'disabled' : ''}><i data-lucide="calendar-x"></i><span>Cancelar agendamento</span></button>` : ''}
       ${canDelete ? `<button class="button button-danger button-block" type="button" data-delete-lead="${escapeHtml(lead.id)}"><i data-lucide="trash-2"></i><span>Excluir lead</span></button>` : ''}
       <p class="form-footnote"><i data-lucide="shield-check"></i> Autor, loja e data original permanecem preservados.</p>
     </form>

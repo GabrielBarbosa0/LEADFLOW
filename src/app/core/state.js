@@ -67,6 +67,8 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       records: [],
       truncated: false,
       updatingId: '',
+      cancellationLeadId: '',
+      cancellationSaving: false,
       backfillingMonth: '',
       backfilledMonths: [],
       month: monthKeyFromDate(),

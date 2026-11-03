@@ -1,5 +1,5 @@
 {
-  "permissionSchemaVersion": 3,
+  "permissionSchemaVersion": 4,
   "profiles": [
     {
       "id": "system-captor",
@@ -10,6 +10,7 @@
         "leads.create",
         "leads.view_own",
         "leads.edit_own",
+        "appointments.cancel",
         "followups.own",
         "goals.view_own"
       ]
@@ -23,6 +24,7 @@
         "leads.create",
         "leads.view_own",
         "leads.edit_own",
+        "appointments.cancel",
         "followups.own",
         "goals.view_own"
       ]
@@ -44,6 +46,7 @@
         "leads.clinical_update",
         "appointments.view",
         "appointments.attendance",
+        "appointments.cancel",
         "walkins.manage",
         "followups.team",
         "goals.manage",
@@ -81,6 +84,7 @@
         "leads.clinical_update",
         "appointments.view",
         "appointments.attendance",
+        "appointments.cancel",
         "walkins.manage",
         "followups.team"
       ]

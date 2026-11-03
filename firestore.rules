@@ -31,9 +31,9 @@ service cloud.firestore {
     }
 
     function legacyPermission(permission) {
-      return permission in ['leads.create', 'leads.view_own', 'leads.edit_own', 'followups.own', 'goals.view_own']
+      return permission in ['leads.create', 'leads.view_own', 'leads.edit_own', 'appointments.cancel', 'followups.own', 'goals.view_own']
         || (userProfile().role == 'manager' && permission in [
-          'management.view', 'appointments.view', 'appointments.attendance',
+          'management.view', 'appointments.view', 'appointments.attendance', 'appointments.cancel',
           'followups.team', 'goals.manage', 'dashboard.view', 'leads.export',
           'leads.clinical_update', 'leads.edit_all', 'leads.delete'
         ]);
@@ -188,7 +188,9 @@ service cloud.firestore {
         && (!('appointmentDate' in data) || !('appointmentTime' in data)
           || ((data.appointmentDate == '') == (data.appointmentTime == '')))
         && (!('appointmentAttendance' in data)
-          || data.appointmentAttendance in ['pending', 'attended', 'missed'])
+          || data.appointmentAttendance in ['pending', 'attended', 'missed', 'cancelled'])
+        && (!('appointmentStatus' in data)
+          || data.appointmentStatus in ['scheduled', 'cancelled'])
         && (!('appointmentSchedulingMode' in data)
           || data.appointmentSchedulingMode in ['controlled', 'free'])
         && (!('appointmentDurationMinutes' in data)
@@ -506,7 +508,9 @@ service cloud.firestore {
           || ((request.resource.data.appointmentDate == '')
             == (request.resource.data.appointmentTime == '')))
         && (!('appointmentAttendance' in request.resource.data)
-          || request.resource.data.appointmentAttendance in ['pending', 'attended', 'missed'])
+          || request.resource.data.appointmentAttendance in ['pending', 'attended', 'missed', 'cancelled'])
+        && (!('appointmentStatus' in request.resource.data)
+          || request.resource.data.appointmentStatus in ['scheduled', 'cancelled'])
         && (!('customerRg' in request.resource.data)
           || (request.resource.data.customerRg is string
             && request.resource.data.customerRg.size() <= 20))
@@ -573,12 +577,61 @@ service cloud.firestore {
           ));
     }
 
+    function validAppointmentCancellation() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'appointmentStatus', 'appointmentAttendance',
+          'appointmentCancelledAtServer', 'appointmentCancelledByUid',
+          'appointmentCancelledByName', 'appointmentCancellationReason',
+          'appointmentCancellationDetails', 'funnelStage', 'funnelReasonCode',
+          'funnelUpdatedAtClient', 'funnelUpdatedAtServer', 'updatedAtServer'
+        ])
+        && resource.data.appointmentDate is string
+        && resource.data.appointmentDate != ''
+        && resource.data.appointmentTime is string
+        && resource.data.appointmentTime != ''
+        && (!('appointmentStatus' in resource.data) || resource.data.appointmentStatus != 'cancelled')
+        && (!('appointmentAttendance' in resource.data)
+          || resource.data.appointmentAttendance in ['pending'])
+        && request.resource.data.appointmentStatus == 'cancelled'
+        && request.resource.data.appointmentAttendance == 'cancelled'
+        && request.resource.data.appointmentCancelledAtServer == request.time
+        && request.resource.data.appointmentCancelledByUid == request.auth.uid
+        && request.resource.data.appointmentCancelledByName == userProfile().displayName
+        && request.resource.data.appointmentCancellationReason in [
+          'client_withdrew', 'unable_to_attend', 'schedule_conflict',
+          'other_provider', 'transport_issue', 'duplicate_registration',
+          'operational_guidance', 'other'
+        ]
+        && request.resource.data.appointmentCancellationDetails is string
+        && request.resource.data.appointmentCancellationDetails.size() <= 500
+        && (request.resource.data.appointmentCancellationReason != 'other'
+          || request.resource.data.appointmentCancellationDetails.size() >= 3)
+        && request.resource.data.funnelStage == 'cancelled'
+        && request.resource.data.funnelReasonCode == request.resource.data.appointmentCancellationReason
+        && request.resource.data.funnelUpdatedAtServer == request.time
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function isAppointmentCancellationUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'appointmentStatus', 'appointmentCancelledAtServer',
+        'appointmentCancellationReason'
+      ]);
+    }
+
     function isOwnerLeadUpdate() {
       return resource.data.capturedByUid == request.auth.uid
         && userHasStore(resource.data.storeId)
         && hasPermission('leads.edit_own')
         && validLeadUpdateShape()
         && ownerAttendanceChangeIsValid();
+    }
+
+    function isOwnerAppointmentCancellation() {
+      return resource.data.capturedByUid == request.auth.uid
+        && userHasStore(resource.data.storeId)
+        && hasPermission('appointments.cancel')
+        && validAppointmentCancellation();
     }
 
     function isManagerLeadUpdate() {
@@ -758,10 +811,18 @@ service cloud.firestore {
         activeUser()
         && leadIdentityIsUnchanged()
         && (
-          isOwnerLeadUpdate()
-          || isOwnerAppointmentUpdate()
-          || isCaptorFollowUpContactUpdate()
-          || isManagerLeadUpdate()
+          (isAppointmentCancellationUpdate()
+            && (isOwnerAppointmentCancellation()
+              || (isManager()
+                && managerHasStore(resource.data.storeId)
+                && hasPermission('appointments.cancel')
+                && validAppointmentCancellation())))
+          || (!isAppointmentCancellationUpdate() && (
+            isOwnerLeadUpdate()
+            || isOwnerAppointmentUpdate()
+            || isCaptorFollowUpContactUpdate()
+            || isManagerLeadUpdate()
+          ))
         )
       );
 
@@ -849,7 +910,15 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.capturedByUid == request.resource.data.capturedByUid;
       allow delete: if isAdmin()
         || (activeUser() && (
-          (hasPermission('leads.delete')
+          (resource.data.capturedByUid == request.auth.uid
+            && hasPermission('appointments.cancel')
+            && existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
+            && getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled')
+          || (managerHasStore(resource.data.storeId)
+            && hasPermission('appointments.cancel')
+            && existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
+            && getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled')
+          || (hasPermission('leads.delete')
             && (resource.data.capturedByUid == request.auth.uid || managerHasStore(resource.data.storeId))
             && !existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)))
           || (resource.data.capturedByUid == request.auth.uid
@@ -858,6 +927,7 @@ service cloud.firestore {
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDate != resource.data.appointmentDate
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled'
             ))
         ));
     }

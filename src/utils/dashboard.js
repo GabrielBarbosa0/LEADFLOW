@@ -1,4 +1,5 @@
 import { calculateAge, INTERESTS, PATHOLOGIES } from './lead.js';
+import { hasActiveAppointment } from './appointment-cancellation.js';
 
 function percentage(count, total) {
   return total ? Math.round((count / total) * 100) : 0;
@@ -53,7 +54,7 @@ export function upcomingDateRange(today = new Date()) {
 
 export function dashboardSummary(records = [], upcomingRecords = records, today = new Date()) {
   const total = records.length;
-  const scheduled = records.filter((lead) => lead.appointmentDate && lead.appointmentTime).length;
+  const scheduled = records.filter((lead) => hasActiveAppointment(lead)).length;
   const ophthalmologist = records.filter((lead) => lead.careRoute === 'ophthalmologist').length;
   const transportRecords = records.filter((lead) => lead.needsTransport);
   const paidExams = records.filter((lead) => lead.examPaymentType === 'paid').length;
@@ -63,7 +64,7 @@ export function dashboardSummary(records = [], upcomingRecords = records, today 
   const upcoming = upcomingRecords.filter((lead) => (
     lead.appointmentDate >= startDate
     && lead.appointmentDate <= endDate
-    && lead.appointmentTime
+    && hasActiveAppointment(lead)
   ));
   const upcomingTransport = upcoming.filter((lead) => lead.needsTransport);
   const clinicalRoutes = [

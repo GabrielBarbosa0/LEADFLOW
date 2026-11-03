@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { createLeadDocument } from '../../src/utils/lead.js';
 
 const projectId = 'demo-fascinlead-leads';
@@ -99,6 +99,40 @@ function authenticatedDb(uid, email) {
 }
 
 describe('lead correction rules', () => {
+  it('lets the owner cancel an appointment while releasing its reserved slot and preserving history', async () => {
+    const slotId = 'slot-consultorio-surubim-2026-10-15-09:30';
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'appointmentSlots', slotId), {
+        storeId: 'loja-06', appointmentDate: '2026-10-15', appointmentTime: '09:30', blockTime: '09:30',
+        durationMinutes: 20, leadId: 'lead-test', capturedByUid: 'captor-uid', createdAt: Timestamp.now()
+      });
+    });
+    const db = authenticatedDb('captor-uid', 'captor@example.com');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'lead-test'), {
+      appointmentStatus: 'cancelled',
+      appointmentAttendance: 'cancelled',
+      appointmentCancelledAtServer: serverTimestamp(),
+      appointmentCancelledByUid: 'captor-uid',
+      appointmentCancelledByName: 'Captador Teste',
+      appointmentCancellationReason: 'client_withdrew',
+      appointmentCancellationDetails: '',
+      funnelStage: 'cancelled',
+      funnelReasonCode: 'client_withdrew',
+      funnelUpdatedAtClient: '2026-11-03T12:00:00.000Z',
+      funnelUpdatedAtServer: serverTimestamp(),
+      updatedAtServer: serverTimestamp()
+    });
+    batch.delete(doc(db, 'appointmentSlots', slotId));
+    batch.set(doc(db, 'leads', 'lead-test', 'history', 'appointment-cancelled'), {
+      leadId: 'lead-test', storeId: 'loja-06', eventType: 'appointment_cancelled', funnelStage: 'cancelled',
+      reasonCode: 'client_withdrew', description: 'Cliente desistiu.', actorUid: 'captor-uid',
+      actorName: 'Captador Teste', actorRole: 'captor', occurredAtClient: '2026-11-03T12:00:00.000Z',
+      occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
+  });
+
   it('lets an agenda-only manager read appointments without management access', async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {

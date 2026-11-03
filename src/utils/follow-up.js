@@ -31,6 +31,7 @@ export function appointmentFollowUps(leads, profile, settings = DEFAULT_STORE_SC
     .filter((lead) => profile.role === 'captor'
       ? lead.capturedByUid === profile.uid
       : profile.role === 'manager' ? canAccessStore(profile, lead.storeId) : true)
+    .filter((lead) => lead.appointmentStatus !== 'cancelled' && lead.appointmentAttendance !== 'cancelled')
     .filter((lead) => {
       const leadSettings = settings?.byStore?.[lead.storeId] || settings;
       return lead.appointmentAttendance === 'missed'

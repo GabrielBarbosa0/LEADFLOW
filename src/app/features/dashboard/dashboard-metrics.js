@@ -1,7 +1,8 @@
 import { dashboardSummary } from '../../../utils/dashboard.js';
+import { hasActiveAppointment } from '../../../utils/appointment-cancellation.js';
 
 export function appointmentDistribution(records) {
-  const appointments = records.filter((lead) => lead.appointmentDate && lead.appointmentTime);
+  const appointments = records.filter((lead) => hasActiveAppointment(lead));
   const weekdays = [[1, 'Segunda'], [2, 'Terça'], [3, 'Quarta'], [4, 'Quinta'], [5, 'Sexta'], [6, 'Sábado'], [0, 'Domingo']]
     .map(([index, label]) => ({ label, count: appointments.filter((lead) => new Date(`${lead.appointmentDate}T12:00:00`).getDay() === index).length }));
   const periods = [['Madrugada', 0, 6], ['Manhã', 6, 12], ['Tarde', 12, 18], ['Noite', 18, 24]].map(([label, start, end]) => ({
@@ -20,7 +21,7 @@ export function dashboardGroupStats(records, keyFor, labelFor) {
     groups.get(key).records.push(lead);
     return groups;
   }, new Map()).values()].map((group) => {
-    const scheduled = group.records.filter((lead) => lead.appointmentDate && lead.appointmentTime).length;
+    const scheduled = group.records.filter((lead) => hasActiveAppointment(lead)).length;
     const attended = group.records.filter((lead) => lead.appointmentAttendance === 'attended').length;
     const missed = group.records.filter((lead) => lead.appointmentAttendance === 'missed').length;
     return { label: group.label, total: group.records.length, scheduled, attended, missed, attendanceRate: attended + missed ? Math.round((attended / (attended + missed)) * 100) : 0 };
