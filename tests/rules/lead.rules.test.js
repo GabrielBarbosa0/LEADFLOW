@@ -592,7 +592,7 @@ describe('lead correction rules', () => {
       careRoute: 'optometrist',
       careRouteOverride: 'automatic',
       examPaymentType: 'paid',
-      examPaymentMethods: ['pix', 'cash'],
+      examPaymentMethods: ['pix', 'booklet'],
       examPrice: 275,
       updatedAtServer: Timestamp.now()
     }));

@@ -65,16 +65,16 @@ describe('capture feature modules', () => {
     expect(triageConfigFields(settings)).toContain('name="ophthalmologistExamPrice"');
   });
 
-  it('shows credit fields only when boleto is selected', () => {
+  it('shows credit fields only when carnê is selected', () => {
     const hiddenMarkup = eyeTriageFields({ examPaymentType: 'paid', examPaymentMethods: ['pix'] });
     const visibleMarkup = eyeTriageFields({
       examPaymentType: 'paid',
-      examPaymentMethods: ['bank-slip'],
+      examPaymentMethods: ['booklet'],
       creditFatherName: 'João da Silva'
     });
 
     expect(hiddenMarkup).toContain('data-credit-details-fields hidden');
-    expect(visibleMarkup).toContain('Boleto');
+    expect(visibleMarkup).toContain('Carnê');
     expect(visibleMarkup).toContain('name="creditFatherName"');
     expect(visibleMarkup).not.toContain('data-credit-details-fields hidden');
   });

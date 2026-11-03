@@ -66,6 +66,7 @@ export const EXAM_PAYMENT_METHODS = Object.freeze([
   { id: 'debit-card', label: 'Cartão de débito' },
   { id: 'credit-card', label: 'Cartão de crédito' },
   { id: 'bank-slip', label: 'Boleto' },
+  { id: 'booklet', label: 'Carnê' },
   { id: 'other', label: 'Outro' }
 ]);
 
@@ -299,7 +300,7 @@ export function validateLeadInput(input, options = {}) {
   if (pricing.examPaymentType === 'paid' && invalidPaymentMethod) {
     errors.examPaymentMethods = 'Selecione somente formas de pagamento válidas.';
   }
-  const usesStoreCredit = examPaymentMethods.includes('bank-slip');
+  const usesStoreCredit = examPaymentMethods.includes('booklet');
   const creditFatherName = usesStoreCredit ? String(input.creditFatherName || '').trim() : '';
   const creditMotherName = usesStoreCredit ? String(input.creditMotherName || '').trim() : '';
   const creditAuxiliaryPhoneValue = usesStoreCredit ? String(input.creditAuxiliaryPhone || '').trim() : '';

@@ -64,7 +64,7 @@ export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
   const selectedPaymentMethods = Array.isArray(values.examPaymentMethods)
     ? values.examPaymentMethods
     : [values.examPaymentMethod].filter(Boolean);
-  const showCreditFields = pricing.examPaymentType === 'paid' && selectedPaymentMethods.includes('bank-slip');
+  const showCreditFields = pricing.examPaymentType === 'paid' && selectedPaymentMethods.includes('booklet');
   const paymentMethodOptions = EXAM_PAYMENT_METHODS.map((method) => `<label class="ametropia-option checkbox-label">
     <input type="checkbox" name="examPaymentMethods" value="${method.id}" ${selectedPaymentMethods.includes(method.id) ? 'checked' : ''} ${pricing.examPaymentType === 'courtesy' ? 'disabled' : ''} />
     <span>${method.label}</span>
@@ -198,7 +198,7 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
       input.disabled = isCourtesy;
       if (isCourtesy) input.checked = false;
     });
-    const usesStoreCredit = !isCourtesy && paymentMethodInputs.some((input) => input.value === 'bank-slip' && input.checked);
+    const usesStoreCredit = !isCourtesy && paymentMethodInputs.some((input) => input.value === 'booklet' && input.checked);
     creditDetailsFields.hidden = !usesStoreCredit;
     creditInputs.forEach((input) => {
       input.disabled = !usesStoreCredit;

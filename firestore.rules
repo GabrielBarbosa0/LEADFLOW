@@ -205,8 +205,8 @@ service cloud.firestore {
             && data.appointmentServiceName.size() <= 80))
         && (!('examPaymentType' in data) || data.examPaymentType in ['paid', 'courtesy'])
         && (!('examPaymentMethods' in data) || (data.examPaymentMethods is list
-          && data.examPaymentMethods.size() <= 6
-          && data.examPaymentMethods.hasOnly(['cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'])))
+          && data.examPaymentMethods.size() <= 7
+          && data.examPaymentMethods.hasOnly(['cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'booklet', 'other'])))
         && (!('examPaymentMethods' in data) || !('examPaymentType' in data)
           || data.examPaymentType == 'paid' || data.examPaymentMethods.size() == 0)
         && data.source == 'street'
