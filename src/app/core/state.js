@@ -76,6 +76,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       rescheduleLeadId: '',
       rescheduleDraft: null,
       rescheduleSaving: false,
+      rescheduleError: '',
       backfillingMonth: '',
       backfilledMonths: [],
       month: monthKeyFromDate(),

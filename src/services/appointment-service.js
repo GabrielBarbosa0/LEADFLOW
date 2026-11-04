@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, runTransaction, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase/client.js';
 import { monthRange } from '../utils/calendar.js';
 import { followUpAppointmentKey } from '../utils/follow-up.js';
@@ -16,8 +16,15 @@ export const APPOINTMENT_ATTENDANCE = new Set(['pending', 'attended', 'missed', 
 
 function reservationBlocks(storeId, appointmentDate, appointmentTime, durationMinutes) {
   return appointmentBlockTimes(appointmentTime, durationMinutes).map((blockTime) => ({
-    id: appointmentSlotId(storeId, appointmentDate, blockTime)
+    id: appointmentSlotId(storeId, appointmentDate, blockTime),
+    blockTime
   }));
+}
+
+function appointmentConflictError() {
+  const error = new Error('O horario escolhido acabou de ser ocupado.');
+  error.code = 'appointment-slot-unavailable';
+  return error;
 }
 
 function canCancelAppointment(profile, lead) {
@@ -103,34 +110,44 @@ export async function rescheduleAppointment(profile, lead, input, reasonValues) 
     ? reservationBlocks(lead.storeId, lead.appointmentDate, lead.appointmentTime, lead.appointmentDurationMinutes || 20) : [];
   const newBlocks = next.appointmentSchedulingMode === 'controlled'
     ? reservationBlocks(lead.storeId, next.appointmentDate, next.appointmentTime, next.appointmentDurationMinutes || 20) : [];
-  const batch = writeBatch(db);
-  batch.set(doc(db, 'leads', lead.id), {
-    appointmentDate: next.appointmentDate,
-    appointmentTime: next.appointmentTime,
-    appointmentSchedulingMode: next.appointmentSchedulingMode,
-    appointmentDurationMinutes: next.appointmentDurationMinutes,
-    appointmentServiceId: next.appointmentServiceId,
-    appointmentServiceName: next.appointmentServiceName,
-    appointmentAttendance: 'pending',
-    funnelStage: 'scheduled',
-    funnelReasonCode: reasonValidation.data.reason,
-    funnelUpdatedAtClient: now.toISOString(),
-    funnelUpdatedAtServer: serverTimestamp(),
-    updatedAtServer: serverTimestamp()
-  }, { merge: true });
-  oldBlocks.forEach((block) => batch.delete(doc(db, 'appointmentSlots', block.id)));
-  newBlocks.forEach((block) => batch.set(doc(db, 'appointmentSlots', block.id), {
-    storeId: lead.storeId, appointmentDate: next.appointmentDate, appointmentTime: next.appointmentTime,
-    blockTime: block.blockTime, durationMinutes: next.appointmentDurationMinutes,
-    leadId: lead.id, capturedByUid: lead.capturedByUid, createdAt: serverTimestamp()
-  }));
-  addLeadHistoryEvents(batch, lead.id, [{
-    storeId: lead.storeId, eventType: 'appointment_rescheduled', funnelStage: 'scheduled',
-    reasonCode: reasonValidation.data.reason,
-    description: `Reagendado de ${lead.appointmentDate} às ${lead.appointmentTime} para ${next.appointmentDate} às ${next.appointmentTime}. Motivo: ${appointmentRescheduleReasonLabel(reasonValidation.data.reason)}.${reasonValidation.data.details ? ` Observação: ${reasonValidation.data.details}` : ''}`,
-    actorUid: profile.uid, actorName: String(profile.displayName || 'Usuário'), actorRole: String(profile.role || 'captor'), occurredAtClient: now.toISOString(), schemaVersion: 1
-  }]);
-  await batch.commit();
+  const newBlockIds = new Set(newBlocks.map((block) => block.id));
+  await runTransaction(db, async (transaction) => {
+    const reservations = await Promise.all(newBlocks.map((block) => (
+      transaction.get(doc(db, 'appointmentSlots', block.id))
+    )));
+    if (reservations.some((reservation) => reservation.exists() && reservation.data().leadId !== lead.id)) {
+      throw appointmentConflictError();
+    }
+
+    transaction.set(doc(db, 'leads', lead.id), {
+      appointmentDate: next.appointmentDate,
+      appointmentTime: next.appointmentTime,
+      appointmentSchedulingMode: next.appointmentSchedulingMode,
+      appointmentDurationMinutes: next.appointmentDurationMinutes,
+      appointmentServiceId: next.appointmentServiceId,
+      appointmentServiceName: next.appointmentServiceName,
+      appointmentAttendance: 'pending',
+      funnelStage: 'scheduled',
+      funnelReasonCode: reasonValidation.data.reason,
+      funnelUpdatedAtClient: now.toISOString(),
+      funnelUpdatedAtServer: serverTimestamp(),
+      updatedAtServer: serverTimestamp()
+    }, { merge: true });
+    oldBlocks
+      .filter((block) => !newBlockIds.has(block.id))
+      .forEach((block) => transaction.delete(doc(db, 'appointmentSlots', block.id)));
+    newBlocks.forEach((block) => transaction.set(doc(db, 'appointmentSlots', block.id), {
+      storeId: lead.storeId, appointmentDate: next.appointmentDate, appointmentTime: next.appointmentTime,
+      blockTime: block.blockTime, durationMinutes: next.appointmentDurationMinutes,
+      leadId: lead.id, capturedByUid: lead.capturedByUid, createdAt: serverTimestamp()
+    }));
+    addLeadHistoryEvents(transaction, lead.id, [{
+      storeId: lead.storeId, eventType: 'appointment_rescheduled', funnelStage: 'scheduled',
+      reasonCode: reasonValidation.data.reason,
+      description: `Reagendado de ${lead.appointmentDate} às ${lead.appointmentTime} para ${next.appointmentDate} às ${next.appointmentTime}. Motivo: ${appointmentRescheduleReasonLabel(reasonValidation.data.reason)}.${reasonValidation.data.details ? ` Observação: ${reasonValidation.data.details}` : ''}`,
+      actorUid: profile.uid, actorName: String(profile.displayName || 'Usuário'), actorRole: String(profile.role || 'captor'), occurredAtClient: now.toISOString(), schemaVersion: 1
+    }]);
+  });
   return { ...leadValidation, reschedule: reasonValidation.data };
 }
 

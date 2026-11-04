@@ -22,11 +22,12 @@ import { SYSTEM_ROLE_PROFILES, hasPermission as profileHasPermission } from '../
 import { formatBrazilianCpf } from '../utils/savwin-matching.js';
 import { defaultAppointmentService, servicesForStore } from '../utils/service-catalog.js';
 import { validateAppointmentCancellation } from '../utils/appointment-cancellation.js';
-import { validateAppointmentReschedule } from '../utils/appointment-reschedule.js';
+import { hasAppointmentScheduleChanged, validateAppointmentReschedule, validateRescheduleSchedule } from '../utils/appointment-reschedule.js';
 import { validateWalkInDraft, WALK_IN_CLOSED_STATUSES } from '../utils/walk-in.js';
 import { isCaptarImportedLead } from '../utils/lead-origin.js';
 import { currentRoute, currentRouteParam, navigate } from './router.js';
 import {
+  escapeHtml,
   formatAppointmentDate,
   formatCapturedAt,
   formatDateTimeValue,
@@ -374,7 +375,12 @@ function appointmentCancellationDialogView() {
 
 function appointmentRescheduleDialogView() {
   const lead = findLeadForAppointmentCancellation(state.appointments.rescheduleLeadId);
-  return appointmentRescheduleDialog({ lead, draft: state.appointments.rescheduleDraft, saving: state.appointments.rescheduleSaving });
+  return appointmentRescheduleDialog({
+    lead,
+    draft: state.appointments.rescheduleDraft,
+    saving: state.appointments.rescheduleSaving,
+    error: state.appointments.rescheduleError
+  });
 }
 
 function isLeadDetailOpen() {
@@ -924,12 +930,18 @@ function bindPageEvents() {
         canEditScore: hasAccess('leads.clinical_update')
       });
       const appointmentChanged = existingLead?.appointmentDate && existingLead?.appointmentTime
-        && ['appointmentDate', 'appointmentTime']
-          .some((field) => String(existingLead[field] || '') !== String(values[field] || ''));
+        && hasAppointmentScheduleChanged(existingLead, values);
       if (appointmentChanged && existingLead.appointmentStatus !== 'cancelled' && !['attended', 'cancelled'].includes(existingLead.appointmentAttendance || 'pending')) {
+        const scheduleValidation = validateRescheduleSchedule(values);
+        if (!scheduleValidation.isValid) {
+          const field = setFieldErrors(editLeadForm, scheduleValidation.errors);
+          revealFirstFormError(field);
+          return;
+        }
         state.appointments.rescheduleLeadId = existingLead.id;
         state.appointments.rescheduleDraft = values;
         state.appointments.rescheduleSaving = false;
+        state.appointments.rescheduleError = '';
         render();
         return;
       }
@@ -1007,7 +1019,8 @@ function bindPageEvents() {
   const appointmentCancellation = document.querySelector('#appointment-cancellation-dialog');
   if (appointmentCancellation) {
     requestAnimationFrame(() => {
-      if (!appointmentCancellation.open) appointmentCancellation.showModal();
+      const dialog = document.querySelector('#appointment-cancellation-dialog');
+      if (dialog?.isConnected && !dialog.open) dialog.showModal();
     });
     initializeAppointmentCancellationDialog(appointmentCancellation, {
       close: () => {
@@ -1055,12 +1068,16 @@ function bindPageEvents() {
 
   const appointmentReschedule = document.querySelector('#appointment-reschedule-dialog');
   if (appointmentReschedule) {
-    requestAnimationFrame(() => { if (!appointmentReschedule.open) appointmentReschedule.showModal(); });
+    requestAnimationFrame(() => {
+      const dialog = document.querySelector('#appointment-reschedule-dialog');
+      if (dialog?.isConnected && !dialog.open) dialog.showModal();
+    });
     initializeAppointmentRescheduleDialog(appointmentReschedule, {
       close: () => {
         state.appointments.rescheduleLeadId = '';
         state.appointments.rescheduleDraft = null;
         state.appointments.rescheduleSaving = false;
+        state.appointments.rescheduleError = '';
         render();
       },
       submit: async (reasonValues) => {
@@ -1075,7 +1092,10 @@ function bindPageEvents() {
           const result = state.demoMode
             ? updateLead(lead.id, draft, true, () => {}, lead, { profile: state.profile })
             : await rescheduleAppointment(state.profile, lead, draft, reasonValues);
-          if (!result.isValid) { setFieldErrors(appointmentReschedule.querySelector('form'), result.errors || {}); return; }
+          if (!result.isValid) {
+            state.appointments.rescheduleError = 'Revise os dados do cadastro antes de confirmar o reagendamento.';
+            return;
+          }
           const updated = { ...lead, ...result.data, appointmentAttendance: 'pending', appointmentStatus: 'scheduled' };
           state.leads = state.leads.map((item) => item.id === lead.id ? updated : item);
           state.management.records = state.management.records.map((item) => item.id === lead.id ? updated : item);
@@ -1083,10 +1103,16 @@ function bindPageEvents() {
           if (state.management.activeLead?.id === lead.id) state.management.activeLead = updated;
           state.appointments.rescheduleLeadId = '';
           state.appointments.rescheduleDraft = null;
+          state.appointments.rescheduleError = '';
           if (state.leadDetailDialog.leadId) closeLeadDetailDialog(); else navigate(lead.id === currentRouteParam() ? 'leads' : state.route);
           showToast('Agendamento reagendado com histórico preservado.');
         } catch (error) {
-          showToast(error?.code === 'permission-denied' ? 'Seu perfil não pode reagendar este atendimento.' : 'Não foi possível reagendar. Tente novamente.', 'danger', 'circle-alert');
+          state.appointments.rescheduleError = error?.code === 'permission-denied'
+            ? 'Seu perfil não pode reagendar este atendimento.'
+            : error?.code === 'appointment-slot-unavailable'
+              ? 'Este horário acabou de ser ocupado. Escolha outro.'
+              : 'Não foi possível reagendar. Verifique os dados e tente novamente.';
+          showToast(state.appointments.rescheduleError, 'danger', 'circle-alert');
         } finally {
           state.appointments.rescheduleSaving = false;
           render();
