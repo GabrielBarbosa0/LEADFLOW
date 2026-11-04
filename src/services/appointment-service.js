@@ -3,6 +3,7 @@ import { db, isFirebaseConfigured } from '../firebase/client.js';
 import { monthRange } from '../utils/calendar.js';
 import { followUpAppointmentKey } from '../utils/follow-up.js';
 import { canAccessStore, profileStoreIds } from '../utils/permissions.js';
+import { hasPermission } from '../utils/role-profile.js';
 
 export const APPOINTMENTS_QUERY_LIMIT = 500;
 export const APPOINTMENT_ATTENDANCE = new Set(['pending', 'attended', 'missed']);
@@ -140,10 +141,14 @@ export function subscribeToAppointmentConfirmations(profile, startDate, endDate,
   };
 }
 
+export function canSetAppointmentAttendance(profile, lead, attendance) {
+  return hasPermission(profile, 'appointments.attendance')
+    && APPOINTMENT_ATTENDANCE.has(attendance)
+    && canAccessStore(profile, lead?.storeId);
+}
+
 export async function setAppointmentAttendance(profile, lead, attendance) {
-  if (!isFirebaseConfigured || !['manager', 'admin'].includes(profile?.role)
-    || !APPOINTMENT_ATTENDANCE.has(attendance)
-    || (profile.role === 'manager' && !canAccessStore(profile, lead.storeId))) {
+  if (!isFirebaseConfigured || !canSetAppointmentAttendance(profile, lead, attendance)) {
     const error = new Error('Status de comparecimento não autorizado.');
     error.code = 'permission-denied';
     throw error;

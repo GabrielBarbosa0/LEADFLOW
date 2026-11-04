@@ -7,6 +7,7 @@ import { handleConfirmationClick } from '../../src/app/features/appointments/con
 import { confirmationEndDate, normalizeConfirmationDays } from '../../src/app/features/appointments/confirmation-period.js';
 import { confirmationsView } from '../../src/app/features/appointments/confirmations-view.js';
 import { DEFAULT_STORE_SCHEDULE } from '../../src/utils/schedule.js';
+import { canSetAppointmentAttendance } from '../../src/services/appointment-service.js';
 
 const store = { id: 'loja-06', label: 'Loja 06', displayLabel: 'Loja 06' };
 const lead = {
@@ -30,6 +31,20 @@ function clickEvent(selector, dataset = {}) {
 }
 
 describe('appointments feature modules', () => {
+  it('authorizes attendance from the explicit permission and allowed store', () => {
+    const receptionist = {
+      role: 'manager',
+      roleProfileId: 'system-receptionist',
+      permissions: ['appointments.view', 'appointments.attendance'],
+      storeId: 'loja-02',
+      storeIds: ['loja-02']
+    };
+    expect(canSetAppointmentAttendance(receptionist, { storeId: 'loja-02' }, 'attended')).toBe(true);
+    expect(canSetAppointmentAttendance(receptionist, { storeId: 'loja-02' }, 'pending')).toBe(true);
+    expect(canSetAppointmentAttendance(receptionist, { storeId: 'loja-04' }, 'attended')).toBe(false);
+    expect(canSetAppointmentAttendance({ ...receptionist, permissions: ['appointments.view'] }, { storeId: 'loja-02' }, 'attended')).toBe(false);
+  });
+
   it('returns an active attendance status to pending when selected again', () => {
     expect(nextAppointmentAttendance('attended', 'attended')).toBe('pending');
     expect(nextAppointmentAttendance('missed', 'missed')).toBe('pending');
