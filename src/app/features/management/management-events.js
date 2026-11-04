@@ -7,7 +7,7 @@ export function initializeManagementFilters(form, handlers) {
   });
   const search = form.elements.search;
   search?.addEventListener('input', () => handlers.search(search.value, search.selectionStart, search.selectionEnd));
-  ['storeId', 'capturedByUid'].forEach((name) => {
+  ['storeId', 'capturedByUid', 'archiveStatus'].forEach((name) => {
     form.elements[name]?.addEventListener('change', (event) => handlers.change(name, event.target.value));
   });
 }

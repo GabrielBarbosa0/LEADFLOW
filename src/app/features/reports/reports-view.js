@@ -4,7 +4,8 @@ import {
   reportMetricsView,
   reportNoticesView,
   reportResultsView,
-  reportToolbar
+  reportToolbar,
+  managementArchiveDialog
 } from './report-components.js';
 import { reportFiltersView } from './report-filters.js';
 
@@ -13,7 +14,8 @@ export function reportsView({ management, allowedStores, adminView, canOpenLead,
   const filtered = filterManagementRecords(records, filters);
   const pagination = paginateReportRecords(filtered, management.page, pageSize);
 
-  return `${reportToolbar({ permissions, adminView, recordCount: filtered.length })}
+  const archivedView = filters.archiveStatus === 'archived';
+  return `${reportToolbar({ permissions, adminView, recordCount: filtered.length, canArchive: permissions.archive, archivedView })}
     ${reportFiltersView({ filters, records, allowedStores, loading })}
     ${reportNoticesView({ error, truncated, queryLimit })}
     ${reportMetricsView(filtered)}
@@ -24,5 +26,5 @@ export function reportsView({ management, allowedStores, adminView, canOpenLead,
       currentPage: pagination.currentPage,
       totalPages: pagination.totalPages,
       totalRecords: filtered.length
-    })}</section>`;
+    })}</section>${managementArchiveDialog({ open: management.archiveOpen, records: filtered, selectedIds: management.archiveSelection, saving: management.archiveSaving })}`;
 }

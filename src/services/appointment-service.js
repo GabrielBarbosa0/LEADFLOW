@@ -7,6 +7,9 @@ import { appointmentBlockTimes, appointmentSlotId } from '../utils/schedule.js';
 import { appointmentCancellationReasonLabel, validateAppointmentCancellation } from '../utils/appointment-cancellation.js';
 import { addLeadHistoryEvents } from './lead-history-service.js';
 import { hasPermission } from '../utils/role-profile.js';
+import { appointmentRescheduleReasonLabel, validateAppointmentReschedule } from '../utils/appointment-reschedule.js';
+import { createLeadUpdate } from '../utils/lead.js';
+import { activeLeads } from '../utils/lead-archive.js';
 
 export const APPOINTMENTS_QUERY_LIMIT = 500;
 export const APPOINTMENT_ATTENDANCE = new Set(['pending', 'attended', 'missed', 'cancelled']);
@@ -76,6 +79,61 @@ export async function cancelAppointment(profile, lead, values) {
   return validation;
 }
 
+export async function rescheduleAppointment(profile, lead, input, reasonValues) {
+  const reasonValidation = validateAppointmentReschedule(reasonValues);
+  const leadValidation = createLeadUpdate(input);
+  if (!reasonValidation.isValid) return reasonValidation;
+  if (!leadValidation.isValid) return leadValidation;
+  const canEdit = profile?.role === 'admin'
+    || (profile?.role === 'captor' && lead.capturedByUid === profile.uid && hasPermission(profile, 'leads.edit_own'))
+    || (profile?.role === 'manager' && canAccessStore(profile, lead.storeId) && hasPermission(profile, 'leads.edit_all'));
+  if (!isFirebaseConfigured || !canEdit || !lead?.appointmentDate || !lead?.appointmentTime
+    || lead.appointmentStatus === 'cancelled' || ['attended', 'cancelled'].includes(lead.appointmentAttendance || 'pending')) {
+    const error = new Error('Reagendamento não autorizado.');
+    error.code = 'permission-denied';
+    throw error;
+  }
+  const next = leadValidation.data;
+  const changed = ['appointmentDate', 'appointmentTime']
+    .some((field) => String(lead[field] || '') !== String(next[field] || ''));
+  if (!changed || !next.appointmentDate || !next.appointmentTime) return { isValid: false, errors: { appointmentTime: 'Escolha uma nova data, horário ou serviço.' } };
+
+  const now = new Date();
+  const oldBlocks = lead.appointmentSchedulingMode === 'controlled'
+    ? reservationBlocks(lead.storeId, lead.appointmentDate, lead.appointmentTime, lead.appointmentDurationMinutes || 20) : [];
+  const newBlocks = next.appointmentSchedulingMode === 'controlled'
+    ? reservationBlocks(lead.storeId, next.appointmentDate, next.appointmentTime, next.appointmentDurationMinutes || 20) : [];
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'leads', lead.id), {
+    appointmentDate: next.appointmentDate,
+    appointmentTime: next.appointmentTime,
+    appointmentSchedulingMode: next.appointmentSchedulingMode,
+    appointmentDurationMinutes: next.appointmentDurationMinutes,
+    appointmentServiceId: next.appointmentServiceId,
+    appointmentServiceName: next.appointmentServiceName,
+    appointmentAttendance: 'pending',
+    funnelStage: 'scheduled',
+    funnelReasonCode: reasonValidation.data.reason,
+    funnelUpdatedAtClient: now.toISOString(),
+    funnelUpdatedAtServer: serverTimestamp(),
+    updatedAtServer: serverTimestamp()
+  }, { merge: true });
+  oldBlocks.forEach((block) => batch.delete(doc(db, 'appointmentSlots', block.id)));
+  newBlocks.forEach((block) => batch.set(doc(db, 'appointmentSlots', block.id), {
+    storeId: lead.storeId, appointmentDate: next.appointmentDate, appointmentTime: next.appointmentTime,
+    blockTime: block.blockTime, durationMinutes: next.appointmentDurationMinutes,
+    leadId: lead.id, capturedByUid: lead.capturedByUid, createdAt: serverTimestamp()
+  }));
+  addLeadHistoryEvents(batch, lead.id, [{
+    storeId: lead.storeId, eventType: 'appointment_rescheduled', funnelStage: 'scheduled',
+    reasonCode: reasonValidation.data.reason,
+    description: `Reagendado de ${lead.appointmentDate} às ${lead.appointmentTime} para ${next.appointmentDate} às ${next.appointmentTime}. Motivo: ${appointmentRescheduleReasonLabel(reasonValidation.data.reason)}.${reasonValidation.data.details ? ` Observação: ${reasonValidation.data.details}` : ''}`,
+    actorUid: profile.uid, actorName: String(profile.displayName || 'Usuário'), actorRole: String(profile.role || 'captor'), occurredAtClient: now.toISOString(), schemaVersion: 1
+  }]);
+  await batch.commit();
+  return { ...leadValidation, reschedule: reasonValidation.data };
+}
+
 function appointmentReminderId(lead) {
   return `${lead.id}__${lead.appointmentDate}__${lead.appointmentTime.replace(':', '-')}`;
 }
@@ -106,8 +164,9 @@ function appointmentsQuery(profile, monthKey, selectedStoreId = '') {
 
 export function subscribeToAppointments(profile, monthKey, selectedStoreId, onData, onError) {
   return onSnapshot(appointmentsQuery(profile, monthKey, selectedStoreId), (snapshot) => {
-    const records = snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT)
+    const records = activeLeads(snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT)
       .map((item) => ({ id: item.id, ...item.data() }))
+      )
       .sort((a, b) => String(a.appointmentDate || '').localeCompare(String(b.appointmentDate || ''))
         || String(a.appointmentTime || '').localeCompare(String(b.appointmentTime || ''))
         || String(a.fullName || '').localeCompare(String(b.fullName || ''), 'pt-BR'));
@@ -140,7 +199,7 @@ export async function loadUpcomingAppointments(profile, startDate, endDate, sele
 
   const snapshot = await getDocs(query(collection(db, 'leads'), ...constraints));
   return {
-    records: snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT).map((item) => ({ id: item.id, ...item.data() })),
+    records: activeLeads(snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT).map((item) => ({ id: item.id, ...item.data() }))),
     truncated: snapshot.size > APPOINTMENTS_QUERY_LIMIT
   };
 }
@@ -193,8 +252,8 @@ export function subscribeToAppointmentConfirmations(profile, startDate, endDate,
     onData({ records, truncated });
   };
   const unsubscribeLeads = onSnapshot(query(collection(db, 'leads'), ...leadConstraints), (snapshot) => {
-    leads = snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT)
-      .map((item) => ({ id: item.id, ...item.data() }))
+    leads = activeLeads(snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT)
+      .map((item) => ({ id: item.id, ...item.data() })))
     truncated = truncated || snapshot.size > APPOINTMENTS_QUERY_LIMIT;
     emit();
   }, onError);

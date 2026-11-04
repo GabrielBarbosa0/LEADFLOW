@@ -101,6 +101,8 @@ Criar tambem um evento `appointment_cancelled` em `leads/{leadId}/history`, cont
 
 ## 5. Etapa 2 - Reagendamento e retorno de tratamento
 
+**Status: reagendamento formal implementado localmente; retorno de tratamento pendente.**
+
 ### Objetivo
 
 Evitar que a simples edicao da data esconda a historia do cliente e distinguir retorno clinico de uma tentativa de remarcacao comum.

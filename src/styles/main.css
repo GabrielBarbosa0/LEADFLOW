@@ -3831,6 +3831,141 @@ svg {
   gap: 8px;
 }
 
+.management-archive-dialog {
+  width: min(calc(100% - 32px), 680px);
+  max-height: min(84vh, 760px);
+}
+
+.management-archive-dialog > form {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: inherit;
+}
+
+.management-archive-dialog > form > header,
+.management-archive-dialog > form > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+}
+
+.management-archive-dialog > form > header {
+  border-bottom: 1px solid var(--line);
+}
+
+.management-archive-dialog > form > header h2,
+.management-archive-dialog > form > header p {
+  margin: 0;
+}
+
+.management-archive-dialog > form > header h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 4px;
+  font-size: 1.25rem;
+}
+
+.management-archive-dialog > form > header h2 svg {
+  width: 21px;
+  height: 21px;
+  color: var(--brand);
+}
+
+.management-archive-dialog > form > header p {
+  max-width: 510px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.management-archive-dialog > form > footer {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.management-archive-body {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px 22px;
+  overflow-y: auto;
+}
+
+.archive-selection-summary {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-subtle);
+}
+
+.archive-select-all,
+.archive-lead-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.archive-select-all {
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.archive-helper {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.archive-lead-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.archive-lead-option {
+  align-items: flex-start;
+  min-height: 58px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-subtle);
+  cursor: pointer;
+}
+
+.archive-lead-option:hover {
+  border-color: var(--brand);
+}
+
+.archive-lead-option > input,
+.archive-select-all > input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.archive-lead-option strong,
+.archive-lead-option small {
+  display: block;
+}
+
+.archive-lead-option strong {
+  font-size: 0.83rem;
+}
+
+.archive-lead-option small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .settings-form,
 .schedule-preview {
   padding: 20px;

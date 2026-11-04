@@ -1,3 +1,5 @@
+import { isArchivedLead } from '../../../utils/lead-archive.js';
+
 export function validateLeadSearch(queryText) {
   const query = String(queryText || '').trim().replace(/\s+/g, ' ');
   const digits = query.replace(/\D/g, '');
@@ -11,6 +13,7 @@ export function searchDemoLeads(leads = [], queryText = '', profile = {}) {
   const query = String(queryText || '').trim().toLocaleLowerCase('pt-BR');
   const digits = query.replace(/\D/g, '');
   return leads
+    .filter((lead) => !isArchivedLead(lead))
     .filter((lead) => digits.length === 11
       ? String(lead.customerCpf || '').replace(/\D/g, '') === digits
       : String(lead.fullName || '').toLocaleLowerCase('pt-BR').includes(query))

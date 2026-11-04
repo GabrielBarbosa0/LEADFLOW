@@ -1,5 +1,6 @@
 import { isValidCpf, normalizeCpf } from '../../../utils/savwin-matching.js';
 import { hasActiveAppointment as hasUncancelledAppointment } from '../../../utils/appointment-cancellation.js';
+import { isArchivedLead } from '../../../utils/lead-archive.js';
 
 export const CPF_APPOINTMENT_WARNING = 'Já existe um agendamento ativo vinculado a este CPF.';
 
@@ -18,6 +19,8 @@ export function hasDemoCpfAppointment(leads = [], cpf = '', today = localDateKey
   const normalized = normalizeCpf(cpf);
   if (!isValidCpf(normalized)) return false;
   return leads.some((lead) => (
+    !isArchivedLead(lead)
+    &&
     normalizeCpf(lead.customerCpf) === normalized
     && hasActiveAppointment(lead, today)
   ));

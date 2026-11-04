@@ -651,13 +651,17 @@ O identificador sera um UUID gerado no dispositivo. Isso torna a gravacao idempo
 
 `phoneSearch` facilita a busca autorizada, mas nao deve ser exibido como campo separado. Nao sera criada uma chave unica baseada no telefone, pois uma mesma pessoa pode ser abordada legitimamente em momentos diferentes.
 
-`source` descreve o canal operacional da captacao, enquanto `recordOrigin` descreve a procedencia do documento. Os registros trazidos da agenda legada recebem `recordOrigin: "captar_import"`; esse campo e imutavel para usuarios comuns, aparece como marcador visual e sera a referencia para o arquivamento do ciclo anterior. A rotina `mark:captar-leads` reconhece registros legados pelo ID iniciado em `captar-` ou por `installationId: "captar-migration"`, executa em simulacao por padrao e somente grava quando recebe `--apply`.
+`source` descreve o canal operacional da captacao, enquanto `recordOrigin` descreve a procedencia do documento. Os registros trazidos da agenda legada recebem `recordOrigin: "captar_import"`; esse campo aparece como marcador visual e identifica automaticamente os registros do Captar na gestao. O arquivamento e feito pela tela de Gestao, com selecao individual ou em lote dos resultados filtrados. O estado e salvo em `archived: true`, com usuario e data do arquivamento, preserva o historico e remove o lead das telas operacionais, estatisticas, alertas de CPF, agenda e retornos.
 
 Para leads captados offline, `appointmentDate` e `appointmentTime` permanecem vazios. A escolha posterior de horario ocorre somente online e cria os documentos correspondentes em `appointmentSlots`.
 
 #### Cancelamento de agendamento
 
 O cancelamento preserva o lead, a data e o horario originalmente registrados. A acao online exige motivo padronizado; para `Outro motivo`, a observacao se torna obrigatoria. A operacao grava `appointmentStatus` e `appointmentAttendance` como `cancelled`, registra ator, data e justificativa, remove os blocos de horario da agenda controlada e acrescenta o evento imutavel `appointment_cancelled` em `leads/{leadId}/history` no mesmo lote atomico. Agendamentos cancelados deixam de aparecer como ativos em agenda, confirmacoes, retornos e alertas de CPF; data e horario ficam bloqueados no cadastro ate que o fluxo formal de reagendamento seja entregue.
+
+#### Reagendamento formal
+
+Quando um agendamento aberto ja possui data e horario, qualquer troca de data, horario ou servico passa por confirmacao explicita. O modal mostra o horario anterior e o novo, exige um motivo padronizado e exige observacao para `Outro motivo`. A operacao libera os blocos antigos, reserva os novos blocos e cria `appointment_rescheduled` no historico com os dois horarios, motivo, observacao e ator. Esta entrega nao cria retorno de tratamento: esse fluxo permanecera separado para evitar que consultas futuras indicadas pelo profissional sejam contadas como reagendamentos.
 
 No envio do cadastro, a interface aguarda a confirmacao da gravacao online antes de limpar o formulario ou informar sucesso. Falhas de validacao preservam os valores digitados, exibem uma mensagem visivel e levam o foco ao primeiro campo invalido. Falhas do Firestore tambem preservam o formulario e mostram uma mensagem de permissao ou conexao; nenhum erro de gravacao deve terminar silenciosamente.
 

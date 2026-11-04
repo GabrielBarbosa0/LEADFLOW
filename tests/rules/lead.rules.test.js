@@ -99,6 +99,25 @@ function authenticatedDb(uid, email) {
 }
 
 describe('lead correction rules', () => {
+  it('lets an authorized manager archive a lead and preserve the archive event', async () => {
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'lead-test'), {
+      archived: true,
+      archivedAtServer: serverTimestamp(),
+      archivedByUid: 'manager-uid',
+      archivedByName: 'Gestor Teste',
+      updatedAtServer: serverTimestamp()
+    });
+    batch.set(doc(db, 'leads', 'lead-test', 'history', 'lead-archived'), {
+      leadId: 'lead-test', storeId: 'loja-06', eventType: 'lead_archived', funnelStage: 'captured',
+      reasonCode: '', description: 'Lead arquivado na gestão.', actorUid: 'manager-uid',
+      actorName: 'Gestor Teste', actorRole: 'manager', occurredAtClient: '2026-11-03T12:00:00.000Z',
+      occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
+  });
+
   it('lets the owner cancel an appointment while releasing its reserved slot and preserving history', async () => {
     const slotId = 'slot-consultorio-surubim-2026-10-15-09:30';
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
@@ -1380,6 +1399,19 @@ describe('appointment slot reservations', () => {
       fullName: 'Nome alterado sem permissao',
       appointmentTime: '08:20',
       appointmentAttendance: 'pending',
+      updatedAtServer: Timestamp.now()
+    }));
+  });
+
+  it('lets a manager clear an attendance status back to pending', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'leads', 'lead-test'), { appointmentAttendance: 'attended' });
+    });
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {
+      appointmentAttendance: 'pending',
+      appointmentAttendanceUpdatedAt: Timestamp.now(),
+      appointmentAttendanceUpdatedByUid: 'manager-uid',
       updatedAtServer: Timestamp.now()
     }));
   });

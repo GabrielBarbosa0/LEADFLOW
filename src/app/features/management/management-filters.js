@@ -2,7 +2,7 @@ import { toLocalDateInput } from '../../shared/formatters.js';
 
 export function createDefaultManagementFilters(now = new Date()) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  return { startDate: toLocalDateInput(monthStart), endDate: toLocalDateInput(now), storeId: '', capturedByUid: '', search: '' };
+  return { startDate: toLocalDateInput(monthStart), endDate: toLocalDateInput(now), storeId: '', capturedByUid: '', search: '', archiveStatus: 'active' };
 }
 
 export function managementFiltersFromForm(form) {
@@ -12,7 +12,8 @@ export function managementFiltersFromForm(form) {
     endDate: String(values.endDate || ''),
     storeId: String(values.storeId || ''),
     capturedByUid: String(values.capturedByUid || ''),
-    search: String(values.search || '')
+    search: String(values.search || ''),
+    archiveStatus: String(values.archiveStatus || 'active')
   };
 }
 

@@ -2,8 +2,8 @@ import { isFirebaseConfigured } from '../firebase/client.js';
 import { markDemoAppointmentReminderDone, markDemoFollowUpContact, saveLead, subscribeToLeads, undoDemoAppointmentReminderDone, updateDemoAppointmentAttendance, updateLead } from '../services/lead-service.js';
 import { markFollowUpContactStarted, subscribeToTeamFollowUps } from '../services/follow-up-service.js';
 import { loadRoleProfiles } from '../services/role-profile-service.js';
-import { deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
-import { APPOINTMENTS_QUERY_LIMIT, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
+import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
+import { APPOINTMENTS_QUERY_LIMIT, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, rescheduleAppointment, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
 import { createQuickWalkIn, createWalkIn, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
 import { ensureDefaultAppointmentServices, loadAppointmentServices } from '../services/service-catalog-service.js';
@@ -20,7 +20,9 @@ import { SYSTEM_ROLE_PROFILES, hasPermission as profileHasPermission } from '../
 import { formatBrazilianCpf } from '../utils/savwin-matching.js';
 import { defaultAppointmentService, servicesForStore } from '../utils/service-catalog.js';
 import { validateAppointmentCancellation } from '../utils/appointment-cancellation.js';
+import { validateAppointmentReschedule } from '../utils/appointment-reschedule.js';
 import { validateWalkInDraft, WALK_IN_CLOSED_STATUSES } from '../utils/walk-in.js';
+import { isCaptarImportedLead } from '../utils/lead-origin.js';
 import { currentRoute, currentRouteParam, navigate } from './router.js';
 import {
   formatAppointmentDate,
@@ -52,6 +54,7 @@ import { leadDetailAppointmentTimeField as renderLeadDetailAppointmentTimeField,
 import { leadDetailView as renderLeadDetailView } from './features/leads/lead-detail-view.js';
 import { ensureLeadHistory, stopLeadHistorySubscription } from './features/funnel/lead-history-subscriptions.js';
 import { leadHistoryView } from './features/funnel/lead-history-view.js';
+import { funnelStageLabel } from './features/funnel/funnel-model.js';
 import { leadsView as renderLeadsView } from './features/leads/leads-view.js';
 import { searchDemoLeads, validateLeadSearch } from './features/search/lead-search-data.js';
 import { checkCpfActiveAppointment, loadSearchLead, searchLeadAppointments } from './features/search/lead-search-service.js';
@@ -63,6 +66,7 @@ import { appointmentCreateDialog as renderAppointmentCreateDialog, appointmentCr
 import { handleAppointmentClick, initializeAppointmentCreateEvents } from './features/appointments/appointment-events.js';
 import { appointmentsView as renderAppointmentsView } from './features/appointments/appointments-view.js';
 import { appointmentCancellationDialog, initializeAppointmentCancellationDialog } from './features/appointments/appointment-cancellation-dialog.js';
+import { appointmentRescheduleDialog, initializeAppointmentRescheduleDialog } from './features/appointments/appointment-reschedule-dialog.js';
 import { handleConfirmationClick } from './features/appointments/confirmation-events.js';
 import { normalizeConfirmationDays } from './features/appointments/confirmation-period.js';
 import { confirmationsView as renderConfirmationsView } from './features/appointments/confirmations-view.js';
@@ -192,7 +196,7 @@ function homeView() {
 function appView() {
   const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
   const page = pages[state.route] || homeView;
-  return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${appointmentCancellationDialogView()}`, canManage, hasAccess, pendingFollowUps });
+  return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${appointmentCancellationDialogView()}${appointmentRescheduleDialogView()}`, canManage, hasAccess, pendingFollowUps });
 }
 
 function appointmentTimeField() {
@@ -344,7 +348,7 @@ function leadHistoryDialogView() {
   if (!state.leadHistoryDialogOpen) return '';
   const lead = existingLeadForDetail(activeLeadDetailId());
   if (!lead) return '';
-  return `<dialog id="lead-history-dialog" class="lead-history-dialog" aria-labelledby="lead-history-dialog-title"><header><div><p class="eyebrow">FUNIL</p><h2 id="lead-history-dialog-title">Histórico do lead</h2><p>${lead.fullName}</p></div><button class="icon-button" type="button" data-close-lead-history title="Fechar" aria-label="Fechar histórico"><i data-lucide="circle-x"></i></button></header><div class="lead-history-dialog-body">${leadHistoryView({ ...state.leadHistory, stage: lead.funnelStage || state.leadHistory.stage }, { lead })}</div></dialog>`;
+  return `<dialog id="lead-history-dialog" class="lead-history-dialog" aria-labelledby="lead-history-dialog-title"><header><div><h2 id="lead-history-dialog-title">Histórico do lead</h2><p>${lead.fullName}</p></div><div class="lead-history-dialog-actions"><strong>${escapeHtml(funnelStageLabel(lead.funnelStage || state.leadHistory.stage))}</strong><button class="icon-button" type="button" data-close-lead-history title="Fechar" aria-label="Fechar histórico"><i data-lucide="circle-x"></i></button></div></header><div class="lead-history-dialog-body">${leadHistoryView({ ...state.leadHistory, stage: lead.funnelStage || state.leadHistory.stage }, { lead })}</div></dialog>`;
 }
 
 function findLeadForAppointmentCancellation(leadId) {
@@ -359,6 +363,11 @@ function findLeadForAppointmentCancellation(leadId) {
 function appointmentCancellationDialogView() {
   const lead = findLeadForAppointmentCancellation(state.appointments.cancellationLeadId);
   return appointmentCancellationDialog({ lead, saving: state.appointments.cancellationSaving });
+}
+
+function appointmentRescheduleDialogView() {
+  const lead = findLeadForAppointmentCancellation(state.appointments.rescheduleLeadId);
+  return appointmentRescheduleDialog({ lead, draft: state.appointments.rescheduleDraft, saving: state.appointments.rescheduleSaving });
 }
 
 function isLeadDetailOpen() {
@@ -404,7 +413,8 @@ function managementView() {
       followUps: hasAccess('followups.team'),
       kanban: canManage(),
       dashboard: hasAccess('dashboard.view'),
-      export: hasAccess('leads.export')
+      export: hasAccess('leads.export'),
+      archive: hasAccess('leads.delete')
     },
     queryLimit: MANAGEMENT_QUERY_LIMIT
   });
@@ -478,7 +488,6 @@ function appointmentsView() {
     backRoute: canManage() ? 'management' : 'home',
     canCreate,
     canMarkAttendance: hasAccess('appointments.attendance'),
-    canCancel: hasAccess('appointments.cancel'),
     adminView: hasAccess('leads.edit_all'),
     createDialog: canCreate ? appointmentCreateDialog(allowedAppointmentStores()) : '',
     queryLimit: APPOINTMENTS_QUERY_LIMIT
@@ -842,6 +851,16 @@ function bindPageEvents() {
       const values = leadDetailSubmissionValues(editLeadForm, existingLead, state.leadDetailSchedule.settings, {
         managerReschedule: managementEdit && state.profile?.role === 'manager'
       });
+      const appointmentChanged = existingLead?.appointmentDate && existingLead?.appointmentTime
+        && ['appointmentDate', 'appointmentTime']
+          .some((field) => String(existingLead[field] || '') !== String(values[field] || ''));
+      if (appointmentChanged && existingLead.appointmentStatus !== 'cancelled' && !['attended', 'cancelled'].includes(existingLead.appointmentAttendance || 'pending')) {
+        state.appointments.rescheduleLeadId = existingLead.id;
+        state.appointments.rescheduleDraft = values;
+        state.appointments.rescheduleSaving = false;
+        render();
+        return;
+      }
       const submitButton = editLeadForm.querySelector('[type="submit"]');
       submitButton.disabled = true;
 
@@ -956,6 +975,48 @@ function bindPageEvents() {
         } finally {
           state.appointments.cancellationSaving = false;
           state.appointments.updatingId = '';
+          render();
+        }
+      }
+    });
+  }
+
+  const appointmentReschedule = document.querySelector('#appointment-reschedule-dialog');
+  if (appointmentReschedule) {
+    requestAnimationFrame(() => { if (!appointmentReschedule.open) appointmentReschedule.showModal(); });
+    initializeAppointmentRescheduleDialog(appointmentReschedule, {
+      close: () => {
+        state.appointments.rescheduleLeadId = '';
+        state.appointments.rescheduleDraft = null;
+        state.appointments.rescheduleSaving = false;
+        render();
+      },
+      submit: async (reasonValues) => {
+        const lead = findLeadForAppointmentCancellation(state.appointments.rescheduleLeadId);
+        const draft = state.appointments.rescheduleDraft;
+        const reasonValidation = validateAppointmentReschedule(reasonValues);
+        if (!lead || !draft || state.appointments.rescheduleSaving) return;
+        if (!reasonValidation.isValid) { setFieldErrors(appointmentReschedule.querySelector('form'), reasonValidation.errors); return; }
+        state.appointments.rescheduleSaving = true;
+        render();
+        try {
+          const result = state.demoMode
+            ? updateLead(lead.id, draft, true, () => {}, lead, { profile: state.profile })
+            : await rescheduleAppointment(state.profile, lead, draft, reasonValues);
+          if (!result.isValid) { setFieldErrors(appointmentReschedule.querySelector('form'), result.errors || {}); return; }
+          const updated = { ...lead, ...result.data, appointmentAttendance: 'pending', appointmentStatus: 'scheduled' };
+          state.leads = state.leads.map((item) => item.id === lead.id ? updated : item);
+          state.management.records = state.management.records.map((item) => item.id === lead.id ? updated : item);
+          state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? updated : item);
+          if (state.management.activeLead?.id === lead.id) state.management.activeLead = updated;
+          state.appointments.rescheduleLeadId = '';
+          state.appointments.rescheduleDraft = null;
+          if (state.leadDetailDialog.leadId) closeLeadDetailDialog(); else navigate(lead.id === currentRouteParam() ? 'leads' : state.route);
+          showToast('Agendamento reagendado com histórico preservado.');
+        } catch (error) {
+          showToast(error?.code === 'permission-denied' ? 'Seu perfil não pode reagendar este atendimento.' : 'Não foi possível reagendar. Tente novamente.', 'danger', 'circle-alert');
+        } finally {
+          state.appointments.rescheduleSaving = false;
           render();
         }
       }
@@ -1245,6 +1306,52 @@ function bindPageEvents() {
     });
   }
 
+  const managementArchiveForm = document.querySelector('#management-archive-form');
+  if (managementArchiveForm) {
+    const reopenArchiveDialog = () => requestAnimationFrame(() => {
+      const dialog = document.querySelector('#management-archive-dialog');
+      if (dialog && !dialog.open) dialog.showModal();
+    });
+    managementArchiveForm.querySelector('[data-archive-select-all]')?.addEventListener('change', (event) => {
+      state.management.archiveSelection = event.target.checked
+        ? filteredManagementRecords().map((lead) => lead.id)
+        : [];
+      render();
+      reopenArchiveDialog();
+    });
+    managementArchiveForm.querySelectorAll('input[name="leadId"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        state.management.archiveSelection = [...managementArchiveForm.querySelectorAll('input[name="leadId"]:checked')]
+          .map((item) => item.value);
+        render();
+        reopenArchiveDialog();
+      });
+    });
+    managementArchiveForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const selectedIds = new Set(state.management.archiveSelection);
+      const leads = filteredManagementRecords().filter((lead) => selectedIds.has(lead.id));
+      if (!leads.length || state.management.archiveSaving) return;
+      state.management.archiveSaving = true;
+      render();
+      reopenArchiveDialog();
+      try {
+        const archived = await archiveManagementLeads(state.profile, leads);
+        state.management.records = state.management.records.filter((lead) => !selectedIds.has(lead.id));
+        state.management.archiveOpen = false;
+        state.management.archiveSelection = [];
+        showToast(`${archived} lead(s) arquivado(s).`, 'success', 'archive');
+      } catch (error) {
+        showToast(error?.code === 'permission-denied'
+          ? 'Seu perfil não tem permissão para arquivar estes leads.'
+          : 'Não foi possível arquivar os leads. Tente novamente.', 'danger', 'circle-alert');
+      } finally {
+        state.management.archiveSaving = false;
+        render();
+      }
+    });
+  }
+
   const dashboardPeriodForm = document.querySelector('#dashboard-period');
   dashboardPeriodForm?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -1497,6 +1604,17 @@ async function loadManagementData() {
   render();
   ensureLeadDetailSchedule();
   ensureLeadDetailHistory();
+}
+
+function openManagementArchive() {
+  const records = filteredManagementRecords();
+  state.management.archiveSelection = records.filter(isCaptarImportedLead).map((lead) => lead.id);
+  state.management.archiveOpen = true;
+  render();
+  requestAnimationFrame(() => {
+    const dialog = document.querySelector('#management-archive-dialog');
+    if (dialog && !dialog.open) dialog.showModal();
+  });
 }
 
 async function loadDashboardUpcomingData() {
@@ -1773,6 +1891,19 @@ async function handleAction(action) {
     if (!records.length) return;
     downloadLeadsCsv(records, state.management.filters.startDate, state.management.filters.endDate);
     showToast(`${records.length} registro(s) exportado(s).`);
+  }
+
+  if (action === 'open-management-archive') {
+    if (!hasAccess('leads.delete') || state.management.filters.archiveStatus === 'archived') return;
+    openManagementArchive();
+    return;
+  }
+
+  if (action === 'close-management-archive') {
+    state.management.archiveOpen = false;
+    state.management.archiveSelection = [];
+    render();
+    return;
   }
 
   if (action === 'reload-reports') {
@@ -2103,15 +2234,18 @@ export async function startApp() {
       markAttendance: async (leadId, attendance) => {
         const lead = appointmentRecords().find((item) => item.id === leadId);
         if (!lead) return;
+        const nextAttendance = lead.appointmentAttendance === attendance ? 'pending' : attendance;
         state.appointments.updatingId = lead.id;
         render();
         try {
-          if (state.demoMode) updateDemoAppointmentAttendance(lead.id, attendance, state.profile);
+          if (state.demoMode) updateDemoAppointmentAttendance(lead.id, nextAttendance, state.profile);
           else {
-            await setAppointmentAttendance(state.profile, lead, attendance);
-            state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: attendance } : item);
+            await setAppointmentAttendance(state.profile, lead, nextAttendance);
+            state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: nextAttendance } : item);
           }
-          showToast(attendance === 'attended' ? 'Comparecimento registrado.' : 'Falta registrada.');
+          showToast(nextAttendance === 'pending'
+            ? 'Comparecimento desmarcado.'
+            : nextAttendance === 'attended' ? 'Comparecimento registrado.' : 'Falta registrada.');
         } catch (error) {
           showToast(error?.code === 'permission-denied' ? 'Seu perfil não pode alterar este agendamento.' : 'Não foi possível salvar o comparecimento.', 'danger', 'circle-alert');
         } finally {

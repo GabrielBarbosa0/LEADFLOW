@@ -18,6 +18,7 @@ describe('core state', () => {
     expect(state.loading).toBe(true);
     expect(state.profile).toBeNull();
     expect(state.management.filters).toEqual({ startDate: '2026-10-01', endDate: '2026-10-29' });
+    expect(state.management).toMatchObject({ archiveOpen: false, archiveSelection: [], archiveSaving: false });
     expect(state.dashboardFilters).toEqual({ storeId: '' });
     expect(state.leadSearch).toEqual({ query: '', loading: false, searched: false, error: '', results: [] });
     expect(state.settings.roleDraft).toEqual({ name: '', scope: 'own', permissions: ['leads.create'] });

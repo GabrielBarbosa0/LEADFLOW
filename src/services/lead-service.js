@@ -13,6 +13,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase/client.js';
+import { activeLeads } from '../utils/lead-archive.js';
 import { createLeadDocument, createLeadUpdate } from '../utils/lead.js';
 import { followUpAppointmentKey } from '../utils/follow-up.js';
 import { getInstallationId } from '../utils/installation.js';
@@ -93,7 +94,7 @@ export function subscribeToLeads(profile, demoMode, onData, onError) {
   const emit = () => {
     const merged = new Map(remoteLeads.map((lead) => [lead.id, lead]));
     offlineLeads.forEach((lead) => merged.set(lead.id, { ...merged.get(lead.id), ...lead }));
-    onData([...merged.values()].sort((a, b) => (
+    onData(activeLeads([...merged.values()]).sort((a, b) => (
       String(b.capturedAtClient).localeCompare(String(a.capturedAtClient))
     )));
   };

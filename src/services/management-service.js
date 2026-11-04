@@ -16,6 +16,8 @@ import { canAccessStore, profileStoreIds } from '../utils/permissions.js';
 import { hasPermission } from '../utils/role-profile.js';
 import { appointmentBlockTimes, appointmentSlotId } from '../utils/schedule.js';
 import { removeOfflineLead } from './offline-lead-store.js';
+import { activeLeads, archivedLeads } from '../utils/lead-archive.js';
+import { addLeadHistoryEvents } from './lead-history-service.js';
 
 export const MANAGEMENT_QUERY_LIMIT = 300;
 
@@ -29,7 +31,7 @@ function localDayAfter(date) {
   return nextDay.toISOString();
 }
 
-export async function loadManagementLeads(profile, startDate, endDate) {
+export async function loadManagementLeads(profile, startDate, endDate, { archiveStatus = 'active' } = {}) {
   if (!isFirebaseConfigured || !['manager', 'admin'].includes(profile.role)) {
     throw new Error('Acesso gerencial indisponível.');
   }
@@ -47,15 +49,46 @@ export async function loadManagementLeads(profile, startDate, endDate) {
   }
 
   const snapshot = await getDocs(query(collection(db, 'leads'), ...constraints));
-  const records = snapshot.docs.slice(0, MANAGEMENT_QUERY_LIMIT).map((leadDoc) => ({
+  const documents = snapshot.docs.slice(0, MANAGEMENT_QUERY_LIMIT).map((leadDoc) => ({
     id: leadDoc.id,
     ...leadDoc.data()
   }));
+  const records = archiveStatus === 'archived' ? archivedLeads(documents) : activeLeads(documents);
 
   return {
     records,
     truncated: snapshot.size > MANAGEMENT_QUERY_LIMIT
   };
+}
+
+export async function archiveManagementLeads(profile, leads = []) {
+  if (!Array.isArray(leads) || !leads.length) return 0;
+  leads.forEach((lead) => assertCanDelete(profile, lead));
+  const now = new Date().toISOString();
+  const batch = writeBatch(db);
+  leads.forEach((lead) => {
+    batch.set(doc(db, 'leads', lead.id), {
+      archived: true,
+      archivedAtServer: serverTimestamp(),
+      archivedByUid: profile.uid,
+      archivedByName: String(profile.displayName || 'Usuário'),
+      updatedAtServer: serverTimestamp()
+    }, { merge: true });
+    addLeadHistoryEvents(batch, lead.id, [{
+      storeId: lead.storeId,
+      eventType: 'lead_archived',
+      funnelStage: String(lead.funnelStage || 'captured'),
+      reasonCode: '',
+      description: 'Lead arquivado na gestão.',
+      actorUid: profile.uid,
+      actorName: String(profile.displayName || 'Usuário'),
+      actorRole: String(profile.role || 'manager'),
+      occurredAtClient: now,
+      schemaVersion: 1
+    }]);
+  });
+  await batch.commit();
+  return leads.length;
 }
 
 function assertCanUpdate(profile, lead) {

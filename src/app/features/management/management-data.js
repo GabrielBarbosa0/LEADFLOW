@@ -18,7 +18,7 @@ export async function loadManagementRecords({ profile, filters, demoMode, demoRe
   if (periodError) return { error: periodError };
   if (demoMode) return { records: [...demoRecords], truncated: false };
   try {
-    return await loadRecords(profile, filters.startDate, filters.endDate);
+    return await loadRecords(profile, filters.startDate, filters.endDate, { archiveStatus: filters.archiveStatus });
   } catch (error) {
     return {
       error: error?.code === 'permission-denied'

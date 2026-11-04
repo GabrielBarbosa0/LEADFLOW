@@ -34,14 +34,14 @@ describe('appointments feature modules', () => {
     const markup = appointmentsView({
       allowed: true,
       appointments: { loading: false, error: '', truncated: false, month: '2026-10', storeId: 'loja-06', selectedDate: '2026-10-30', updatingId: '' },
-      records: [lead], allowedStores: [store], backRoute: 'management', canCreate: true, canMarkAttendance: true, canCancel: true,
+      records: [lead], allowedStores: [store], backRoute: 'management', canCreate: true, canMarkAttendance: true,
       adminView: true, createDialog: '<dialog id="appointment-create-dialog"></dialog>', queryLimit: 500,
       now: new Date('2026-10-29T12:00:00-03:00')
     });
     expect(markup).toContain('Maria Silva');
     expect(markup).toContain('data-attendance-status="attended"');
     expect(markup).toContain('data-create-appointment');
-    expect(markup).toContain('data-cancel-appointment="lead-1"');
+    expect(markup).not.toContain('data-cancel-appointment');
     expect(markup).toContain('appointment-create-dialog');
   });
 
