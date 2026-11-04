@@ -1,31 +1,47 @@
 import { expect, test } from '@playwright/test';
 
-test('opens the daily walk-in queue from a full-width standard home action', async ({ page }, testInfo) => {
+test('opens the daily walk-in queue from the shared operational action row', async ({ page }, testInfo) => {
   await page.goto('/');
   await page.evaluate(() => sessionStorage.setItem('fascinlead:demo-role', 'admin'));
   await page.getByRole('button', { name: 'Abrir modo de desenvolvimento' }).click();
 
   const primary = page.getByRole('button', { name: /Nova abordagem/ });
   const walkIn = page.getByRole('button', { name: /Novo encaixe r.pido/ });
+  const externalOperations = page.getByRole('button', { name: /Operação externa/ });
   await expect(primary).toBeVisible();
   await expect(walkIn).toBeVisible();
+  await expect(externalOperations).toBeVisible();
   await expect(walkIn.locator('.action-icon svg')).toBeVisible();
-  const [primaryBox, walkInBox] = await Promise.all([primary.boundingBox(), walkIn.boundingBox()]);
-  expect(walkInBox.width).toBeCloseTo(primaryBox.width, 0);
+  await expect(externalOperations.locator('.action-icon svg')).toBeVisible();
+  const [primaryBox, walkInBox, externalBox] = await Promise.all([primary.boundingBox(), walkIn.boundingBox(), externalOperations.boundingBox()]);
+  if (testInfo.project.name === 'desktop-chrome') {
+    expect(walkInBox.width).toBeLessThan(primaryBox.width);
+    expect(walkInBox.width).toBeCloseTo(externalBox.width, 0);
+    expect(walkInBox.y).toBeCloseTo(externalBox.y, 0);
+    expect(walkInBox.x).toBeLessThan(externalBox.x);
+  } else {
+    expect(walkInBox.width).toBeCloseTo(primaryBox.width, 0);
+    expect(externalBox.width).toBeCloseTo(primaryBox.width, 0);
+  }
   const colors = await page.evaluate(() => {
     const standardCard = document.querySelector('.action-card:not(.action-card-primary):not(.action-card-walk-in)');
     const walkInCard = document.querySelector('.action-card-walk-in');
+    const externalCard = document.querySelector('.action-card-external');
     const walkInIcon = walkInCard.querySelector('.action-icon svg');
     return {
       standard: getComputedStyle(standardCard).backgroundColor,
       walkIn: getComputedStyle(walkInCard).backgroundColor,
       icon: getComputedStyle(walkInCard.querySelector('.action-icon')).backgroundColor,
-      iconOpacity: getComputedStyle(walkInIcon).opacity
+      iconOpacity: getComputedStyle(walkInIcon).opacity,
+      externalIcon: getComputedStyle(externalCard.querySelector('.action-icon')).backgroundColor,
+      externalIconOpacity: getComputedStyle(externalCard.querySelector('.action-icon svg')).opacity
     };
   });
   expect(colors.walkIn).toBe(colors.standard);
   expect(colors.icon).not.toBe('rgba(0, 0, 0, 0)');
   expect(colors.iconOpacity).toBe('1');
+  expect(colors.externalIcon).not.toBe('rgba(0, 0, 0, 0)');
+  expect(colors.externalIconOpacity).toBe('1');
   await page.screenshot({ path: testInfo.outputPath('walk-in-home-action.png'), fullPage: true });
 
   await walkIn.click();

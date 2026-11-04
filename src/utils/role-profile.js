@@ -31,6 +31,7 @@ export const PERMISSION_GROUPS = [
       { id: 'followups.team', label: 'Acompanhar retornos da equipe', scopes: ['stores'] },
       { id: 'goals.manage', label: 'Criar e editar metas da equipe', scopes: ['stores'] },
       { id: 'dashboard.view', label: 'Visualizar dashboard', scopes: ['stores'] },
+      { id: 'external.operations.read', label: 'Visualizar operação externa', scopes: ['stores'] },
       { id: 'leads.export', label: 'Exportar leads em CSV', scopes: ['stores'] }
     ]
   },
@@ -73,19 +74,20 @@ export function permissionsForProfile(profile) {
 
 export function hasPermission(profile, permission) {
   if (profile?.role === 'admin') return true;
-  if (profile?.roleProfileId === 'system-telemarketing') {
+  const profileId = profile?.roleProfileId || profile?.id;
+  if (profileId === 'system-telemarketing') {
     return [
       'leads.create', 'leads.view_own', 'leads.edit_own', 'followups.own',
       'leads.view_stores', 'appointments.view', 'followups.team'
     ].includes(permission);
   }
   if (permission === 'walkins.manage') {
-    return ['system-manager', 'system-receptionist'].includes(profile?.roleProfileId)
-      || (profile?.role === 'manager' && !profile?.roleProfileId);
+    return ['system-manager', 'system-receptionist'].includes(profileId)
+      || (profile?.role === 'manager' && !profileId);
   }
   if (permission === 'appointments.cancel') {
-    return ['system-captor', 'system-mei', 'system-manager', 'system-receptionist'].includes(profile?.roleProfileId)
-      || (['captor', 'manager'].includes(profile?.role) && !profile?.roleProfileId);
+    return ['system-captor', 'system-mei', 'system-manager', 'system-receptionist', 'system-external-leader'].includes(profileId)
+      || (['captor', 'manager'].includes(profile?.role) && !profileId);
   }
   return permissionsForProfile(profile).includes(permission);
 }

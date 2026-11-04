@@ -49,6 +49,7 @@ export async function handleAuthenticationAction(action, dependencies) {
     stopAppointmentsSubscription,
     stopConfirmationsSubscription,
     stopWalkInsSubscription,
+    stopExternalOperations,
     stopNewLeadScheduleSubscriptions,
     createDefaultManagementFilters,
     createDefaultGoalDraft,
@@ -127,6 +128,7 @@ export async function handleAuthenticationAction(action, dependencies) {
   stopAppointmentsSubscription();
   stopConfirmationsSubscription();
   stopWalkInsSubscription?.();
+  stopExternalOperations?.();
   stopNewLeadScheduleSubscriptions();
   stopOfflineCaptureSubscription();
   stopFollowUpScheduleSubscription();
@@ -152,7 +154,8 @@ export async function startAuthenticationController(dependencies) {
     hasAccess,
     stopAppointmentsSubscription,
     stopConfirmationsSubscription,
-    stopWalkInsSubscription
+    stopWalkInsSubscription,
+    stopExternalOperations
   } = dependencies;
 
   if (hasDemoSession(devMode)) {
@@ -208,6 +211,7 @@ export async function startAuthenticationController(dependencies) {
           stopAppointmentsSubscription();
           stopConfirmationsSubscription();
           stopWalkInsSubscription?.();
+          stopExternalOperations?.();
         }
         subscribeProfileLeads();
         startOfflineCaptureSubscription();

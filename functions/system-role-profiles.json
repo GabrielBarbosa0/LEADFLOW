@@ -1,5 +1,5 @@
 {
-  "permissionSchemaVersion": 4,
+  "permissionSchemaVersion": 6,
   "profiles": [
     {
       "id": "system-captor",
@@ -90,6 +90,21 @@
       ]
     },
     {
+      "id": "system-external-leader",
+      "name": "Lider de externa",
+      "scope": "stores",
+      "baseRole": "captor",
+      "permissions": [
+        "leads.create",
+        "leads.view_own",
+        "leads.edit_own",
+        "appointments.cancel",
+        "followups.own",
+        "goals.view_own",
+        "external.operations.read"
+      ]
+    },
+    {
       "id": "system-admin",
       "name": "Administrador",
       "scope": "admin",
@@ -109,6 +124,7 @@
         "goals.manage",
         "dashboard.view",
         "leads.export",
+        "external.operations.read",
         "leads.edit_all",
         "leads.delete",
         "schedule.manage",

@@ -246,6 +246,17 @@ O score nao deve ser exibido a captadores, telemarketing ou usuarios comuns. A p
 
 ## 8. Etapa 5 - Painel do lider de externa
 
+**Status: implementada localmente em 03/11/2026; aguarda validacao operacional e publicacao conjunta da interface com a Cloud Function.**
+
+### Implementacao realizada
+
+- Perfil padrao `Lider de externa`, limitado as unidades autorizadas e a permissao `external.operations.read`.
+- Entrada `Operacao externa` na pagina inicial para quem possui a permissao.
+- Filtro por data, unidade, cliente, apelido, bairro ou referencia, com alternancia para mostrar somente quem precisa de transporte.
+- Resumo de agendamentos, transportes, acompanhantes e assentos reservados.
+- Detalhe operacional com endereco, referencia, apelido, contato, transporte e captador responsavel.
+- Callable Function `listExternalOperations`, que consulta os agendamentos pelo dia e devolve somente os campos logicos; CPF, score, pagamento e dados clinicos nao sao enviados ao navegador desse perfil.
+
 ### Objetivo
 
 Criar uma visao operacional de transporte para o lider de externa, acessivel pela pagina inicial e focada no dia escolhido.
@@ -268,7 +279,7 @@ Adicionar item na pagina inicial: `Operacao externa`.
 
 1. Seletor de data, iniciado em hoje.
 2. Resumo: total de agendamentos, clientes com transporte, acompanhantes e assentos necessarios.
-3. Lista apenas de clientes com transporte, agrupada por unidade e horario.
+3. Lista de clientes do dia, com destaque e filtro para quem precisa de transporte, ordenada por horario.
 4. Cartao compacto: nome, telefone, endereco, bairro, referencia, apelido, horario, acompanhante e responsavel pelo cadastro.
 5. Seta para abrir detalhe completo autorizado, sem mostrar score ou informacoes financeiras.
 6. Estado vazio claro para dia sem transporte.

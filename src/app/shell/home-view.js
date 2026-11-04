@@ -13,6 +13,7 @@ export function homeView({ state, hasAccess, canManage, canManageGoals, isAdmin,
   const cards = [];
   if (hasAccess('leads.create')) cards.push(actionCard('new', 'user-plus', 'Nova abordagem', 'Cadastrar novo contato', '<i data-lucide="chevron-right"></i>').replace('class="action-card"', 'class="action-card action-card-primary"'));
   if (hasAccess('walkins.manage')) cards.push(actionCard('walk-ins', 'clock-3', 'Novo encaixe rápido', 'Adicionar cliente presencial à fila do dia', '<i data-lucide="chevron-right"></i>').replace('class="action-card"', 'class="action-card action-card-walk-in"'));
+  if (hasAccess('external.operations.read')) cards.push(actionCard('external-operations', 'map-pin', 'Operação externa', 'Organizar transportes e acompanhamentos').replace('class="action-card"', 'class="action-card action-card-external"'));
   if (hasAccess('leads.view_own')) cards.push(actionCard('leads', 'clipboard-list', 'Meus cadastros', `${state.leads.length} registro(s) neste acesso`));
   if (hasAccess('followups.own') || hasAccess('followups.team')) {
     const title = hasAccess('followups.team') ? 'Retornos da equipe' : 'Retornos pendentes';

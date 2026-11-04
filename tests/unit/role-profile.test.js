@@ -11,8 +11,8 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(4);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 4)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(6);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 6)).toBe(true);
   });
 
   it('keeps the administrator profile with every permission', () => {
@@ -83,6 +83,27 @@ describe('role profiles', () => {
       roleProfileId: 'system-telemarketing',
       permissions: ['management.view', 'leads.delete', 'walkins.manage']
     }, 'walkins.manage')).toBe(false);
+  });
+
+  it('provides an external leader with standard collaborator access plus logistics', () => {
+    const externalLeader = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-external-leader');
+    const collaborator = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-captor');
+
+    expect(externalLeader).toMatchObject({
+      name: 'Lider de externa',
+      scope: 'stores',
+      baseRole: 'captor',
+      system: true
+    });
+    expect(externalLeader.permissions).toEqual([
+      ...collaborator.permissions,
+      'external.operations.read'
+    ]);
+    expect(hasPermission(externalLeader, 'external.operations.read')).toBe(true);
+    expect(hasPermission(externalLeader, 'leads.create')).toBe(true);
+    expect(hasPermission(externalLeader, 'appointments.cancel')).toBe(true);
+    expect(hasPermission(externalLeader, 'appointments.view')).toBe(false);
+    expect(hasPermission(externalLeader, 'management.view')).toBe(false);
   });
 
   it('creates an own-data profile without team permissions', () => {

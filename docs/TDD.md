@@ -1194,6 +1194,7 @@ O MVP estara apto para piloto quando:
 | ADR-025 | Separar unidades permitidas do usuario e loja de destino do lead | Suporta gestores multi-loja e MEI externo sem perder o isolamento e a atribuicao operacional de cada captacao |
 | ADR-026 | Compartilhar agenda do consultorio e transporte entre Loja 02 e Loja 06 | As duas unidades ficam em Surubim e utilizam os mesmos recursos; Loja 04 e Loja 05 permanecem independentes |
 | ADR-027 | Modelar encaixes como uma fila diaria separada | Preserva a agenda regular e seus blocos de reserva, enquanto registra clientes presenciais, seus estados e a auditoria operacional sem inventar horarios |
+| ADR-028 | Expor a operacao externa por Callable Function com projeção logistica | O lider de externa precisa de rota, contato e transporte, mas nao deve receber CPF, score, pagamento ou dados clinicos do lead no navegador |
 
 ## 20. Pendencias de produto e operacao
 

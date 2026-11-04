@@ -28,6 +28,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
     unsubscribeAppointments: null,
     unsubscribeConfirmations: null,
     unsubscribeWalkIns: null,
+    unsubscribeExternalOperations: null,
     unsubscribeStoreSchedule: null,
     unsubscribeOfflineCapture: null,
     unsubscribeFollowUpSchedule: null,
@@ -111,6 +112,18 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       quickCreate: false,
       quickDraft: {},
       updatingId: ''
+    },
+    externalOperations: {
+      loading: false,
+      loaded: false,
+      error: '',
+      records: [],
+      startDate: toLocalDateInput(new Date()),
+      endDate: toLocalDateInput(new Date()),
+      storeId: '',
+      query: '',
+      transportMode: 'all',
+      detailLeadId: ''
     },
     appointmentCreate: {
       loading: false,

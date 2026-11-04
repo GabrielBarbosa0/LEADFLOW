@@ -124,6 +124,18 @@ export function resetSessionState(state, {
     searchLoading: false, searchSearched: false, searchError: '', searchResults: [],
     quickCreate: false, quickDraft: {}, updatingId: ''
   };
+  state.externalOperations = {
+    loading: false,
+    loaded: false,
+    error: '',
+    records: [],
+    startDate: toLocalDateInput(new Date()),
+    endDate: toLocalDateInput(new Date()),
+    storeId: '',
+    query: '',
+    transportMode: 'all',
+    detailLeadId: ''
+  };
   state.appointmentCreate = {
     loading: false,
     saving: false,

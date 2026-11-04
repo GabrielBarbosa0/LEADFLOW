@@ -6,6 +6,7 @@ import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANA
 import { APPOINTMENTS_QUERY_LIMIT, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, rescheduleAppointment, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
 import { createQuickWalkIn, createWalkIn, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { loadWalkInCaptors } from '../services/walk-in-captor-service.js';
+import { demoExternalOperations, loadExternalOperations } from '../services/external-operations-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
 import { ensureDefaultAppointmentServices, loadAppointmentServices } from '../services/service-catalog-service.js';
 import { consultLocalSavwinSales, isLocalSavwinEnabled } from '../services/savwin-service.js';
@@ -72,6 +73,7 @@ import { handleConfirmationClick } from './features/appointments/confirmation-ev
 import { normalizeConfirmationDays } from './features/appointments/confirmation-period.js';
 import { confirmationsView as renderConfirmationsView } from './features/appointments/confirmations-view.js';
 import { walkInsView as renderWalkInsView } from './features/walk-ins/walk-ins-view.js';
+import { externalOperationsView as renderExternalOperationsView } from './features/external-operations/external-operations-view.js';
 import { findManagementLead as selectManagementLead, loadManagementRecords, validateManagementPeriod } from './features/management/management-data.js';
 import { createDefaultManagementFilters as buildDefaultManagementFilters, filterManagementRecords } from './features/management/management-filters.js';
 import { handleManagementClick, initializeManagementFilters } from './features/management/management-events.js';
@@ -159,6 +161,7 @@ function canAccessRoute(route) {
     appointments: () => hasAccess('appointments.view'),
     confirmations: () => hasAccess('appointments.view'),
     'walk-ins': () => hasAccess('walkins.manage'),
+    'external-operations': () => hasAccess('external.operations.read'),
     access: () => isAdmin(),
     goals: () => hasAccess('goals.view_own') || hasAccess('goals.manage'),
     settings: () => isAdmin()
@@ -195,7 +198,7 @@ function homeView() {
 }
 
 function appView() {
-  const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
+  const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, 'external-operations': externalOperationsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
   const page = pages[state.route] || homeView;
   return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${appointmentCancellationDialogView()}${appointmentRescheduleDialogView()}`, canManage, hasAccess, pendingFollowUps });
 }
@@ -522,6 +525,15 @@ function walkInsView() {
     canCreate: hasAccess('leads.create')
   });
 }
+
+function externalOperationsView() {
+  const allowedStores = isAdmin() ? STORES : STORES.filter((store) => profileStoreIds(state.profile).includes(store.id));
+  return renderExternalOperationsView({
+    allowed: hasAccess('external.operations.read'),
+    operations: state.externalOperations,
+    allowedStores
+  });
+}
 function appointmentCreateSchedule() {
   return resolveAppointmentCreateSchedule(state.appointmentCreate);
 }
@@ -615,6 +627,61 @@ function handleConnectivityChange() {
 
 function bindPageEvents() {
   initializeKanbanScrollbar();
+  const externalDetailDialog = document.querySelector('#external-operation-detail-dialog');
+  if (externalDetailDialog) {
+    requestAnimationFrame(() => {
+      if (!externalDetailDialog.open) externalDetailDialog.showModal();
+    });
+    const closeExternalDetail = () => {
+      state.externalOperations.detailLeadId = '';
+      render();
+    };
+    externalDetailDialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closeExternalDetail();
+    });
+    externalDetailDialog.addEventListener('click', (event) => {
+      if (event.target === externalDetailDialog) closeExternalDetail();
+    });
+    externalDetailDialog.querySelectorAll('[data-external-detail-close]').forEach((button) => button.addEventListener('click', closeExternalDetail));
+  }
+  const reloadExternalOperations = () => {
+    state.externalOperations.loaded = false;
+    state.externalOperations.detailLeadId = '';
+    loadExternalOperationsData();
+  };
+  document.querySelector('[data-external-operations-apply]')?.addEventListener('click', () => {
+    const startDate = document.querySelector('#external-operations-start-date')?.value || '';
+    const endDate = document.querySelector('#external-operations-end-date')?.value || '';
+    if (!startDate || !endDate || startDate > endDate) {
+      showToast('Informe um período válido para consultar as rotas.', 'danger', 'circle-alert');
+      return;
+    }
+    state.externalOperations.startDate = startDate;
+    state.externalOperations.endDate = endDate;
+    reloadExternalOperations();
+  });
+  document.querySelector('#external-operations-store')?.addEventListener('change', (event) => {
+    state.externalOperations.storeId = event.target.value;
+    reloadExternalOperations();
+  });
+  document.querySelector('#external-operations-search')?.addEventListener('input', (event) => {
+    const selectionStart = event.target.selectionStart;
+    const selectionEnd = event.target.selectionEnd;
+    state.externalOperations.query = event.target.value;
+    render();
+    const input = document.querySelector('#external-operations-search');
+    input?.focus();
+    input?.setSelectionRange(selectionStart, selectionEnd);
+  });
+  document.querySelector('#external-operations-transport')?.addEventListener('change', (event) => {
+    state.externalOperations.transportMode = event.target.value;
+    render();
+  });
+  document.querySelectorAll('[data-external-detail-open]').forEach((button) => button.addEventListener('click', () => {
+    state.externalOperations.detailLeadId = button.dataset.externalDetailOpen;
+    render();
+  }));
   const rankingDialog = document.querySelector('#dashboard-ranking-dialog');
   if (rankingDialog) {
     requestAnimationFrame(() => {
@@ -1758,6 +1825,38 @@ function ensureWalkInsData() {
   }
 }
 
+function stopExternalOperations() {
+  state.unsubscribeExternalOperations?.();
+  state.unsubscribeExternalOperations = null;
+}
+
+async function loadExternalOperationsData() {
+  if (state.route !== 'external-operations' || !hasAccess('external.operations.read') || state.externalOperations.loading) return;
+  state.externalOperations.loading = true;
+  state.externalOperations.error = '';
+  render();
+  try {
+    const result = state.demoMode
+      ? { records: demoExternalOperations(state.leads, state.externalOperations), truncated: false }
+      : await loadExternalOperations(state.externalOperations);
+    state.externalOperations.records = result.records;
+    state.externalOperations.loaded = true;
+  } catch (error) {
+    state.externalOperations.error = error?.code === 'permission-denied'
+      ? 'Seu perfil nao possui acesso a operacao externa.'
+      : 'Nao foi possivel carregar as rotas do dia.';
+  } finally {
+    state.externalOperations.loading = false;
+    render();
+  }
+}
+
+function ensureExternalOperationsData() {
+  if (state.route === 'external-operations' && hasAccess('external.operations.read') && !state.externalOperations.loaded && !state.externalOperations.loading) {
+    loadExternalOperationsData();
+  }
+}
+
 function startConfirmationsSubscription() {
   return startConfirmationsLive({ state, render, hasAccess, subscribe: subscribeToAppointmentConfirmations });
 }
@@ -1854,6 +1953,7 @@ function refreshAuthorizedData() {
   ensureAppointmentsData();
   ensureConfirmationsData();
   ensureWalkInsData();
+  ensureExternalOperationsData();
   ensureNewLeadSchedule();
   ensureLeadDetailSchedule();
   ensureLeadDetailHistory();
@@ -1885,6 +1985,7 @@ function authControllerDependencies() {
     stopAppointmentsSubscription,
     stopConfirmationsSubscription,
     stopWalkInsSubscription,
+    stopExternalOperations,
     stopNewLeadScheduleSubscriptions,
     stopLeadHistorySubscription: () => stopLeadHistorySubscription(state),
     synchronizePendingRegistrations,
@@ -2337,6 +2438,7 @@ export async function startApp() {
     stopAppointmentsSubscription,
     stopConfirmationsSubscription,
     stopWalkInsSubscription,
+    stopExternalOperations,
     stopNewLeadScheduleSubscriptions,
     stopLeadHistorySubscription: () => stopLeadHistorySubscription(state),
     handleConnectivity: handleConnectivityChange,

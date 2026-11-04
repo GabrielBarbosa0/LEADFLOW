@@ -47,7 +47,7 @@ function canonicalAccessProfile(email, access, authUser) {
     email,
     displayName: access.displayName || authUser.displayName || 'Colaborador',
     photoUrl: authUser.photoURL || '',
-    role: access.role,
+    role: systemProfile?.baseRole || access.role,
     roleProfileId: access.roleProfileId || systemProfile?.id || '',
     permissions: currentPermissions(access, systemProfile),
     permissionSchemaVersion: PERMISSION_SCHEMA_VERSION,
@@ -87,7 +87,8 @@ exports.syncCurrentAccess = onCall({ region: 'southamerica-east1' }, async (requ
   const authUser = await getAuth().getUser(request.auth.uid);
   const canonical = canonicalAccessProfile(email, access, authUser);
   const currentUser = userSnapshot.data() || {};
-  const accessNeedsUpdate = access.permissionSchemaVersion !== PERMISSION_SCHEMA_VERSION
+  const accessNeedsUpdate = access.role !== canonical.role
+    || access.permissionSchemaVersion !== PERMISSION_SCHEMA_VERSION
     || access.roleProfileId !== canonical.roleProfileId
     || !sameStringArray(access.permissions, canonical.permissions);
   const userNeedsUpdate = !userSnapshot.exists || accessProfileChanged(currentUser, canonical);
@@ -96,6 +97,7 @@ exports.syncCurrentAccess = onCall({ region: 'southamerica-east1' }, async (requ
     const batch = firestore.batch();
     if (accessNeedsUpdate) {
       batch.set(accessRef, {
+        role: canonical.role,
         roleProfileId: canonical.roleProfileId,
         permissions: canonical.permissions,
         permissionSchemaVersion: PERMISSION_SCHEMA_VERSION,
@@ -433,4 +435,90 @@ exports.checkCpfActiveAppointment = onCall({ region: 'southamerica-east1' }, asy
     .limit(20)
     .get();
   return { hasAppointment: snapshot.docs.some((lead) => hasActiveAppointment(lead.data())) };
+});
+
+async function externalOperationsCaller(request) {
+  const email = normalizeEmail(request.auth?.token?.email);
+  if (!request.auth || request.auth.token.email_verified !== true || !email) {
+    throw new HttpsError('unauthenticated', 'Entre novamente para consultar a operacao externa.');
+  }
+
+  if (email === PRIMARY_ADMIN_EMAIL) return { role: 'admin', storeIds: [] };
+
+  const accessSnapshot = await getFirestore().doc(`allowedEmails/${email}`).get();
+  const access = accessSnapshot.data();
+  if (!accessSnapshot.exists || access?.active !== true) {
+    throw new HttpsError('permission-denied', 'Seu perfil nao possui acesso a operacao externa.');
+  }
+
+  const permissions = currentPermissions(access, systemProfileForAccess(access));
+  if (!permissions.includes('external.operations.read')) {
+    throw new HttpsError('permission-denied', 'Seu perfil nao possui acesso a operacao externa.');
+  }
+  const storeIds = [...new Set([access.storeId, ...(Array.isArray(access.storeIds) ? access.storeIds : [])]
+    .filter(Boolean)
+    .map(String))];
+  return { role: String(access.role || 'captor'), storeIds };
+}
+
+function externalOperationLead(snapshot) {
+  const lead = snapshot.data();
+  const companions = Number(lead.companionCount ?? (lead.hasCompanion ? 1 : 0));
+  return {
+    id: snapshot.id,
+    fullName: String(lead.fullName || ''),
+    preferredName: String(lead.preferredName || ''),
+    phoneSearch: String(lead.phoneSearch || ''),
+    storeId: String(lead.storeId || ''),
+    appointmentDate: String(lead.appointmentDate || ''),
+    appointmentTime: String(lead.appointmentTime || ''),
+    appointmentServiceName: String(lead.appointmentServiceName || ''),
+    needsTransport: lead.needsTransport === true,
+    hasCompanion: companions > 0,
+    companionCount: Math.max(0, companions),
+    transportSeats: Number(lead.transportSeats) || (lead.needsTransport ? companions + 1 : 0),
+    street: String(lead.street || ''),
+    number: String(lead.number || ''),
+    neighborhood: String(lead.neighborhood || ''),
+    city: String(lead.city || ''),
+    state: String(lead.state || ''),
+    addressReference: String(lead.addressReference || ''),
+    capturedByName: String(lead.capturedByName || '')
+  };
+}
+
+exports.listExternalOperations = onCall({ region: 'southamerica-east1' }, async (request) => {
+  const caller = await externalOperationsCaller(request);
+  const startDate = String(request.data?.startDate || '');
+  const endDate = String(request.data?.endDate || '');
+  const requestedStoreId = String(request.data?.storeId || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate) || startDate > endDate) {
+    throw new HttpsError('invalid-argument', 'Informe um periodo valido.');
+  }
+  const days = Math.floor((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000);
+  if (days > 30) {
+    throw new HttpsError('invalid-argument', 'O periodo maximo e de 31 dias.');
+  }
+  if (caller.role !== 'admin' && requestedStoreId && !caller.storeIds.includes(requestedStoreId)) {
+    throw new HttpsError('permission-denied', 'Esta unidade nao esta permitida para seu perfil.');
+  }
+
+  const snapshot = await getFirestore().collection('leads')
+    .where('appointmentDate', '>=', startDate)
+    .where('appointmentDate', '<=', endDate)
+    .limit(500)
+    .get();
+  const records = snapshot.docs
+    .filter((item) => {
+      const lead = item.data();
+      return lead.archived !== true
+        && lead.needsTransport === true
+        && lead.appointmentStatus !== 'cancelled'
+        && lead.appointmentAttendance !== 'cancelled'
+        && (!requestedStoreId || lead.storeId === requestedStoreId)
+        && (caller.role === 'admin' || caller.storeIds.includes(lead.storeId));
+    })
+    .map(externalOperationLead)
+    .sort((left, right) => `${left.appointmentTime}-${left.fullName}`.localeCompare(`${right.appointmentTime}-${right.fullName}`, 'pt-BR'));
+  return { records, truncated: snapshot.size === 500 };
 });
