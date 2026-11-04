@@ -57,7 +57,6 @@ import { leadDetailAppointmentTimeField as renderLeadDetailAppointmentTimeField,
 import { leadDetailView as renderLeadDetailView } from './features/leads/lead-detail-view.js';
 import { ensureLeadHistory, stopLeadHistorySubscription } from './features/funnel/lead-history-subscriptions.js';
 import { leadHistoryView } from './features/funnel/lead-history-view.js';
-import { funnelStageLabel } from './features/funnel/funnel-model.js';
 import { leadsView as renderLeadsView } from './features/leads/leads-view.js';
 import { searchDemoLeads, validateLeadSearch } from './features/search/lead-search-data.js';
 import { checkCpfActiveAppointment, loadSearchLead, searchLeadAppointments } from './features/search/lead-search-service.js';
@@ -356,7 +355,7 @@ function leadHistoryDialogView() {
   if (!state.leadHistoryDialogOpen) return '';
   const lead = existingLeadForDetail(activeLeadDetailId());
   if (!lead) return '';
-  return `<dialog id="lead-history-dialog" class="lead-history-dialog" aria-labelledby="lead-history-dialog-title"><header><div><h2 id="lead-history-dialog-title">Histórico do lead</h2><p>${lead.fullName}</p></div><div class="lead-history-dialog-actions"><strong>${escapeHtml(funnelStageLabel(lead.funnelStage || state.leadHistory.stage))}</strong><button class="icon-button" type="button" data-close-lead-history title="Fechar" aria-label="Fechar histórico"><i data-lucide="circle-x"></i></button></div></header><div class="lead-history-dialog-body">${leadHistoryView({ ...state.leadHistory, stage: lead.funnelStage || state.leadHistory.stage }, { lead })}</div></dialog>`;
+  return `<dialog id="lead-history-dialog" class="lead-history-dialog" aria-labelledby="lead-history-dialog-title"><header><div><h2 id="lead-history-dialog-title">Histórico do lead</h2><p>${lead.fullName}</p></div><div class="lead-history-dialog-actions"><button class="icon-button" type="button" data-close-lead-history title="Fechar" aria-label="Fechar histórico"><i data-lucide="circle-x"></i></button></div></header><div class="lead-history-dialog-body">${leadHistoryView({ ...state.leadHistory, stage: lead.funnelStage || state.leadHistory.stage }, { lead })}</div></dialog>`;
 }
 
 function findLeadForAppointmentCancellation(leadId) {
