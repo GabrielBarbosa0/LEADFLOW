@@ -1,4 +1,15 @@
 import { renderIcons, toastMarkup } from '../shared/ui.js';
+import { APP_NAME, APP_NAME_UPPER } from '../../config/branding.js';
+
+function applyBranding(root) {
+  document.title = APP_NAME;
+  const loginTitle = root.querySelector('#login-title');
+  const headerBrand = root.querySelector('.header-brand .eyebrow');
+  const loadingText = root.querySelector('.loading-page span');
+  if (loginTitle) loginTitle.textContent = APP_NAME;
+  if (headerBrand) headerBrand.textContent = APP_NAME_UPPER;
+  if (loadingText) loadingText.textContent = `Preparando o ${APP_NAME}...`;
+}
 
 export function syncAgendaSidebarHeight() {
   const agendaLayout = document.querySelector('.agenda-layout');
@@ -27,6 +38,8 @@ export function renderApplication({ state, appView, loginView, canAccessRoute, b
   } else {
     root.innerHTML = state.profile ? appView() : loginView();
   }
+
+  applyBranding(root);
 
   if (state.updateAction) {
     root.insertAdjacentHTML('beforeend', `<aside class="update-banner" role="status">

@@ -5,6 +5,7 @@ import { createSavwinLocalProxy } from './server/savwin-local-proxy.js';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const appName = mode === 'staging' ? 'LeadFlow Test' : 'LeadFlow';
   return ({
   build: {
     rolldownOptions: {
@@ -33,14 +34,20 @@ export default defineConfig(({ mode }) => {
     }
   },
   plugins: [
+    {
+      name: 'leadflow-branding',
+      transformIndexHtml(html) {
+        return html.replace(/<title>.*?<\/title>/, `<title>${appName}</title>`);
+      }
+    },
     createFascinLeadApi(env),
     createSavwinLocalProxy(env),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'favicon-32.png', 'apple-touch-icon.png', 'leadflow-logo.png'],
       manifest: {
-        name: 'LeadFlow',
-        short_name: 'LeadFlow',
+        name: appName,
+        short_name: appName,
         description: 'Captacao, relacionamento e agendamento de clientes.',
         theme_color: '#003070',
         background_color: '#f4f6f9',
