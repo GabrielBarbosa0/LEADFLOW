@@ -8,6 +8,10 @@ export function initializeAppointmentCreateEvents(form, handlers) {
   form.addEventListener('submit', (event) => { event.preventDefault(); handlers.submit(form); });
 }
 
+export function nextAppointmentAttendance(currentAttendance, selectedAttendance) {
+  return currentAttendance === selectedAttendance ? 'pending' : selectedAttendance;
+}
+
 export async function handleAppointmentClick(event, handlers) {
   const leadButton = event.target.closest('[data-appointment-lead-id]');
   if (leadButton) { handlers.openLead(leadButton.dataset.appointmentLeadId); return true; }

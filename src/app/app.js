@@ -59,7 +59,7 @@ import { handleFollowUpsClick } from './features/follow-ups/follow-ups-events.js
 import { initialFollowUpsState, startFollowUpsSubscriptions } from './features/follow-ups/follow-ups-subscriptions.js';
 import { followUpsView as renderFollowUpsView, pendingFollowUps as selectPendingFollowUps } from './features/follow-ups/follow-ups-view.js';
 import { appointmentCreateDialog as renderAppointmentCreateDialog, appointmentCreateSchedule as resolveAppointmentCreateSchedule, appointmentCreateService as resolveAppointmentCreateService, appointmentCreateTimeField as renderAppointmentCreateTimeField } from './features/appointments/appointment-dialog.js';
-import { handleAppointmentClick, initializeAppointmentCreateEvents } from './features/appointments/appointment-events.js';
+import { handleAppointmentClick, initializeAppointmentCreateEvents, nextAppointmentAttendance } from './features/appointments/appointment-events.js';
 import { appointmentsView as renderAppointmentsView } from './features/appointments/appointments-view.js';
 import { handleConfirmationClick } from './features/appointments/confirmation-events.js';
 import { normalizeConfirmationDays } from './features/appointments/confirmation-period.js';
@@ -2028,15 +2028,18 @@ export async function startApp() {
       markAttendance: async (leadId, attendance) => {
         const lead = appointmentRecords().find((item) => item.id === leadId);
         if (!lead) return;
+        const nextAttendance = nextAppointmentAttendance(lead.appointmentAttendance || 'pending', attendance);
         state.appointments.updatingId = lead.id;
         render();
         try {
-          if (state.demoMode) updateDemoAppointmentAttendance(lead.id, attendance, state.profile);
+          if (state.demoMode) updateDemoAppointmentAttendance(lead.id, nextAttendance, state.profile);
           else {
-            await setAppointmentAttendance(state.profile, lead, attendance);
-            state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: attendance } : item);
+            await setAppointmentAttendance(state.profile, lead, nextAttendance);
+            state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: nextAttendance } : item);
           }
-          showToast(attendance === 'attended' ? 'Comparecimento registrado.' : 'Falta registrada.');
+          showToast(nextAttendance === 'pending'
+            ? 'Comparecimento desmarcado.'
+            : nextAttendance === 'attended' ? 'Comparecimento registrado.' : 'Falta registrada.');
         } catch (error) {
           showToast(error?.code === 'permission-denied' ? 'Seu perfil não pode alterar este agendamento.' : 'Não foi possível salvar o comparecimento.', 'danger', 'circle-alert');
         } finally {

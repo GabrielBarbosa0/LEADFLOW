@@ -1083,6 +1083,49 @@ test('groups appointments by day and registers attendance', async ({ page }, tes
   await expect(persistedAttendance.getByRole('button', { name: 'Compareceu', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('returns attendance to pending when the active option is selected again', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-15T12:00:00-03:00'));
+  await page.reload();
+  await page.evaluate(() => {
+    sessionStorage.setItem('fascinlead:demo-role', 'admin');
+    localStorage.setItem('fascinlead:demo-leads', JSON.stringify([{
+      id: 'attendance-toggle',
+      fullName: 'Cliente Comparecimento Reversível',
+      preferredName: '',
+      phoneSearch: '81999991234',
+      appointmentDate: '2026-10-19',
+      appointmentTime: '08:00',
+      appointmentAttendance: 'pending',
+      appointmentServiceName: 'Exame de vista',
+      appointmentDurationMinutes: 20,
+      capturedByName: 'Gestor de Teste',
+      capturedByUid: 'demo-admin',
+      storeId: 'loja-06',
+      syncState: 'demo'
+    }]));
+  });
+
+  await page.getByRole('button', { name: 'Abrir modo de desenvolvimento' }).click();
+  await page.getByRole('button', { name: /Agenda de exames/ }).click();
+  await page.locator('[data-appointment-date="2026-10-19"]').click();
+
+  const attendance = page.getByRole('group', { name: 'Comparecimento de Cliente Comparecimento Reversível' });
+  const attended = attendance.getByRole('button', { name: 'Compareceu', exact: true });
+  const missed = attendance.getByRole('button', { name: 'Não compareceu', exact: true });
+
+  await attended.click();
+  await expect(attended).toHaveAttribute('aria-pressed', 'true');
+  await attended.click();
+  await expect(attended).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByText('Comparecimento desmarcado.')).toBeVisible();
+
+  await missed.click();
+  await expect(missed).toHaveAttribute('aria-pressed', 'true');
+  await missed.click();
+  await expect(missed).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByText('Comparecimento desmarcado.')).toBeVisible();
+});
+
 test('keeps a long appointment list inside the calendar height', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chrome', 'Desktop sidebar uses its own scroll área.');
 
