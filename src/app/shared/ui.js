@@ -1,4 +1,5 @@
 import {
+  Archive,
   ArrowLeft,
   BarChart3,
   BellRing,
@@ -63,6 +64,7 @@ import {
 import { escapeHtml } from './formatters.js';
 
 const appIcons = {
+  Archive,
   ArrowLeft,
   BarChart3,
   BellRing,

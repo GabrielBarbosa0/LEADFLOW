@@ -583,14 +583,18 @@ function handleConnectivityChange() {
   });
 }
 
+function showDialogOnNextFrame(selector) {
+  requestAnimationFrame(() => {
+    const dialog = document.querySelector(selector);
+    if (dialog?.isConnected && !dialog.open) dialog.showModal();
+  });
+}
 
 function bindPageEvents() {
   initializeKanbanScrollbar();
   const rankingDialog = document.querySelector('#dashboard-ranking-dialog');
   if (rankingDialog) {
-    requestAnimationFrame(() => {
-      if (!rankingDialog.open) rankingDialog.showModal();
-    });
+    showDialogOnNextFrame('#dashboard-ranking-dialog');
     rankingDialog.addEventListener('cancel', (event) => {
       event.preventDefault();
       state.dashboardRanking.open = false;
@@ -609,9 +613,7 @@ function bindPageEvents() {
   }
   const leadDetailDialog = document.querySelector('#lead-detail-dialog');
   if (leadDetailDialog) {
-    requestAnimationFrame(() => {
-      if (!leadDetailDialog.open) leadDetailDialog.showModal();
-    });
+    showDialogOnNextFrame('#lead-detail-dialog');
     leadDetailDialog.addEventListener('cancel', (event) => {
       event.preventDefault();
       closeLeadDetailDialog();
@@ -622,9 +624,7 @@ function bindPageEvents() {
   }
   const leadHistoryDialog = document.querySelector('#lead-history-dialog');
   if (leadHistoryDialog) {
-    requestAnimationFrame(() => {
-      if (!leadHistoryDialog.open) leadHistoryDialog.showModal();
-    });
+    showDialogOnNextFrame('#lead-history-dialog');
     leadHistoryDialog.addEventListener('cancel', (event) => {
       event.preventDefault();
       state.leadHistoryDialogOpen = false;
