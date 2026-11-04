@@ -97,6 +97,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       saving: false,
       error: '',
       records: [],
+      captors: [],
       services: [],
       serviceId: '',
       storeId: '',

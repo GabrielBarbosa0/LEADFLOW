@@ -42,7 +42,9 @@ export function validateWalkInDraft(values = {}) {
     serviceName: String(values.serviceName || '').trim(),
     professionalType: String(values.professionalType || '').trim(),
     reason: String(values.reason || '').trim(),
-    notes: String(values.notes || '').trim()
+    notes: String(values.notes || '').trim(),
+    walkInCaptorUid: String(values.walkInCaptorUid || '').trim(),
+    walkInCaptorName: String(values.walkInCaptorName || '').trim()
   };
   const errors = {};
   if (!data.leadId) errors.leadId = 'Selecione um cliente.';
@@ -53,6 +55,9 @@ export function validateWalkInDraft(values = {}) {
   if (!['optometrist', 'ophthalmologist'].includes(data.professionalType)) errors.professionalType = 'Selecione o profissional.';
   if (data.reason.length < 5 || data.reason.length > 240) errors.reason = 'Informe o motivo do encaixe.';
   if (data.notes.length > 500) errors.notes = 'A observação deve ter no máximo 500 caracteres.';
+  if ((data.walkInCaptorUid && !data.walkInCaptorName) || (!data.walkInCaptorUid && data.walkInCaptorName)) {
+    errors.walkInCaptorUid = 'Selecione um captador valido ou deixe este campo em branco.';
+  }
   return { data, errors, isValid: Object.keys(errors).length === 0 };
 }
 

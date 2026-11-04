@@ -46,6 +46,10 @@ Essa ordem primeiro protege a trilha operacional, depois melhora a agenda e so e
 
 **Status: implementada localmente em 03/11/2026.** A entrega ainda nao foi publicada em Hosting nem teve regras do Firestore enviadas ao projeto de producao.
 
+### Status
+
+Implementacao inicial concluida localmente: busca por nome, exibicao na fila, registro auditavel e acompanhamento do captador vinculado. A troca posterior de responsavel com motivo continua pendente para uma etapa especifica.
+
 ### Objetivo
 
 Permitir cancelar um agendamento sem excluir o lead, a data anterior ou eventos ja registrados. O cancelamento deve explicar o motivo e permanecer visivel no historico.
@@ -142,7 +146,7 @@ O retorno nao sera contado como reagendamento nos relatorios. A interface da age
 
 ### Objetivo
 
-Permitir associar opcionalmente um captador a um encaixe, para que ele acompanhe aquele cliente sem adulterar quem realizou o cadastro original.
+Permitir associar opcionalmente um captador a um encaixe, para que ele acompanhe aquele cliente sem adulterar quem realizou o cadastro original. Para um cadastro rapido novo, o captador escolhido passa a ser o autor original; para um lead existente, ele fica registrado apenas como quem trouxe o cliente para aquele encaixe.
 
 ### Experiencia proposta
 

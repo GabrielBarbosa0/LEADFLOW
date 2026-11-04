@@ -70,6 +70,28 @@ function leadCreatedHistoryEvent(profile, leadId, storeId) {
   };
 }
 
+function captorAssignment(profile, data, walkInId) {
+  if (!data.walkInCaptorUid) return null;
+  return {
+    followUpCaptorUid: data.walkInCaptorUid,
+    followUpCaptorName: data.walkInCaptorName,
+    followUpSource: 'walk_in',
+    followUpWalkInId: walkInId,
+    followUpAssignedAtServer: serverTimestamp(),
+    followUpAssignedByUid: profile.uid,
+    updatedAtServer: serverTimestamp()
+  };
+}
+
+function captorAssignmentHistoryEvent(profile, walkIn) {
+  return historyEvent(
+    profile,
+    walkIn,
+    'walk_in_captor_assigned',
+    `Captador responsavel pelo encaixe: ${walkIn.walkInCaptorName}.`
+  );
+}
+
 function walkInDocumentId(queueDate, leadId) {
   return `${queueDate}__${leadId}`;
 }
@@ -145,6 +167,11 @@ export async function createWalkIn(profile, values) {
       schemaVersion: 1
     };
     transaction.set(reference, walkIn);
+    const assignment = captorAssignment(profile, data, id);
+    if (assignment) {
+      transaction.update(doc(db, 'leads', data.leadId), assignment);
+      transaction.set(doc(db, 'leads', data.leadId, 'history', createId()), captorAssignmentHistoryEvent(profile, { ...walkIn, id }));
+    }
     transaction.set(doc(db, 'leads', data.leadId, 'history', createId()), historyEvent(
       profile,
       { ...walkIn, id },
@@ -157,9 +184,12 @@ export async function createWalkIn(profile, values) {
 
 export async function createQuickWalkIn(profile, leadValues, walkInValues, options = {}) {
   const leadId = createId();
+  const attributionProfile = walkInValues.walkInCaptorUid
+    ? { ...profile, uid: walkInValues.walkInCaptorUid, displayName: walkInValues.walkInCaptorName, storeId: walkInValues.storeId }
+    : { ...profile, storeId: walkInValues.storeId };
   const quickLead = createQuickLeadDocument(
     { ...leadValues, ...walkInValues },
-    { ...profile, storeId: walkInValues.storeId },
+    attributionProfile,
     getInstallationId()
   );
   if (!quickLead.isValid) return { ...quickLead, scope: 'lead' };
@@ -210,6 +240,10 @@ export async function createQuickWalkIn(profile, leadValues, walkInValues, optio
       funnelUpdatedAtServer: serverTimestamp()
     });
     transaction.set(doc(db, 'leads', leadId, 'history', createId()), leadCreatedHistoryEvent(profile, leadId, data.storeId));
+    if (data.walkInCaptorUid) {
+      transaction.update(leadReference, captorAssignment(profile, data, id));
+      transaction.set(doc(db, 'leads', leadId, 'history', createId()), captorAssignmentHistoryEvent(profile, { ...walkIn, id }));
+    }
     transaction.set(walkInReference, walkIn);
     transaction.set(doc(db, 'leads', leadId, 'history', createId()), historyEvent(
       profile,

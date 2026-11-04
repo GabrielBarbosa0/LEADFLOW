@@ -5,6 +5,7 @@ import { loadRoleProfiles } from '../services/role-profile-service.js';
 import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
 import { APPOINTMENTS_QUERY_LIMIT, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, rescheduleAppointment, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
 import { createQuickWalkIn, createWalkIn, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
+import { loadWalkInCaptors } from '../services/walk-in-captor-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
 import { ensureDefaultAppointmentServices, loadAppointmentServices } from '../services/service-catalog-service.js';
 import { consultLocalSavwinSales, isLocalSavwinEnabled } from '../services/savwin-service.js';
@@ -1190,6 +1191,13 @@ function bindPageEvents() {
       values.storeId = selectedLead?.storeId || values.storeId;
       values.queueDate = toLocalDateInput(new Date());
       values.serviceName = service?.name || '';
+      const captorName = String(values.walkInCaptorName || '').trim();
+      const captor = captorName
+        ? state.walkIns.captors.find((item) => item.displayName.localeCompare(captorName, 'pt-BR', { sensitivity: 'accent' }) === 0
+          && item.storeIds.includes(values.storeId))
+        : null;
+      values.walkInCaptorUid = captor?.uid || '';
+      values.walkInCaptorName = captor?.displayName || captorName;
       if ((!selectedLead && !quickCreate) || !profileStoreIds(state.profile).includes(values.storeId)) {
         showToast('Selecione um cliente de uma unidade permitida.', 'danger', 'circle-alert');
         return;
@@ -1698,12 +1706,25 @@ async function startWalkInsSubscription() {
   try {
     if (state.demoMode) {
       state.walkIns.services = [defaultAppointmentService(profileStoreIds(state.profile), DEFAULT_STORE_SCHEDULE.appointmentDurationMinutes)];
+      state.walkIns.captors = [...new Map(state.leads
+        .filter((lead) => lead.capturedByUid && lead.capturedByName)
+        .map((lead) => [lead.capturedByUid, {
+          uid: lead.capturedByUid,
+          displayName: lead.capturedByName,
+          storeId: lead.storeId,
+          storeIds: [lead.storeId]
+        }])).values()];
       state.walkIns.loaded = true;
       state.walkIns.loading = false;
       render();
       return;
     }
-    state.walkIns.services = await loadAppointmentServices(state.profile);
+    const [services, captors] = await Promise.all([
+      loadAppointmentServices(state.profile),
+      loadWalkInCaptors(state.profile)
+    ]);
+    state.walkIns.services = services;
+    state.walkIns.captors = captors;
     state.unsubscribeWalkIns = subscribeToWalkIns(
       state.profile,
       toLocalDateInput(new Date()),
@@ -2029,7 +2050,7 @@ export async function startApp() {
           ? state.leads.find((item) => item.id === result.id)
           : await loadSearchLead(result.id);
         if (!lead) throw new Error('not-found');
-        if (lead.capturedByUid === state.profile?.uid && hasAccess('leads.view_own')) {
+        if ((lead.capturedByUid === state.profile?.uid || lead.followUpCaptorUid === state.profile?.uid) && hasAccess('leads.view_own')) {
           if (!state.leads.some((item) => item.id === lead.id)) state.leads = [lead, ...state.leads];
           navigate('lead', lead.id);
         } else if (hasAccess('leads.view_stores')) {

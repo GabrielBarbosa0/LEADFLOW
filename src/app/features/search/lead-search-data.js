@@ -28,6 +28,6 @@ export function searchDemoLeads(leads = [], queryText = '', profile = {}) {
       appointmentAttendance: lead.appointmentAttendance || '',
       appointmentServiceName: lead.appointmentServiceName || '',
       capturedByName: lead.capturedByName || '',
-      canOpen: lead.capturedByUid === profile.uid || profile.role === 'admin' || profile.role === 'manager'
+      canOpen: lead.capturedByUid === profile.uid || lead.followUpCaptorUid === profile.uid || profile.role === 'admin' || profile.role === 'manager'
     }));
 }

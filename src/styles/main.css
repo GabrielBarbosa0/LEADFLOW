@@ -7947,6 +7947,19 @@ svg {
   font-size: 0.76rem;
 }
 
+.walk-in-captor {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  color: var(--brand) !important;
+  font-weight: 700;
+}
+
+.walk-in-captor svg {
+  width: 14px;
+  height: 14px;
+}
+
 .walk-in-closed-reason {
   color: var(--danger) !important;
 }

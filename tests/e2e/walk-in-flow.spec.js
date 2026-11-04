@@ -6,7 +6,7 @@ test('opens the daily walk-in queue from a full-width standard home action', asy
   await page.getByRole('button', { name: 'Abrir modo de desenvolvimento' }).click();
 
   const primary = page.getByRole('button', { name: /Nova abordagem/ });
-  const walkIn = page.getByRole('button', { name: /Novo encaixe rapido/ });
+  const walkIn = page.getByRole('button', { name: /Novo encaixe r.pido/ });
   await expect(primary).toBeVisible();
   await expect(walkIn).toBeVisible();
   await expect(walkIn.locator('.action-icon svg')).toBeVisible();

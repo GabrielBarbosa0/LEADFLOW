@@ -88,11 +88,12 @@ export function subscribeToLeads(profile, demoMode, onData, onError) {
   }
 
   let remoteLeads = [];
+  let assignedWalkInLeads = [];
   let offlineLeads = [];
   let confirmedRemoteIds = new Set();
   const removingOfflineIds = new Set();
   const emit = () => {
-    const merged = new Map(remoteLeads.map((lead) => [lead.id, lead]));
+    const merged = new Map([...remoteLeads, ...assignedWalkInLeads].map((lead) => [lead.id, lead]));
     offlineLeads.forEach((lead) => merged.set(lead.id, { ...merged.get(lead.id), ...lead }));
     onData(activeLeads([...merged.values()]).sort((a, b) => (
       String(b.capturedAtClient).localeCompare(String(a.capturedAtClient))
@@ -137,8 +138,25 @@ export function subscribeToLeads(profile, demoMode, onData, onError) {
     },
     onError
   );
+  const unsubscribeAssignedWalkIns = profile.role === 'captor'
+    ? onSnapshot(query(
+      collection(db, 'leads'),
+      where('followUpCaptorUid', '==', profile.uid),
+      orderBy('capturedAtClient', 'desc'),
+      limit(100)
+    ), (snapshot) => {
+      assignedWalkInLeads = snapshot.docs.map((leadDoc) => ({
+        id: leadDoc.id,
+        ...leadDoc.data(),
+        syncState: leadDoc.metadata.hasPendingWrites ? 'pending' : 'synced',
+        fromCache: leadDoc.metadata.fromCache
+      }));
+      emit();
+    }, onError)
+    : () => {};
   return () => {
     unsubscribeRemote();
+    unsubscribeAssignedWalkIns();
     unsubscribeOffline();
   };
 }

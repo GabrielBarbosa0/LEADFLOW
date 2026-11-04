@@ -31,7 +31,7 @@ export function appointmentFollowUps(leads, profile, settings = DEFAULT_STORE_SC
   return leads
     .filter((lead) => !isArchivedLead(lead))
     .filter((lead) => profile.role === 'captor'
-      ? lead.capturedByUid === profile.uid
+      ? lead.capturedByUid === profile.uid || lead.followUpCaptorUid === profile.uid
       : profile.role === 'manager' ? canAccessStore(profile, lead.storeId) : true)
     .filter((lead) => lead.appointmentStatus !== 'cancelled' && lead.appointmentAttendance !== 'cancelled')
     .filter((lead) => {

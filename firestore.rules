@@ -232,7 +232,7 @@ service cloud.firestore {
           'birthday_benefit_planned', 'birthday_congratulated',
           'walk_in_created', 'walk_in_called', 'walk_in_in_service',
           'walk_in_completed', 'walk_in_gave_up',
-          'walk_in_not_accommodated', 'walk_in_cancelled'
+          'walk_in_not_accommodated', 'walk_in_cancelled', 'walk_in_captor_assigned'
         ]
         && data.funnelStage in [
           'captured', 'awaiting_appointment', 'scheduled', 'confirmation',
@@ -264,6 +264,9 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/leads/$(leadId))
         && (
           (get(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+            && hasPermission('leads.view_own'))
+          || (('followUpCaptorUid' in get(/databases/$(database)/documents/leads/$(leadId)).data)
+            && get(/databases/$(database)/documents/leads/$(leadId)).data.followUpCaptorUid == request.auth.uid
             && hasPermission('leads.view_own'))
           || (managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
             && hasPermission('management.view'))
@@ -387,7 +390,7 @@ service cloud.firestore {
     function validWalkIn(data) {
       return data.keys().hasOnly([
           'leadId', 'storeId', 'queueDate', 'serviceId', 'serviceName',
-          'professionalType', 'reason', 'notes', 'status', 'priority',
+          'professionalType', 'reason', 'notes', 'walkInCaptorUid', 'walkInCaptorName', 'status', 'priority',
           'priorityReason', 'arrivedAt', 'calledAt', 'startedAt', 'completedAt',
           'closedReason', 'convertedAppointmentLeadId', 'createdAt',
           'createdByUid', 'createdByName', 'updatedAt', 'updatedByUid',
@@ -411,6 +414,14 @@ service cloud.firestore {
         && data.reason.size() <= 240
         && data.notes is string
         && data.notes.size() <= 500
+        && ((!('walkInCaptorUid' in data) && !('walkInCaptorName' in data)) || (
+          data.walkInCaptorUid is string
+          && data.walkInCaptorName is string
+          && data.walkInCaptorName.size() <= 120
+          && ((data.walkInCaptorUid == '' && data.walkInCaptorName == '')
+            || (data.walkInCaptorUid.size() >= 1
+            && data.walkInCaptorName.size() >= 2))
+        ))
         && data.status in ['waiting', 'called', 'in_service', 'completed', 'gave_up', 'not_accommodated', 'cancelled']
         && data.priority is int
         && data.priority >= 0
@@ -810,12 +821,19 @@ service cloud.firestore {
         activeUser()
         && hasPermission('leads.create')
         && validLead(request.resource.data)
-        && request.resource.data.capturedByUid == request.auth.uid
-        && userHasStore(request.resource.data.storeId)
+        && (
+          (request.resource.data.capturedByUid == request.auth.uid
+            && userHasStore(request.resource.data.storeId))
+          || (request.resource.data.registrationMode == 'quick_walk_in'
+            && canManageWalkInStore(request.resource.data.storeId))
+        )
       );
 
       allow get, list: if activeUser() && (
         (resource.data.capturedByUid == request.auth.uid && hasPermission('leads.view_own'))
+        || (('followUpCaptorUid' in resource.data)
+          && resource.data.followUpCaptorUid == request.auth.uid
+          && hasPermission('leads.view_own'))
         || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
         || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view'))
         || (managerHasStore(resource.data.storeId) && hasPermission('leads.view_stores'))

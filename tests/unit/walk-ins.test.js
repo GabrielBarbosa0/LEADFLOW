@@ -48,6 +48,7 @@ describe('walk-in queue', () => {
       notes: ''
     });
     expect(valid.isValid).toBe(true);
+    expect(validateWalkInDraft({ ...valid.data, walkInCaptorName: 'Captador sem cadastro' }).isValid).toBe(false);
     expect(validateWalkInDraft({}).isValid).toBe(false);
     expect(canTransitionWalkIn('waiting', 'called')).toBe(true);
     expect(canTransitionWalkIn('waiting', 'completed')).toBe(false);
@@ -71,6 +72,7 @@ describe('walk-in queue', () => {
           serviceName: service.name,
           professionalType: 'optometrist',
           reason: 'Cliente presencial solicitou exame imediato',
+          walkInCaptorName: 'Ana Captadora',
           status: 'waiting',
           arrivedAt: new Date('2026-10-30T10:00:00-03:00')
         }]
@@ -85,6 +87,8 @@ describe('walk-in queue', () => {
     expect(markup).toContain('20</strong><span>min');
     expect(markup).toContain('data-walk-in-transition="called"');
     expect(markup).toContain('Adicionar a fila de encaixes');
+    expect(markup).toContain('Trouxe para o encaixe: Ana Captadora');
+    expect(markup).toContain('Captador que trouxe o cliente');
   });
 
   it('renders the inline quick registration after an unsuccessful search', () => {

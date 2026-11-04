@@ -33,7 +33,8 @@ export function subscribeToTeamFollowUps(profile, onData, onError) {
 }
 
 export async function markFollowUpContactStarted(profile, lead) {
-  const captorOwnsLead = profile?.role === 'captor' && lead?.capturedByUid === profile.uid;
+  const captorOwnsLead = profile?.role === 'captor'
+    && (lead?.capturedByUid === profile.uid || lead?.followUpCaptorUid === profile.uid);
   const managerCanAccess = ['manager', 'admin'].includes(profile?.role) && canAccessStore(profile, lead?.storeId);
   if (!isFirebaseConfigured || (!captorOwnsLead && !managerCanAccess)) {
     throw permissionError('Retorno não autorizado.');

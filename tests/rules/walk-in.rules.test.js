@@ -24,11 +24,15 @@ beforeEach(async () => {
     await Promise.all([
       setDoc(doc(db, 'users', 'manager-uid'), {
         displayName: 'Gestor Teste', email: 'manager@example.com', role: 'manager',
-        permissions: ['appointments.view', 'leads.create'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
+        permissions: ['appointments.view', 'leads.create', 'leads.edit_all'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
       }),
       setDoc(doc(db, 'users', 'captor-uid'), {
         displayName: 'Captador Teste', email: 'captor@example.com', role: 'captor',
-        permissions: ['appointments.view'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
+        permissions: ['appointments.view', 'leads.view_own'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
+      }),
+      setDoc(doc(db, 'users', 'walkin-captor-uid'), {
+        displayName: 'Captador do Encaixe', email: 'walkin-captor@example.com', role: 'captor',
+        permissions: ['leads.view_own'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
       }),
       setDoc(doc(db, 'users', 'telemarketing-uid'), {
         displayName: 'Telemarketing Teste', email: 'telemarketing@example.com', role: 'manager',
@@ -41,7 +45,8 @@ beforeEach(async () => {
         storeId: 'loja-06', storeIds: ['loja-02', 'loja-04', 'loja-05', 'loja-06'], active: true
       }),
       setDoc(doc(db, 'leads', 'lead-1'), {
-        fullName: 'Maria Silva', storeId: 'loja-06', capturedByUid: 'captor-uid'
+        fullName: 'Maria Silva', phone: '+5581999999999', phoneSearch: '81999999999', notes: '',
+        storeId: 'loja-06', capturedByUid: 'captor-uid'
       })
     ]);
   });
@@ -147,5 +152,21 @@ describe('walk-in queue rules', () => {
       occurredAtServer: serverTimestamp(), schemaVersion: 1
     }));
     await assertFails(updateDoc(doc(db, 'leads', 'lead-1', 'history', 'event-1'), { description: 'Alterado' }));
+  });
+
+  it('records the walk-in captor without replacing the original captor', async () => {
+    const managerDb = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(updateDoc(doc(managerDb, 'leads', 'lead-1'), {
+      followUpCaptorUid: 'walkin-captor-uid',
+      followUpCaptorName: 'Captador do Encaixe',
+      followUpSource: 'walk_in',
+      followUpWalkInId: '2026-10-30__lead-1',
+      followUpAssignedAtServer: serverTimestamp(),
+      followUpAssignedByUid: 'manager-uid',
+      updatedAtServer: serverTimestamp()
+    }));
+
+    const captorDb = authenticatedDb('walkin-captor-uid', 'walkin-captor@example.com');
+    await assertSucceeds(getDoc(doc(captorDb, 'leads', 'lead-1')));
   });
 });

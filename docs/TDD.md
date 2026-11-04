@@ -283,7 +283,7 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 - Gestores, administradores e Atendentes de Balcao podem acessar a fila de encaixes das unidades permitidas; Colaborador, MEI e Telemarketing nao possuem esse acesso.
 - A entrada e acessada pelo atalho `Novo encaixe rapido` na pagina inicial e representa somente clientes presenciais do dia, sem ocupar um horario regular da agenda.
 - A pessoa responsavel pode pesquisar pelo nome ou CPF, reutilizar um cadastro existente ou criar o cliente rapidamente sem sair da tela. O cadastro rapido exige nome e telefone; CPF e opcional, e dados clinicos permanecem incompletos ate a complementacao posterior.
-- Cada entrada registra unidade, servico, profissional, motivo, observacao opcional, chegada e responsavel pela criacao.
+- Cada entrada registra unidade, servico, profissional, motivo, observacao opcional, chegada e responsavel pela criacao. Opcionalmente registra tambem o `captador do encaixe`: quem trouxe o cliente presencialmente para a unidade. Em cliente novo, esse captador e o autor do cadastro; em cliente ja existente, a autoria original permanece e o vinculo adicional concede acompanhamento em `Cadastros` e `Retornos`.
 - Um mesmo lead nao pode entrar duas vezes na fila da mesma data. O fluxo de estado permitido e `waiting -> called -> in_service -> completed`, com encerramentos alternativos `gave_up`, `not_accommodated` e `cancelled` que exigem justificativa quando aplicavel.
 - Cada criacao e transicao gera um evento imutavel no historico do lead. A fila permanece separada dos horarios regulares e nao cria documentos em `appointmentSlots`.
 - Prioridade manual, alerta de risco contra o proximo horario regular, conversao para agendamento futuro e indicadores por periodo permanecem como evolucoes posteriores.
@@ -763,6 +763,7 @@ O progresso nao e gravado no documento. Ele e calculado a partir dos leads sincr
 ### 7.11 Indices
 
 - `leads`: `capturedByUid ASC, capturedAtClient DESC`.
+- `leads`: `followUpCaptorUid ASC, capturedAtClient DESC`.
 - `leads`: `storeId ASC, capturedAtClient DESC`.
 - `leads`: `storeId ASC, capturedByUid ASC, capturedAtClient DESC`.
 - `leads`: `storeId ASC, appointmentDate ASC`.

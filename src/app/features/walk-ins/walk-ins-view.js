@@ -31,9 +31,11 @@ function queueItem(item, updatingId, now) {
   const elapsed = walkInElapsedMinutes(item.arrivedAt, now);
   const professional = item.professionalType === 'ophthalmologist' ? 'Oftalmologista' : 'Optometrista';
   const open = walkInIsOpen(item.status);
+  const captor = item.walkInCaptorName ? `<small class="walk-in-captor"><i data-lucide="user-round"></i> Trouxe para o encaixe: ${escapeHtml(item.walkInCaptorName)}</small>` : '';
   return `<article class="walk-in-item ${open ? '' : 'is-closed'}">
     <div class="walk-in-order"><strong>${open ? elapsed : '✓'}</strong><span>${open ? 'min' : 'fim'}</span></div>
     <div class="walk-in-person"><div class="walk-in-person-heading"><strong>${escapeHtml(lead.fullName || 'Cadastro indisponível')}</strong><span class="status-badge status-${item.status === 'completed' ? 'success' : open ? 'warning' : 'neutral'}">${escapeHtml(WALK_IN_STATUS_LABELS[item.status] || item.status)}</span></div><span>${lead.phoneSearch ? escapeHtml(formatBrazilianPhone(lead.phoneSearch)) : 'Telefone não informado'}</span><small>${escapeHtml(item.serviceName)} · ${professional} · chegada há ${elapsed} min</small><small>${escapeHtml(item.reason)}</small>${item.closedReason ? `<small class="walk-in-closed-reason">Motivo do encerramento: ${escapeHtml(item.closedReason)}</small>` : ''}</div>
+    ${captor}
     ${queueActions(item, updatingId === item.id)}
   </article>`;
 }
@@ -59,6 +61,7 @@ function createPanel({ walkIns, selectedLead, allowedStores, services, canCreate
   const availableServices = servicesForStore(services, selectedStoreId);
   const serviceOptions = availableServices.map((service) => `<option value="${escapeHtml(service.id)}" data-service-name="${escapeHtml(service.name)}" ${service.id === walkIns.serviceId ? 'selected' : ''}>${escapeHtml(service.name)} · ${service.durationMinutes} min</option>`).join('');
   const reasonOptions = WALK_IN_REASONS.map((reason) => `<option value="${escapeHtml(reason)}">${escapeHtml(reason)}</option>`).join('');
+  const captorOptions = (walkIns.captors || []).filter((captor) => captor.storeIds.includes(selectedStoreId)).map((captor) => `<option value="${escapeHtml(captor.displayName)}" label="${escapeHtml(storeDisplayLabel(captor.storeId))}"></option>`).join('');
   let searchContent = '<div class="walk-in-search-empty"><i data-lucide="search"></i><span>Pesquise para selecionar o cliente.</span></div>';
   if (walkIns.quickCreate) searchContent = quickClientForm(walkIns.searchQuery, walkIns.quickDraft);
   else if (walkIns.searchLoading) searchContent = '<div class="walk-in-search-empty"><i class="spin" data-lucide="loader-circle"></i><span>Pesquisando...</span></div>';
@@ -80,6 +83,7 @@ function createPanel({ walkIns, selectedLead, allowedStores, services, canCreate
         <div class="field"><label for="walk-in-service">Serviço solicitado</label><select id="walk-in-service" name="serviceId" required><option value="">${availableServices.length ? 'Selecione o serviço' : 'Nenhum serviço disponível'}</option>${serviceOptions}</select><small class="field-error"></small></div>
         <div class="field"><label for="walk-in-reason">Motivo do encaixe</label><select id="walk-in-reason" name="reason" required><option value="">Selecione o motivo</option>${reasonOptions}</select><small class="field-error"></small></div>
         <div class="field"><label for="walk-in-notes">Observação <span class="field-optional">(opcional)</span></label><textarea id="walk-in-notes" name="notes" maxlength="500" rows="3" placeholder="Informação útil para a recepção ou profissional"></textarea><small class="field-error"></small></div>
+        <div class="field" data-field="walkInCaptorUid"><label for="walk-in-captor">Captador que trouxe o cliente <span class="field-optional">(opcional)</span></label><input id="walk-in-captor" name="walkInCaptorName" list="walk-in-captor-options" placeholder="Pesquise pelo nome do captador" autocomplete="off" /><datalist id="walk-in-captor-options">${captorOptions}</datalist><small class="field-help">No cadastro novo, ele sera o captador de origem. Em cadastro existente, a origem e preservada.</small><small class="field-error"></small></div>
         <button class="button button-primary button-block" type="submit" ${(!selectedLead && !walkIns.quickCreate) || walkIns.saving || !availableServices.length ? 'disabled' : ''}><i data-lucide="list-plus"></i><span>${walkIns.saving ? 'Adicionando...' : walkIns.quickCreate ? 'Cadastrar e adicionar a fila' : 'Adicionar a fila de encaixes'}</span></button>
       </form>
     </div>
