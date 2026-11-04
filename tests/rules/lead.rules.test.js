@@ -99,6 +99,15 @@ function authenticatedDb(uid, email) {
 }
 
 describe('lead correction rules', () => {
+  it('allows score changes only for an advanced profile', async () => {
+    const captorDb = authenticatedDb('captor-uid', 'captor@example.com');
+    await assertFails(updateDoc(doc(captorDb, 'leads', 'lead-test'), {
+      creditScore: 640,
+      updatedAtServer: Timestamp.now()
+    }));
+
+  });
+
   it('lets an authorized manager archive a lead and preserve the archive event', async () => {
     const db = authenticatedDb('manager-uid', 'manager@example.com');
     const batch = writeBatch(db);

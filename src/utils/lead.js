@@ -65,15 +65,19 @@ export const EXAM_PAYMENT_METHODS = Object.freeze([
   { id: 'pix', label: 'Pix' },
   { id: 'debit-card', label: 'Cartão de débito' },
   { id: 'credit-card', label: 'Cartão de crédito' },
-  { id: 'bank-slip', label: 'Boleto' },
   { id: 'booklet', label: 'Carnê' },
   { id: 'other', label: 'Outro' }
 ]);
 
+const LEGACY_EXAM_PAYMENT_METHOD_LABELS = Object.freeze({
+  'bank-slip': 'Boleto'
+});
+
 export function examPaymentMethodsLabel(values) {
   const requested = Array.isArray(values) ? values : [values].filter(Boolean);
   const labels = requested
-    .map((value) => EXAM_PAYMENT_METHODS.find((method) => method.id === String(value))?.label)
+    .map((value) => EXAM_PAYMENT_METHODS.find((method) => method.id === String(value))?.label
+      || LEGACY_EXAM_PAYMENT_METHOD_LABELS[String(value)])
     .filter(Boolean);
   return labels.length ? labels.join(' + ') : 'A definir';
 }
@@ -236,6 +240,8 @@ export function validateLeadInput(input, options = {}) {
   const phone = normalizeBrazilianPhone(input.phone);
   const customerCpf = normalizeCpf(input.customerCpf);
   const customerRg = normalizeRg(input.customerRg);
+  const creditScoreValue = String(input.creditScore ?? '').trim();
+  const creditScore = creditScoreValue === '' ? null : Number(creditScoreValue);
   const birthDate = String(input.birthDate || '').trim();
   const sex = String(input.sex || '').trim();
   const needsTransport = booleanValue(input.needsTransport);
@@ -254,6 +260,9 @@ export function validateLeadInput(input, options = {}) {
   if (!phone) errors.phone = 'Informe um telefone com DDD.';
   if (customerCpf && !isValidCpf(customerCpf)) errors.customerCpf = 'Informe um CPF válido.';
   if (customerRg.length > 20) errors.customerRg = 'Use no máximo 20 caracteres.';
+  if (creditScoreValue && (!Number.isInteger(creditScore) || creditScore < 0 || creditScore > 1000)) {
+    errors.creditScore = 'Informe um score entre 0 e 1000.';
+  }
   if (diabetes.hasDiabetes && diabetes.diabetesLevel !== null && (diabetes.diabetesLevel < 20 || diabetes.diabetesLevel > 600)) {
     errors.diabetesLevel = 'Informe um nivel entre 20 e 600 mg/dL.';
   }
@@ -366,6 +375,7 @@ export function validateLeadInput(input, options = {}) {
     phone,
     customerCpf,
     customerRg,
+    creditScore,
     birthDate,
     sex,
     needsTransport,
@@ -493,6 +503,7 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
       phoneSearch: validation.phone.search,
       customerCpf: validation.customerCpf,
       customerRg: validation.customerRg,
+      ...(Object.hasOwn(input, 'creditScore') ? { creditScore: validation.creditScore } : {}),
       birthDate: validation.birthDate,
       birthMonthDay: birthMonthDay(validation.birthDate),
       sex: validation.sex,
@@ -566,6 +577,7 @@ export function createLeadUpdate(input) {
       phoneSearch: validation.phone.search,
       customerCpf: validation.customerCpf,
       customerRg: validation.customerRg,
+      ...(Object.hasOwn(input, 'creditScore') ? { creditScore: validation.creditScore } : {}),
       birthDate: validation.birthDate,
       birthMonthDay: birthMonthDay(validation.birthDate),
       sex: validation.sex,

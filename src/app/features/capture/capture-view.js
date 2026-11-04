@@ -13,7 +13,8 @@ export function captureView({
   allowedStoreIds,
   storeChoice,
   selectedService,
-  appointmentTimeMarkup
+  appointmentTimeMarkup,
+  canEditScore = false
 }) {
   if (!navigator.onLine && !offlineCaptureEnabled) {
     return `
@@ -59,7 +60,7 @@ export function captureView({
         <div class="field" data-field="birthDate"><label for="birthDate">Data de nascimento <span aria-hidden="true">*</span></label><input id="birthDate" name="birthDate" type="date" autocomplete="bday" max="${toLocalDateInput(new Date())}" required /><small class="birth-age-hint" data-birth-age>A idade será calculada automaticamente.</small><small class="field-error"></small></div>
         <div class="field" data-field="sex"><label for="sex">Sexo</label><select id="sex" name="sex">${sexOptions()}</select><small class="field-error"></small></div>
       </div>
-      <div class="field"><label for="preferredName">Como prefere ser chamado</label><input id="preferredName" name="preferredName" maxlength="60" placeholder="Apelido ou nome preferido" /></div>
+      <div class="field-row preferred-score-fields"><div class="field"><label for="preferredName">Como prefere ser chamado</label><input id="preferredName" name="preferredName" maxlength="60" placeholder="Apelido ou nome preferido" /></div><div class="field" data-field="creditScore"><label for="creditScore">Score</label><input id="creditScore" name="creditScore" type="number" inputmode="numeric" min="0" max="1000" step="1" ${canEditScore ? '' : 'disabled'} /><small class="field-error"></small></div></div>
       <div class="field-row address-fields">
         <div class="field address-street" data-field="street"><label for="street">Rua</label><input id="street" name="street" maxlength="120" autocomplete="address-line1" /><small class="field-error"></small></div>
         <div class="field address-number" data-field="streetNumber"><label for="streetNumber">Número</label><input id="streetNumber" name="streetNumber" maxlength="12" autocomplete="address-line2" placeholder="S/N" /><small class="field-error"></small></div>

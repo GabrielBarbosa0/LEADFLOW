@@ -24,8 +24,9 @@ export function initializeLeadDetailForm(form, options) {
   form.elements.appointmentDate?.addEventListener('input', () => options.onAppointmentDateChange?.(form.elements.appointmentDate.value, form));
 }
 
-export function leadDetailSubmissionValues(form, existingLead, settings, { managerReschedule = false } = {}) {
+export function leadDetailSubmissionValues(form, existingLead, settings, { managerReschedule = false, canEditScore = false } = {}) {
   let values = enrichLeadTriage(leadFormValues(form), settings);
+  if (!canEditScore) delete values.creditScore;
   if (existingLead && !form.querySelector('[name="ametropiaIds"]')) {
     values.ametropiaIds = existingLead.ametropiaIds || [];
   }

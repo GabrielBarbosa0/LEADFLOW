@@ -150,6 +150,8 @@ service cloud.firestore {
           && (data.customerCpf == '' || data.customerCpf.matches('^\\d{11}$'))
         ))
         && (!('customerRg' in data) || (data.customerRg is string && data.customerRg.size() <= 20))
+        && (!('creditScore' in data) || data.creditScore == null
+          || (data.creditScore is int && data.creditScore >= 0 && data.creditScore <= 1000))
         && (!('addressReference' in data) || (data.addressReference is string && data.addressReference.size() <= 160))
         && (!('examPrice' in data) || (data.examPrice is number && data.examPrice >= 0 && data.examPrice <= 100000))
         && data.birthDate is string
@@ -525,6 +527,9 @@ service cloud.firestore {
         && (!('customerRg' in request.resource.data)
           || (request.resource.data.customerRg is string
             && request.resource.data.customerRg.size() <= 20))
+        && (!('creditScore' in request.resource.data) || request.resource.data.creditScore == null
+          || (request.resource.data.creditScore is int
+            && request.resource.data.creditScore >= 0 && request.resource.data.creditScore <= 1000))
         && (!('addressReference' in request.resource.data)
           || (request.resource.data.addressReference is string
             && request.resource.data.addressReference.size() <= 160))
@@ -635,6 +640,7 @@ service cloud.firestore {
         && userHasStore(resource.data.storeId)
         && hasPermission('leads.edit_own')
         && validLeadUpdateShape()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['creditScore'])
         && ownerAttendanceChangeIsValid();
     }
 
@@ -821,6 +827,9 @@ service cloud.firestore {
         activeUser()
         && hasPermission('leads.create')
         && validLead(request.resource.data)
+        && (!('creditScore' in request.resource.data)
+          || request.resource.data.creditScore == null
+          || hasPermission('leads.clinical_update'))
         && (
           (request.resource.data.capturedByUid == request.auth.uid
             && userHasStore(request.resource.data.storeId))

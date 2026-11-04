@@ -332,8 +332,8 @@ test('requires a destination store for a multi-store MEI capture', async ({ page
   }
   await expect(examPaymentType).toHaveValue('paid');
   await expect(examPaymentMethods).toBeVisible();
-  await expect(examPaymentMethods.getByRole('checkbox')).toHaveCount(7);
-  await expect(examPaymentMethods.getByLabel('Boleto')).toBeVisible();
+  await expect(examPaymentMethods.getByRole('checkbox')).toHaveCount(6);
+  await expect(examPaymentMethods.getByLabel('Boleto')).toHaveCount(0);
   await expect(examPaymentMethods.getByLabel('Carnê')).toBeVisible();
   await examPaymentMethods.getByLabel('Pix').check();
   await examPaymentMethods.getByLabel('Dinheiro').check();

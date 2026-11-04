@@ -249,7 +249,8 @@ function newLeadView() {
     allowedStoreIds: captureStoreIds(),
     storeChoice: requiresCaptureStoreChoice(),
     selectedService: selectedNewLeadService(),
-    appointmentTimeMarkup: appointmentTimeField()
+    appointmentTimeMarkup: appointmentTimeField(),
+    canEditScore: hasAccess('leads.clinical_update')
   });
 }
 
@@ -323,6 +324,7 @@ function leadDetailView() {
     canDelete: hasAccess('leads.delete'),
     canCancelAppointment: hasAccess('appointments.cancel') && Boolean(lead?.appointmentDate && lead?.appointmentTime) && lead?.appointmentStatus !== 'cancelled' && !['attended', 'missed', 'cancelled'].includes(lead?.appointmentAttendance || 'pending'),
     canEditClinical: hasAccess('leads.clinical_update'),
+    canEditScore: hasAccess('leads.clinical_update'),
     readOnly,
     history: state.leadHistory
   });
@@ -343,6 +345,7 @@ function leadDetailDialogView() {
     canDelete: hasAccess('leads.delete'),
     canCancelAppointment: hasAccess('appointments.cancel') && lead.appointmentStatus !== 'cancelled' && !['attended', 'missed', 'cancelled'].includes(lead.appointmentAttendance || 'pending'),
     canEditClinical: hasAccess('leads.clinical_update'),
+    canEditScore: hasAccess('leads.clinical_update'),
     inDialog: true,
     history: state.leadHistory
   })}</dialog>`;
@@ -917,7 +920,8 @@ function bindPageEvents() {
         ? findManagementLead(editLeadForm.dataset.leadId)
         : state.leads.find((lead) => lead.id === editLeadForm.dataset.leadId);
       const values = leadDetailSubmissionValues(editLeadForm, existingLead, state.leadDetailSchedule.settings, {
-        managerReschedule: managementEdit && state.profile?.role === 'manager'
+        managerReschedule: managementEdit && state.profile?.role === 'manager' && !hasAccess('leads.clinical_update'),
+        canEditScore: hasAccess('leads.clinical_update')
       });
       const appointmentChanged = existingLead?.appointmentDate && existingLead?.appointmentTime
         && ['appointmentDate', 'appointmentTime']

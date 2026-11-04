@@ -400,8 +400,14 @@ describe('lead validation', () => {
       creditFatherName: 'Joao da Silva',
       creditMotherName: 'Maria da Silva',
       creditAuxiliaryPhone: '(81) 98888-7777'
-    }).data.examPaymentMethods).toEqual(['pix', 'bank-slip']);
+    }).errors.examPaymentMethods).toBeDefined();
     expect(validateLeadInput({ ...validInput, examPaymentMethods: ['pix', 'crypto'] }).errors.examPaymentMethods).toBeDefined();
+  });
+
+  it('accepts a score from 0 to 1000 and rejects values outside that range', () => {
+    expect(createLeadUpdate({ ...validInput, creditScore: '720' }).data.creditScore).toBe(720);
+    expect(validateLeadInput({ ...validInput, creditScore: '1001' }).errors.creditScore).toBeDefined();
+    expect(validateLeadInput({ ...validInput, creditScore: '7.5' }).errors.creditScore).toBeDefined();
   });
 
   it('persists optional carnê details when they are informed', () => {

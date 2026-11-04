@@ -96,6 +96,25 @@ describe('leads feature modules', () => {
     expect(markup).toContain('Maria Silva');
     expect(markup).toContain('Excluir lead');
     expect(markup).toContain('edit-appointment-time-field');
+    expect(markup).toContain('id="edit-creditScore"');
+    expect(markup).toContain('id="edit-creditScore" name="creditScore" type="number" inputmode="numeric" min="0" max="1000" step="1" value="" disabled');
+  });
+
+  it('allows an advanced profile to edit the score', () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const markup = leadDetailView({
+      lead: sampleLead({ creditScore: 742 }),
+      managementMode: false,
+      canManage: false,
+      profileRole: 'manager',
+      scheduleState: scheduleState(),
+      appointmentTimeMarkup: '<div></div>',
+      canDelete: false,
+      canEditScore: true
+    });
+
+    expect(markup).toContain('value="742"');
+    expect(markup).not.toContain('value="742" disabled');
   });
 
   it('shows the Captar origin in the lead detail summary', () => {
