@@ -111,8 +111,12 @@ export async function rescheduleAppointment(profile, lead, input, reasonValues) 
   const newBlocks = next.appointmentSchedulingMode === 'controlled'
     ? reservationBlocks(lead.storeId, next.appointmentDate, next.appointmentTime, next.appointmentDurationMinutes || 20) : [];
   const newBlockIds = new Set(newBlocks.map((block) => block.id));
+  const oldBlocksToRelease = oldBlocks.filter((block) => !newBlockIds.has(block.id));
   await runTransaction(db, async (transaction) => {
     const reservations = await Promise.all(newBlocks.map((block) => (
+      transaction.get(doc(db, 'appointmentSlots', block.id))
+    )));
+    const oldReservations = await Promise.all(oldBlocksToRelease.map((block) => (
       transaction.get(doc(db, 'appointmentSlots', block.id))
     )));
     if (reservations.some((reservation) => reservation.exists() && reservation.data().leadId !== lead.id)) {
@@ -133,9 +137,12 @@ export async function rescheduleAppointment(profile, lead, input, reasonValues) 
       funnelUpdatedAtServer: serverTimestamp(),
       updatedAtServer: serverTimestamp()
     }, { merge: true });
-    oldBlocks
-      .filter((block) => !newBlockIds.has(block.id))
-      .forEach((block) => transaction.delete(doc(db, 'appointmentSlots', block.id)));
+    oldBlocksToRelease.forEach((block, index) => {
+      const reservation = oldReservations[index];
+      if (reservation.exists() && reservation.data().leadId === lead.id) {
+        transaction.delete(doc(db, 'appointmentSlots', block.id));
+      }
+    });
     newBlocks.forEach((block) => transaction.set(doc(db, 'appointmentSlots', block.id), {
       storeId: lead.storeId, appointmentDate: next.appointmentDate, appointmentTime: next.appointmentTime,
       blockTime: block.blockTime, durationMinutes: next.appointmentDurationMinutes,

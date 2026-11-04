@@ -655,25 +655,32 @@ service cloud.firestore {
         && validAppointmentCancellation();
     }
 
+    function validManagerAppointmentScheduleUpdate() {
+      return hasPermission('appointments.attendance')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'appointmentDate', 'appointmentTime', 'appointmentSchedulingMode',
+          'appointmentDurationMinutes', 'appointmentServiceId', 'appointmentServiceName',
+          'appointmentAttendance', 'funnelStage', 'funnelReasonCode',
+          'funnelUpdatedAtClient', 'funnelUpdatedAtServer', 'appointmentCycle',
+          'updatedAtServer'
+        ])
+        && request.resource.data.appointmentDate is string
+        && request.resource.data.appointmentDate != ''
+        && request.resource.data.appointmentTime is string
+        && request.resource.data.appointmentTime != ''
+        && request.resource.data.appointmentAttendance == 'pending';
+    }
+
     function isManagerLeadUpdate() {
       return isManager()
         && managerHasStore(resource.data.storeId)
         && (
-          (hasPermission('leads.edit_all') && validLeadUpdateShape())
+          (hasPermission('leads.edit_all') && (
+            validLeadUpdateShape()
+            || validManagerAppointmentScheduleUpdate()
+          ))
           || (!hasPermission('leads.edit_all') && (
-            (hasPermission('appointments.attendance')
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'appointmentDate', 'appointmentTime', 'appointmentSchedulingMode',
-                'appointmentDurationMinutes', 'appointmentServiceId', 'appointmentServiceName',
-                'appointmentAttendance', 'funnelStage', 'funnelReasonCode',
-                'funnelUpdatedAtClient', 'funnelUpdatedAtServer', 'appointmentCycle',
-                'updatedAtServer'
-              ])
-              && request.resource.data.appointmentDate is string
-              && request.resource.data.appointmentDate != ''
-              && request.resource.data.appointmentTime is string
-              && request.resource.data.appointmentTime != ''
-              && request.resource.data.appointmentAttendance == 'pending')
+            validManagerAppointmentScheduleUpdate()
             || (hasPermission('appointments.attendance')
               && resource.data.appointmentDate is string
               && resource.data.appointmentDate != ''
@@ -681,7 +688,7 @@ service cloud.firestore {
                 'appointmentAttendance', 'appointmentAttendanceUpdatedAt',
                 'appointmentAttendanceUpdatedByUid', 'updatedAtServer'
               ]))
-            || (hasPermission('followups.team')
+          || (hasPermission('followups.team')
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                 'followUpContactedAt', 'followUpContactedByUid',
                 'followUpContactedByName', 'followUpContactedAppointmentKey',

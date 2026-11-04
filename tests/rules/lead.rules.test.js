@@ -1588,6 +1588,153 @@ describe('appointment slot reservations', () => {
     }));
   });
 
+  it('lets the front desk reschedule a legacy appointment whose old slots are missing', async () => {
+    const legacyLead = {
+      ...lead,
+      notes: null,
+      storeId: 'loja-05',
+      appointmentDate: '2026-11-07',
+      appointmentTime: '09:00',
+      appointmentSchedulingMode: 'controlled',
+      appointmentDurationMinutes: 20,
+      appointmentAttendance: 'pending',
+      funnelStage: 'scheduled'
+    };
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await Promise.all([
+        updateDoc(doc(adminDb, 'users', 'manager-uid'), {
+          roleProfileId: 'system-receptionist',
+          storeId: 'loja-05',
+          storeIds: ['loja-05'],
+          permissions: [
+            'leads.create', 'leads.view_own', 'leads.edit_own',
+            'leads.edit_all', 'leads.clinical_update',
+            'appointments.view', 'appointments.attendance', 'appointments.cancel',
+            'walkins.manage', 'followups.own', 'followups.team', 'management.view'
+          ]
+        }),
+        setDoc(doc(adminDb, 'leads', 'legacy-appointment-without-slots'), legacyLead)
+      ]);
+    });
+
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(runTransaction(db, async (transaction) => {
+      const oldReferences = ['09:00', '09:10'].map((blockTime) => (
+        doc(db, 'appointmentSlots', `slot-loja-05-2026-11-07-${blockTime}`)
+      ));
+      const newReferences = ['09:20', '09:30'].map((blockTime) => (
+        doc(db, 'appointmentSlots', `slot-loja-05-2026-11-07-${blockTime}`)
+      ));
+      const oldReservations = await Promise.all(oldReferences.map((reference) => transaction.get(reference)));
+      const newReservations = await Promise.all(newReferences.map((reference) => transaction.get(reference)));
+      if (oldReservations.some((reservation) => reservation.exists())) throw new Error('Legacy slot unexpectedly exists');
+      if (newReservations.some((reservation) => reservation.exists())) throw new Error('New slot unexpectedly occupied');
+
+      transaction.set(doc(db, 'leads', 'legacy-appointment-without-slots'), {
+        appointmentDate: '2026-11-07', appointmentTime: '09:20',
+        appointmentSchedulingMode: 'controlled', appointmentDurationMinutes: 20,
+        appointmentServiceId: 'default-eye-exam', appointmentServiceName: 'Exame de Vista',
+        appointmentAttendance: 'pending', funnelStage: 'scheduled',
+        funnelReasonCode: 'professional_availability',
+        funnelUpdatedAtClient: '2026-11-04T14:33:18.951Z',
+        funnelUpdatedAtServer: serverTimestamp(), updatedAtServer: serverTimestamp()
+      }, { merge: true });
+      ['09:20', '09:30'].forEach((blockTime, index) => {
+        transaction.set(newReferences[index], {
+          storeId: 'loja-05', appointmentDate: '2026-11-07', appointmentTime: '09:20',
+          blockTime, durationMinutes: 20, leadId: 'legacy-appointment-without-slots',
+          capturedByUid: 'captor-uid', createdAt: serverTimestamp()
+        });
+      });
+      transaction.set(doc(db, 'leads', 'legacy-appointment-without-slots', 'history', 'rescheduled'), {
+        leadId: 'legacy-appointment-without-slots', storeId: 'loja-05',
+        eventType: 'appointment_rescheduled', funnelStage: 'scheduled',
+        reasonCode: 'professional_availability', description: 'Reagendamento de cadastro legado.',
+        actorUid: 'manager-uid', actorName: 'Gestor Teste', actorRole: 'manager',
+        occurredAtClient: '2026-11-04T14:33:18.951Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
+      });
+    }));
+  });
+
+  it('lets the full front-desk profile replace existing appointment slots', async () => {
+    const legacyLead = {
+      ...lead,
+      notes: null,
+      storeId: 'loja-05',
+      appointmentDate: '2026-11-07',
+      appointmentTime: '10:00',
+      appointmentSchedulingMode: 'controlled',
+      appointmentDurationMinutes: 20,
+      appointmentServiceId: 'default-eye-exam',
+      appointmentServiceName: 'Exame de Vista',
+      appointmentAttendance: 'pending',
+      funnelStage: 'scheduled'
+    };
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      const fullFrontDeskPermissions = [
+        'leads.create', 'leads.view_own', 'leads.edit_own',
+        'leads.edit_all', 'leads.clinical_update',
+        'appointments.view', 'appointments.attendance', 'appointments.cancel',
+        'walkins.manage', 'followups.own', 'followups.team', 'management.view'
+      ];
+      await Promise.all([
+        updateDoc(doc(adminDb, 'users', 'manager-uid'), {
+          role: 'manager', roleProfileId: 'system-receptionist',
+          storeId: 'loja-05', storeIds: ['loja-05'], permissions: fullFrontDeskPermissions
+        }),
+        setDoc(doc(adminDb, 'leads', 'front-desk-existing-slots'), legacyLead),
+        ...['10:00', '10:10'].map((blockTime) => setDoc(
+          doc(adminDb, 'appointmentSlots', `slot-loja-05-2026-11-07-${blockTime}`),
+          {
+            storeId: 'loja-05', appointmentDate: '2026-11-07', appointmentTime: '10:00',
+            blockTime, durationMinutes: 20, leadId: 'front-desk-existing-slots',
+            capturedByUid: 'captor-uid', createdAt: Timestamp.now()
+          }
+        ))
+      ]);
+    });
+
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(runTransaction(db, async (transaction) => {
+      const oldReferences = ['10:00', '10:10'].map((blockTime) => (
+        doc(db, 'appointmentSlots', `slot-loja-05-2026-11-07-${blockTime}`)
+      ));
+      const newReferences = ['09:00', '09:10'].map((blockTime) => (
+        doc(db, 'appointmentSlots', `slot-loja-05-2026-11-07-${blockTime}`)
+      ));
+      const oldReservations = await Promise.all(oldReferences.map((reference) => transaction.get(reference)));
+      const newReservations = await Promise.all(newReferences.map((reference) => transaction.get(reference)));
+      if (oldReservations.some((reservation) => !reservation.exists())) throw new Error('Old slot is missing');
+      if (newReservations.some((reservation) => reservation.exists())) throw new Error('New slot is occupied');
+
+      transaction.set(doc(db, 'leads', 'front-desk-existing-slots'), {
+        appointmentDate: '2026-11-07', appointmentTime: '09:00',
+        appointmentSchedulingMode: 'controlled', appointmentDurationMinutes: 20,
+        appointmentServiceId: 'default-eye-exam', appointmentServiceName: 'Exame de Vista',
+        appointmentAttendance: 'pending', funnelStage: 'scheduled',
+        funnelReasonCode: 'client_request', funnelUpdatedAtClient: '2026-11-04T14:49:13.670Z',
+        funnelUpdatedAtServer: serverTimestamp(), updatedAtServer: serverTimestamp()
+      }, { merge: true });
+      oldReferences.forEach((reference) => transaction.delete(reference));
+      ['09:00', '09:10'].forEach((blockTime, index) => {
+        transaction.set(newReferences[index], {
+          storeId: 'loja-05', appointmentDate: '2026-11-07', appointmentTime: '09:00',
+          blockTime, durationMinutes: 20, leadId: 'front-desk-existing-slots',
+          capturedByUid: 'captor-uid', createdAt: serverTimestamp()
+        });
+      });
+      transaction.set(doc(db, 'leads', 'front-desk-existing-slots', 'history', 'rescheduled-existing'), {
+        leadId: 'front-desk-existing-slots', storeId: 'loja-05',
+        eventType: 'appointment_rescheduled', funnelStage: 'scheduled', reasonCode: 'client_request',
+        description: 'Reagendamento com blocos antigos existentes.', actorUid: 'manager-uid',
+        actorName: 'Gestor Teste', actorRole: 'manager', occurredAtClient: '2026-11-04T14:49:13.670Z',
+        occurredAtServer: serverTimestamp(), schemaVersion: 1
+      });
+    }));
+  });
+
   it('keeps unrelated lead fields protected during an owner reschedule', async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const adminDb = context.firestore();
