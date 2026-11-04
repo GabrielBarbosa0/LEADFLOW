@@ -34,7 +34,13 @@ function currentPermissions(access, systemProfile) {
   if (systemProfile && storedVersion < PERMISSION_SCHEMA_VERSION) {
     return [...systemProfile.permissions];
   }
-  if (Array.isArray(access.permissions)) return [...access.permissions];
+  if (Array.isArray(access.permissions)) {
+    if (systemProfile?.id === 'system-receptionist') {
+      // Older front-desk records can miss permissions required by the standard role.
+      return [...new Set([...access.permissions, ...systemProfile.permissions])];
+    }
+    return [...access.permissions];
+  }
   return [...(systemProfile?.permissions || [])];
 }
 

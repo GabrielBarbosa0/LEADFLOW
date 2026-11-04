@@ -982,7 +982,10 @@ function bindPageEvents() {
           render();
         }
       }, existingLead, {
-        appointmentOnly: !hasAccess('leads.edit_own'),
+        appointmentOnly: !(
+          hasAccess('leads.edit_all')
+          || (existingLead?.capturedByUid === state.profile?.uid && hasAccess('leads.edit_own'))
+        ),
         profile: state.profile
       });
       setFieldErrors(editLeadForm, result.errors || {});

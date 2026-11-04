@@ -381,12 +381,16 @@ service cloud.firestore {
         && userHasStore(resource.data.storeId);
     }
 
-    function canManageWalkInStore(storeId) {
-      return isAdmin() || (managerHasStore(storeId) && (
-        (('roleProfileId' in userProfile())
-          && userProfile().roleProfileId in ['system-manager', 'system-receptionist'])
-        || (!('roleProfileId' in userProfile()) && userProfile().role == 'manager')
+    function canManageAnyWalkIn() {
+      return isAdmin() || (isManager() && (
+          (('roleProfileId' in userProfile())
+            && userProfile().roleProfileId in ['system-manager', 'system-receptionist'])
+          || (!('roleProfileId' in userProfile()) && userProfile().role == 'manager')
       ));
+    }
+
+    function canManageWalkInStore(storeId) {
+      return canManageAnyWalkIn() && (isAdmin() || managerHasStore(storeId));
     }
 
     function validWalkIn(data) {
@@ -656,35 +660,38 @@ service cloud.firestore {
         && managerHasStore(resource.data.storeId)
         && (
           (hasPermission('leads.edit_all') && validLeadUpdateShape())
-          || (
-            hasPermission('appointments.attendance')
-            &&
-            resource.data.appointmentDate is string
-            && resource.data.appointmentDate != ''
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'appointmentAttendance', 'appointmentAttendanceUpdatedAt',
-              'appointmentAttendanceUpdatedByUid', 'updatedAtServer'
-            ])
-          )
-          || (
-            hasPermission('followups.team')
-            &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'followUpContactedAt', 'followUpContactedByUid',
-              'followUpContactedByName', 'followUpContactedAppointmentKey',
-              'updatedAtServer'
-            ])
-            && request.resource.data.followUpContactedByUid == request.auth.uid
-            && request.resource.data.followUpContactedByName == userProfile().displayName
-            && request.resource.data.followUpContactedAppointmentKey
-              == resource.data.appointmentDate + '|' + resource.data.appointmentTime
-          )
-          || (hasPermission('appointments.attendance')
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'appointmentDate', 'appointmentTime', 'appointmentSchedulingMode',
-              'appointmentDurationMinutes', 'appointmentServiceId', 'appointmentServiceName',
-              'appointmentAttendance', 'updatedAtServer'
-            ]))
+          || (!hasPermission('leads.edit_all') && (
+            (hasPermission('appointments.attendance')
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'appointmentDate', 'appointmentTime', 'appointmentSchedulingMode',
+                'appointmentDurationMinutes', 'appointmentServiceId', 'appointmentServiceName',
+                'appointmentAttendance', 'funnelStage', 'funnelReasonCode',
+                'funnelUpdatedAtClient', 'funnelUpdatedAtServer', 'appointmentCycle',
+                'updatedAtServer'
+              ])
+              && request.resource.data.appointmentDate is string
+              && request.resource.data.appointmentDate != ''
+              && request.resource.data.appointmentTime is string
+              && request.resource.data.appointmentTime != ''
+              && request.resource.data.appointmentAttendance == 'pending')
+            || (hasPermission('appointments.attendance')
+              && resource.data.appointmentDate is string
+              && resource.data.appointmentDate != ''
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'appointmentAttendance', 'appointmentAttendanceUpdatedAt',
+                'appointmentAttendanceUpdatedByUid', 'updatedAtServer'
+              ]))
+            || (hasPermission('followups.team')
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'followUpContactedAt', 'followUpContactedByUid',
+                'followUpContactedByName', 'followUpContactedAppointmentKey',
+                'updatedAtServer'
+              ])
+              && request.resource.data.followUpContactedByUid == request.auth.uid
+              && request.resource.data.followUpContactedByName == userProfile().displayName
+              && request.resource.data.followUpContactedAppointmentKey
+                == resource.data.appointmentDate + '|' + resource.data.appointmentTime)
+          ))
         );
     }
 
@@ -802,7 +809,11 @@ service cloud.firestore {
     }
 
     match /appointmentWalkIns/{walkInId} {
-      allow get, list: if activeUser() && canManageWalkInStore(resource.data.storeId);
+      allow get: if activeUser() && (
+        (!exists(/databases/$(database)/documents/appointmentWalkIns/$(walkInId)) && canManageAnyWalkIn())
+        || canManageWalkInStore(resource.data.storeId)
+      );
+      allow list: if activeUser() && canManageWalkInStore(resource.data.storeId);
       allow create: if activeUser()
         && validWalkIn(request.resource.data)
         && canManageWalkInStore(request.resource.data.storeId)
@@ -923,7 +934,14 @@ service cloud.firestore {
     }
 
     match /appointmentSlots/{slotId} {
-      allow get, list: if activeUser() && (
+      allow get: if activeUser() && (
+        (!exists(/databases/$(database)/documents/appointmentSlots/$(slotId))
+          && (hasPermission('leads.create') || hasPermission('appointments.attendance')))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('leads.create'))
+        || (managerHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || isAdmin()
+      );
+      allow list: if activeUser() && (
         (userHasScheduleStore(resource.data.storeId) && hasPermission('leads.create'))
         || (managerHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
         || isAdmin()
@@ -953,7 +971,15 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.capturedByUid == request.resource.data.capturedByUid;
       allow delete: if isAdmin()
         || (activeUser() && (
-          (resource.data.capturedByUid == request.auth.uid
+          (managerHasStore(resource.data.storeId)
+            && hasPermission('appointments.attendance')
+            && existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
+            && (
+              getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDate != resource.data.appointmentDate
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
+            ))
+          || (resource.data.capturedByUid == request.auth.uid
             && hasPermission('appointments.cancel')
             && existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
             && getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled')

@@ -76,6 +76,7 @@ describe('walk-in queue rules', () => {
   it('lets an authorized store manager create, list and call a walk-in', async () => {
     const db = authenticatedDb('manager-uid', 'manager@example.com');
     const reference = doc(db, 'appointmentWalkIns', '2026-10-30__lead-1');
+    await assertSucceeds(getDoc(reference));
     await assertSucceeds(setDoc(reference, validWalkIn()));
     await assertSucceeds(getDocs(query(
       collection(db, 'appointmentWalkIns'),
@@ -88,6 +89,12 @@ describe('walk-in queue rules', () => {
   });
 
   it('creates a quick incomplete lead and its walk-in atomically', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {
+        roleProfileId: 'system-receptionist',
+        permissions: ['leads.create', 'walkins.manage']
+      });
+    });
     const db = authenticatedDb('manager-uid', 'manager@example.com');
     const batch = writeBatch(db);
     batch.set(doc(db, 'leads', 'quick-lead'), {

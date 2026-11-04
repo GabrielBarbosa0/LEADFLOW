@@ -11,8 +11,8 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(6);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 6)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(7);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 7)).toBe(true);
   });
 
   it('keeps the administrator profile with every permission', () => {

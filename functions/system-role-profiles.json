@@ -1,5 +1,5 @@
 {
-  "permissionSchemaVersion": 6,
+  "permissionSchemaVersion": 7,
   "profiles": [
     {
       "id": "system-captor",

@@ -93,7 +93,7 @@ export async function rescheduleAppointment(profile, lead, input, reasonValues) 
   if (!leadValidation.isValid) return leadValidation;
   const canEdit = profile?.role === 'admin'
     || (profile?.role === 'captor' && lead.capturedByUid === profile.uid && hasPermission(profile, 'leads.edit_own'))
-    || (profile?.role === 'manager' && canAccessStore(profile, lead.storeId) && hasPermission(profile, 'leads.edit_all'));
+    || (profile?.role === 'manager' && canAccessStore(profile, lead.storeId) && hasPermission(profile, 'appointments.attendance'));
   if (!isFirebaseConfigured || !canEdit || !lead?.appointmentDate || !lead?.appointmentTime
     || lead.appointmentStatus === 'cancelled' || ['attended', 'cancelled'].includes(lead.appointmentAttendance || 'pending')) {
     const error = new Error('Reagendamento não autorizado.');

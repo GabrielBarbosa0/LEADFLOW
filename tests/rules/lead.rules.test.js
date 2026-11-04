@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, runTransaction, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { createLeadDocument } from '../../src/utils/lead.js';
 
 const projectId = 'demo-fascinlead-leads';
@@ -156,6 +156,41 @@ describe('lead correction rules', () => {
       leadId: 'lead-test', storeId: 'loja-06', eventType: 'appointment_cancelled', funnelStage: 'cancelled',
       reasonCode: 'client_withdrew', description: 'Cliente desistiu.', actorUid: 'captor-uid',
       actorName: 'Captador Teste', actorRole: 'captor', occurredAtClient: '2026-11-03T12:00:00.000Z',
+      occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  it('lets an appointment operator cancel a permitted-store appointment without general lead editing', async () => {
+    const slotId = 'slot-consultorio-surubim-2026-10-15-09:30';
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await Promise.all([
+        updateDoc(doc(adminDb, 'users', 'manager-uid'), {
+          roleProfileId: 'system-receptionist',
+          permissions: ['appointments.view', 'appointments.cancel']
+        }),
+        setDoc(doc(adminDb, 'appointmentSlots', slotId), {
+          storeId: 'loja-06', appointmentDate: '2026-10-15', appointmentTime: '09:30', blockTime: '09:30',
+          durationMinutes: 20, leadId: 'lead-test', capturedByUid: 'captor-uid', createdAt: Timestamp.now()
+        })
+      ]);
+    });
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'lead-test'), {
+      appointmentStatus: 'cancelled', appointmentAttendance: 'cancelled',
+      appointmentCancelledAtServer: serverTimestamp(), appointmentCancelledByUid: 'manager-uid',
+      appointmentCancelledByName: 'Gestor Teste', appointmentCancellationReason: 'client_withdrew',
+      appointmentCancellationDetails: '', funnelStage: 'cancelled', funnelReasonCode: 'client_withdrew',
+      funnelUpdatedAtClient: '2026-11-04T12:00:00.000Z', funnelUpdatedAtServer: serverTimestamp(),
+      updatedAtServer: serverTimestamp()
+    });
+    batch.delete(doc(db, 'appointmentSlots', slotId));
+    batch.set(doc(db, 'leads', 'lead-test', 'history', 'manager-cancelled'), {
+      leadId: 'lead-test', storeId: 'loja-06', eventType: 'appointment_cancelled', funnelStage: 'cancelled',
+      reasonCode: 'client_withdrew', description: 'Cliente desistiu.', actorUid: 'manager-uid',
+      actorName: 'Gestor Teste', actorRole: 'manager', occurredAtClient: '2026-11-04T12:00:00.000Z',
       occurredAtServer: serverTimestamp(), schemaVersion: 1
     });
     await assertSucceeds(batch.commit());
@@ -1391,6 +1426,166 @@ describe('appointment slot reservations', () => {
       leadId: 'limited-scheduled-lead'
     });
     await assertSucceeds(batch.commit());
+  });
+
+  it('lets the front-desk manager check an empty slot and reschedule another captor lead', async () => {
+    const rescheduledLead = {
+      ...lead,
+      appointmentDate: '2026-10-20',
+      appointmentTime: '08:00',
+      appointmentAttendance: 'pending'
+    };
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await Promise.all([
+        updateDoc(doc(adminDb, 'users', 'manager-uid'), {
+          roleProfileId: 'system-receptionist',
+          permissions: ['appointments.view', 'appointments.attendance']
+        }),
+        setDoc(doc(adminDb, 'leads', 'front-desk-reschedule-lead'), rescheduledLead),
+        setDoc(doc(adminDb, 'appointmentSlots', 'slot-consultorio-surubim-2026-10-20-08:00'), {
+          ...slot,
+          leadId: 'front-desk-reschedule-lead'
+        }),
+        setDoc(doc(adminDb, 'appointmentSlots', 'slot-consultorio-surubim-2026-10-20-08:10'), {
+          ...slot,
+          blockTime: '08:10',
+          leadId: 'front-desk-reschedule-lead'
+        })
+      ]);
+    });
+
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(getDoc(doc(db, 'appointmentSlots', 'slot-consultorio-surubim-2026-10-20-08:20')));
+
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'front-desk-reschedule-lead'), {
+      appointmentTime: '08:20',
+      appointmentAttendance: 'pending',
+      updatedAtServer: Timestamp.now()
+    });
+    batch.delete(doc(db, 'appointmentSlots', 'slot-consultorio-surubim-2026-10-20-08:00'));
+    batch.delete(doc(db, 'appointmentSlots', 'slot-consultorio-surubim-2026-10-20-08:10'));
+    ['08:20', '08:30'].forEach((blockTime) => {
+      batch.set(doc(db, 'appointmentSlots', `slot-consultorio-surubim-2026-10-20-${blockTime}`), {
+        ...slot,
+        appointmentTime: '08:20',
+        blockTime,
+        leadId: 'front-desk-reschedule-lead'
+      });
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  it('lets an appointment operator schedule an existing lead without editing the full registration', async () => {
+    const unscheduledLead = {
+      ...lead,
+      storeId: 'loja-02',
+      appointmentDate: '',
+      appointmentTime: '',
+      appointmentSchedulingMode: 'controlled'
+    };
+    delete unscheduledLead.appointmentAttendance;
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await Promise.all([
+        updateDoc(doc(adminDb, 'users', 'manager-uid'), {
+          roleProfileId: 'system-receptionist',
+          permissions: ['appointments.view', 'appointments.attendance']
+        }),
+        setDoc(doc(adminDb, 'leads', 'front-desk-unscheduled-lead'), unscheduledLead)
+      ]);
+    });
+
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'front-desk-unscheduled-lead'), {
+      appointmentDate: '2026-10-20', appointmentTime: '08:20',
+      appointmentSchedulingMode: 'controlled', appointmentDurationMinutes: 20,
+      appointmentServiceId: 'eye-exam', appointmentServiceName: 'Exame de vista',
+      appointmentAttendance: 'pending', funnelStage: 'scheduled', funnelReasonCode: '',
+      funnelUpdatedAtClient: '2026-10-19T12:00:00.000Z', funnelUpdatedAtServer: serverTimestamp(),
+      appointmentCycle: 1, updatedAtServer: serverTimestamp()
+    });
+    ['08:20', '08:30'].forEach((blockTime) => {
+      batch.set(doc(db, 'appointmentSlots', `slot-consultorio-surubim-2026-10-20-${blockTime}`), {
+        ...slot, storeId: 'loja-02', appointmentTime: '08:20', blockTime,
+        leadId: 'front-desk-unscheduled-lead'
+      });
+    });
+    batch.set(doc(db, 'leads', 'front-desk-unscheduled-lead', 'history', 'scheduled'), {
+      leadId: 'front-desk-unscheduled-lead', storeId: 'loja-02', eventType: 'appointment_scheduled',
+      funnelStage: 'scheduled', reasonCode: '', description: 'Agendamento de teste.',
+      actorUid: 'manager-uid', actorName: 'Gestor Teste', actorRole: 'manager',
+      occurredAtClient: '2026-10-19T12:00:00.000Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  it('lets the front-desk profile complete the reschedule transaction with history', async () => {
+    const rescheduledLead = {
+      ...lead,
+      storeId: 'loja-02',
+      appointmentDate: '2026-10-20',
+      appointmentTime: '08:00',
+      appointmentSchedulingMode: 'controlled',
+      appointmentDurationMinutes: 20,
+      appointmentServiceId: 'eye-exam',
+      appointmentServiceName: 'Exame de vista',
+      appointmentAttendance: 'pending',
+      funnelStage: 'scheduled',
+      funnelReasonCode: ''
+    };
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await Promise.all([
+        updateDoc(doc(adminDb, 'users', 'manager-uid'), {
+          roleProfileId: 'system-receptionist',
+          permissions: [
+            'appointments.view', 'appointments.attendance'
+          ]
+        }),
+        setDoc(doc(adminDb, 'leads', 'front-desk-transaction-lead'), rescheduledLead),
+        setDoc(doc(adminDb, 'appointmentSlots', 'slot-consultorio-surubim-2026-10-20-08:00'), {
+          ...slot, storeId: 'loja-02', leadId: 'front-desk-transaction-lead'
+        }),
+        setDoc(doc(adminDb, 'appointmentSlots', 'slot-consultorio-surubim-2026-10-20-08:10'), {
+          ...slot, storeId: 'loja-02', blockTime: '08:10', leadId: 'front-desk-transaction-lead'
+        })
+      ]);
+    });
+
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(runTransaction(db, async (transaction) => {
+      const newSlot = doc(db, 'appointmentSlots', 'slot-consultorio-surubim-2026-10-20-08:20');
+      const reservation = await transaction.get(newSlot);
+      if (reservation.exists()) throw new Error('Slot unexpectedly occupied');
+
+      transaction.set(doc(db, 'leads', 'front-desk-transaction-lead'), {
+        appointmentDate: '2026-10-20', appointmentTime: '08:20',
+        appointmentSchedulingMode: 'controlled', appointmentDurationMinutes: 20,
+        appointmentServiceId: 'eye-exam', appointmentServiceName: 'Exame de vista',
+        appointmentAttendance: 'pending', funnelStage: 'scheduled',
+        funnelReasonCode: 'schedule_conflict', funnelUpdatedAtClient: '2026-10-20T08:00:00.000Z',
+        funnelUpdatedAtServer: serverTimestamp(), updatedAtServer: serverTimestamp()
+      }, { merge: true });
+      ['08:00', '08:10'].forEach((blockTime) => {
+        transaction.delete(doc(db, 'appointmentSlots', `slot-consultorio-surubim-2026-10-20-${blockTime}`));
+      });
+      ['08:20', '08:30'].forEach((blockTime) => {
+        transaction.set(doc(db, 'appointmentSlots', `slot-consultorio-surubim-2026-10-20-${blockTime}`), {
+          ...slot, storeId: 'loja-02', appointmentTime: '08:20', blockTime,
+          leadId: 'front-desk-transaction-lead'
+        });
+      });
+      transaction.set(doc(db, 'leads', 'front-desk-transaction-lead', 'history', 'rescheduled'), {
+        leadId: 'front-desk-transaction-lead', storeId: 'loja-02',
+        eventType: 'appointment_rescheduled', funnelStage: 'scheduled',
+        reasonCode: 'schedule_conflict', description: 'Reagendamento de teste.',
+        actorUid: 'manager-uid', actorName: 'Gestor Teste', actorRole: 'manager',
+        occurredAtClient: '2026-10-20T08:00:00.000Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
+      });
+    }));
   });
 
   it('keeps unrelated lead fields protected during an owner reschedule', async () => {
