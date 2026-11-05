@@ -3,7 +3,7 @@ import { saveLead, subscribeToLeads, updateLead } from '../services/lead-service
 import { markFollowUpContactStarted, subscribeToTeamFollowUps } from '../services/follow-up-service.js';
 import { loadRoleProfiles } from '../services/role-profile-service.js';
 import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
-import { APPOINTMENTS_QUERY_LIMIT, canCancelAppointment, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
+import { APPOINTMENTS_QUERY_LIMIT, canCancelAppointment, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, rescheduleAppointment, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
 import { createQuickWalkIn, createWalkIn, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
 import { ensureDefaultAppointmentServices, loadAppointmentServices } from '../services/service-catalog-service.js';
@@ -21,6 +21,7 @@ import { formatBrazilianCpf } from '../utils/savwin-matching.js';
 import { defaultAppointmentService, servicesForStore } from '../utils/service-catalog.js';
 import { validateWalkInDraft, WALK_IN_CLOSED_STATUSES } from '../utils/walk-in.js';
 import { validateAppointmentCancellation } from '../utils/appointment-cancellation.js';
+import { hasAppointmentScheduleChanged, validateAppointmentReschedule, validateRescheduleSchedule } from '../utils/appointment-reschedule.js';
 import { isCaptarImportedLead } from '../utils/lead-origin.js';
 import { currentRoute, currentRouteParam, navigate } from './router.js';
 import {
@@ -68,6 +69,7 @@ import { appointmentCreateDialog as renderAppointmentCreateDialog, appointmentCr
 import { handleAppointmentClick, initializeAppointmentCreateEvents, nextAppointmentAttendance } from './features/appointments/appointment-events.js';
 import { appointmentsView as renderAppointmentsView } from './features/appointments/appointments-view.js';
 import { appointmentCancellationDialog, initializeAppointmentCancellationDialog } from './features/appointments/appointment-cancellation-dialog.js';
+import { appointmentRescheduleDialog, initializeAppointmentRescheduleDialog } from './features/appointments/appointment-reschedule-dialog.js';
 import { handleConfirmationClick } from './features/appointments/confirmation-events.js';
 import { normalizeConfirmationDays } from './features/appointments/confirmation-period.js';
 import { confirmationsView as renderConfirmationsView } from './features/appointments/confirmations-view.js';
@@ -195,7 +197,7 @@ function homeView() {
 function appView() {
   const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
   const page = pages[state.route] || homeView;
-  return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${appointmentCancellationDialogView()}`, canManage, hasAccess, pendingFollowUps });
+  return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${appointmentCancellationDialogView()}${appointmentRescheduleDialogView()}`, canManage, hasAccess, pendingFollowUps });
 }
 
 function appointmentTimeField() {
@@ -362,6 +364,16 @@ function findLeadForAppointmentCancellation(leadId) {
 function appointmentCancellationDialogView() {
   const lead = findLeadForAppointmentCancellation(state.appointments.cancellationLeadId);
   return appointmentCancellationDialog({ lead, saving: state.appointments.cancellationSaving });
+}
+
+function appointmentRescheduleDialogView() {
+  const lead = findLeadForAppointmentCancellation(state.appointments.rescheduleLeadId);
+  return appointmentRescheduleDialog({
+    lead,
+    draft: state.appointments.rescheduleDraft,
+    saving: state.appointments.rescheduleSaving,
+    error: state.appointments.rescheduleError
+  });
 }
 
 function isLeadDetailOpen() {
@@ -851,6 +863,24 @@ function bindPageEvents() {
       const values = leadDetailSubmissionValues(editLeadForm, existingLead, state.leadDetailSchedule.settings, {
         managerReschedule: managementEdit && state.profile?.role === 'manager'
       });
+      const appointmentChanged = existingLead?.appointmentDate && existingLead?.appointmentTime
+        && hasAppointmentScheduleChanged(existingLead, values);
+      if (appointmentChanged
+        && existingLead.appointmentStatus !== 'cancelled'
+        && !['attended', 'cancelled'].includes(existingLead.appointmentAttendance || 'pending')) {
+        const scheduleValidation = validateRescheduleSchedule(values);
+        if (!scheduleValidation.isValid) {
+          const field = setFieldErrors(editLeadForm, scheduleValidation.errors);
+          revealFirstFormError(field);
+          return;
+        }
+        state.appointments.rescheduleLeadId = existingLead.id;
+        state.appointments.rescheduleDraft = values;
+        state.appointments.rescheduleSaving = false;
+        state.appointments.rescheduleError = '';
+        render();
+        return;
+      }
       const submitButton = editLeadForm.querySelector('[type="submit"]');
       submitButton.disabled = true;
 
@@ -964,6 +994,67 @@ function bindPageEvents() {
             : 'Não foi possível cancelar o agendamento. Tente novamente.', 'danger', 'circle-alert');
         } finally {
           state.appointments.cancellationSaving = false;
+          state.appointments.updatingId = '';
+          render();
+        }
+      }
+    });
+  }
+
+  const rescheduleDialog = document.querySelector('#appointment-reschedule-dialog');
+  if (rescheduleDialog) {
+    requestAnimationFrame(() => {
+      if (rescheduleDialog.isConnected && !rescheduleDialog.open) rescheduleDialog.showModal();
+    });
+    initializeAppointmentRescheduleDialog(rescheduleDialog, {
+      close: () => {
+        state.appointments.rescheduleLeadId = '';
+        state.appointments.rescheduleDraft = null;
+        state.appointments.rescheduleSaving = false;
+        state.appointments.rescheduleError = '';
+        render();
+      },
+      submit: async (reasonValues) => {
+        const lead = findLeadForAppointmentCancellation(state.appointments.rescheduleLeadId);
+        const draft = state.appointments.rescheduleDraft;
+        if (!lead || !draft || state.appointments.rescheduleSaving) return;
+        const validation = validateAppointmentReschedule(reasonValues);
+        if (!validation.isValid) {
+          const field = setFieldErrors(rescheduleDialog.querySelector('form'), validation.errors);
+          revealFirstFormError(field);
+          return;
+        }
+        state.appointments.rescheduleSaving = true;
+        state.appointments.rescheduleError = '';
+        state.appointments.updatingId = lead.id;
+        render();
+        try {
+          const result = await rescheduleAppointment(state.profile, lead, draft, validation.data);
+          if (!result.isValid) {
+            state.appointments.rescheduleError = 'Revise os dados do agendamento antes de confirmar.';
+            return;
+          }
+          const updated = { ...lead, ...result.data };
+          state.leads = state.leads.map((item) => item.id === lead.id ? updated : item);
+          state.management.records = state.management.records.map((item) => item.id === lead.id ? updated : item);
+          state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? updated : item);
+          state.confirmations.records = state.confirmations.records.map((item) => item.id === lead.id ? updated : item);
+          if (state.management.activeLead?.id === lead.id) state.management.activeLead = updated;
+          state.appointments.rescheduleLeadId = '';
+          state.appointments.rescheduleDraft = null;
+          state.appointments.rescheduleError = '';
+          if (state.leadDetailDialog.leadId) closeLeadDetailDialog();
+          else navigate(state.route === 'management-lead' ? 'management' : 'leads');
+          showToast('Agendamento reagendado e histórico atualizado.');
+        } catch (error) {
+          state.appointments.rescheduleError = error?.code === 'permission-denied'
+            ? 'Seu perfil não pode reagendar este atendimento.'
+            : error?.code === 'appointment-slot-unavailable'
+              ? 'Este horário acabou de ser ocupado. Escolha outro.'
+              : 'Não foi possível reagendar. Verifique os dados e tente novamente.';
+          showToast(state.appointments.rescheduleError, 'danger', 'circle-alert');
+        } finally {
+          state.appointments.rescheduleSaving = false;
           state.appointments.updatingId = '';
           render();
         }

@@ -621,9 +621,57 @@ service cloud.firestore {
         && request.resource.data.updatedAtServer == request.time;
     }
 
+    function validAppointmentReschedule() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'appointmentDate', 'appointmentTime', 'appointmentSchedulingMode',
+          'appointmentDurationMinutes', 'appointmentServiceId', 'appointmentServiceName',
+          'appointmentStatus', 'appointmentAttendance',
+          'appointmentRescheduledAtServer', 'appointmentRescheduledByUid',
+          'appointmentRescheduledByName', 'appointmentRescheduleReason',
+          'appointmentRescheduleDetails', 'funnelStage', 'funnelReasonCode',
+          'funnelUpdatedAtClient', 'funnelUpdatedAtServer', 'updatedAtServer'
+        ])
+        && request.resource.data.appointmentDate is string
+        && request.resource.data.appointmentDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.appointmentTime is string
+        && request.resource.data.appointmentTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
+        && (
+          request.resource.data.appointmentDate != resource.data.appointmentDate
+          || request.resource.data.appointmentTime != resource.data.appointmentTime
+        )
+        && (!('appointmentStatus' in resource.data) || resource.data.appointmentStatus != 'cancelled')
+        && (!('appointmentAttendance' in resource.data)
+          || (resource.data.appointmentAttendance != 'attended'
+            && resource.data.appointmentAttendance != 'cancelled'))
+        && request.resource.data.appointmentStatus == 'scheduled'
+        && request.resource.data.appointmentAttendance == 'pending'
+        && request.resource.data.appointmentRescheduledAtServer == request.time
+        && request.resource.data.appointmentRescheduledByUid == request.auth.uid
+        && request.resource.data.appointmentRescheduledByName == userProfile().displayName
+        && request.resource.data.appointmentRescheduleReason in [
+          'client_request', 'schedule_conflict', 'professional_availability',
+          'transport_issue', 'other'
+        ]
+        && request.resource.data.appointmentRescheduleDetails is string
+        && request.resource.data.appointmentRescheduleDetails.size() <= 500
+        && (request.resource.data.appointmentRescheduleReason != 'other'
+          || request.resource.data.appointmentRescheduleDetails.size() >= 3)
+        && request.resource.data.funnelStage == 'scheduled'
+        && request.resource.data.funnelReasonCode == request.resource.data.appointmentRescheduleReason
+        && request.resource.data.funnelUpdatedAtClient is string
+        && request.resource.data.funnelUpdatedAtServer == request.time
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
     function isAppointmentCancellationUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasAny([
         'appointmentStatus', 'appointmentCancelledAtServer', 'appointmentCancellationReason'
+      ]);
+    }
+
+    function isAppointmentRescheduleUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'appointmentRescheduledAtServer', 'appointmentRescheduleReason'
       ]);
     }
 
@@ -642,6 +690,13 @@ service cloud.firestore {
         && validAppointmentCancellation();
     }
 
+    function isOwnerAppointmentReschedule() {
+      return resource.data.capturedByUid == request.auth.uid
+        && userHasStore(resource.data.storeId)
+        && hasPermission('leads.create')
+        && validAppointmentReschedule();
+    }
+
     function canCancelAppointments() {
       return hasPermission('appointments.cancel')
         || (activeUser() && (
@@ -650,6 +705,17 @@ service cloud.firestore {
           ])
           || (!('roleProfileId' in userProfile()) && userProfile().role in ['captor', 'manager'])
         ));
+    }
+
+    function canRescheduleAppointments() {
+      return activeUser() && (
+        (resource.data.capturedByUid == request.auth.uid
+          && userHasStore(resource.data.storeId)
+          && hasPermission('leads.create'))
+        || (isManager()
+          && managerHasStore(resource.data.storeId)
+          && hasPermission('appointments.attendance'))
+      );
     }
 
     function isManagerAttendanceUpdate() {
@@ -856,14 +922,21 @@ service cloud.firestore {
         && leadIdentityIsUnchanged()
         && (
           (leadArchiveFieldsAreUnchanged() && (
-            (isAppointmentCancellationUpdate() && (
+            (isAppointmentRescheduleUpdate() && (
+              isOwnerAppointmentReschedule()
+              || (isManager()
+                && managerHasStore(resource.data.storeId)
+                && hasPermission('appointments.attendance')
+                && validAppointmentReschedule())
+            ))
+            || (!isAppointmentRescheduleUpdate() && isAppointmentCancellationUpdate() && (
               isOwnerAppointmentCancellation()
               || (isManager()
                 && managerHasStore(resource.data.storeId)
                 && canCancelAppointments()
                 && validAppointmentCancellation())
             ))
-            || (!isAppointmentCancellationUpdate() && (
+            || (!isAppointmentRescheduleUpdate() && !isAppointmentCancellationUpdate() && (
               isManagerAttendanceUpdate()
               || isOwnerLeadUpdate()
               || isOwnerAppointmentUpdate()
@@ -907,6 +980,15 @@ service cloud.firestore {
                   && userHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId))
                 || managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
               ))
+            || (request.resource.data.eventType == 'appointment_rescheduled'
+              && (
+                (getAfter(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+                  && userHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+                  && hasPermission('leads.create'))
+                || (isManager()
+                  && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+                  && hasPermission('appointments.attendance'))
+              ))
             || (!request.resource.data.eventType.matches('^walk_in_.*$')
               && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
               && hasPermission('appointments.view'))
@@ -936,7 +1018,14 @@ service cloud.firestore {
     }
 
     match /appointmentSlots/{slotId} {
-      allow get, list: if activeUser() && (
+      allow get: if activeUser() && (
+        (!exists(/databases/$(database)/documents/appointmentSlots/$(slotId))
+          && (hasPermission('leads.create') || hasPermission('appointments.attendance')))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('leads.create'))
+        || (managerHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || isAdmin()
+      );
+      allow list: if activeUser() && (
         (userHasScheduleStore(resource.data.storeId) && hasPermission('leads.create'))
         || (managerHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
         || isAdmin()
@@ -980,6 +1069,13 @@ service cloud.firestore {
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled'
+            ))
+          || (existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
+            && canRescheduleAppointments()
+            && (
+              getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDate != resource.data.appointmentDate
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
             ))
         ));
     }

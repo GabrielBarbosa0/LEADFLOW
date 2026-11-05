@@ -77,6 +77,33 @@ test('validates appointment cancellation reasons for a receptionist', async ({ p
   await expect(dialog).toHaveCount(0);
 });
 
+test('requires formal confirmation when a receptionist reschedules an appointment', async ({ page }) => {
+  await signIn(page, 'balcao@leadflow.test');
+
+  await page.getByRole('button', { name: /Agenda de exames/ }).click();
+  await page.getByRole('button', { name: /Abrir cadastro de Cliente Pendente Hoje/ }).click();
+  const form = page.locator('#edit-lead-form');
+  await expect(form).toBeVisible();
+  await form.getByLabel('Data do pré-agendamento').fill('2026-11-06');
+  const time = form.getByLabel('Horário disponível');
+  await expect(time).toBeEnabled();
+  await time.selectOption({ index: 1 });
+  await form.getByRole('button', { name: /Salvar (reagendamento|alterações)/ }).click();
+
+  const dialog = page.locator('#appointment-reschedule-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Reagendar cliente?' })).toBeVisible();
+  await expect(dialog).toContainText('Cliente Pendente Hoje');
+  await expect(dialog).toContainText('08:00');
+  await dialog.getByRole('button', { name: 'Confirmar reagendamento' }).click();
+  await expect(dialog.getByText('Selecione o motivo do reagendamento.')).toBeVisible();
+  await dialog.getByLabel('Motivo do reagendamento').selectOption('other');
+  await dialog.getByRole('button', { name: 'Confirmar reagendamento' }).click();
+  await expect(dialog.getByText('Descreva o motivo do reagendamento.')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Voltar' }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
 test('shows the simplified lead history without a duplicated funnel heading', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
 

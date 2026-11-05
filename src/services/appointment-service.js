@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, runTransaction, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase/client.js';
 import { monthRange } from '../utils/calendar.js';
 import { followUpAppointmentKey } from '../utils/follow-up.js';
@@ -6,6 +6,8 @@ import { canAccessStore, profileStoreIds } from '../utils/permissions.js';
 import { activeLeads } from '../utils/lead-archive.js';
 import { appointmentBlockTimes, appointmentSlotId } from '../utils/schedule.js';
 import { appointmentCancellationReasonLabel, validateAppointmentCancellation } from '../utils/appointment-cancellation.js';
+import { appointmentRescheduleReasonLabel, validateAppointmentReschedule } from '../utils/appointment-reschedule.js';
+import { createLeadUpdate } from '../utils/lead.js';
 import { hasPermission } from '../utils/role-profile.js';
 import { addLeadHistoryEvents } from './lead-history-service.js';
 
@@ -18,6 +20,24 @@ function reservationSlotIds(lead) {
   }
   return appointmentBlockTimes(lead.appointmentTime, lead.appointmentDurationMinutes || 20)
     .map((blockTime) => appointmentSlotId(lead.storeId, lead.appointmentDate, blockTime));
+}
+
+function reservationBlocks(storeId, appointmentDate, appointmentTime, durationMinutes) {
+  return appointmentBlockTimes(appointmentTime, durationMinutes).map((blockTime) => ({
+    id: appointmentSlotId(storeId, appointmentDate, blockTime),
+    blockTime
+  }));
+}
+
+function appointmentConflictError() {
+  const error = new Error('O horário escolhido acabou de ser ocupado.');
+  error.code = 'appointment-slot-unavailable';
+  return error;
+}
+
+function formatHistoryDate(value) {
+  const [year, month, day] = String(value || '').split('-');
+  return year && month && day ? `${day}/${month}/${year}` : String(value || '');
 }
 
 export function canCancelAppointment(profile, lead) {
@@ -76,6 +96,135 @@ export async function cancelAppointment(profile, lead, values) {
   }]);
   await batch.commit();
   return validation;
+}
+
+export function canRescheduleAppointment(profile, lead) {
+  if (!profile?.uid || !lead?.id || !lead.appointmentDate || !lead.appointmentTime) return false;
+  if (lead.appointmentStatus === 'cancelled'
+    || ['attended', 'cancelled'].includes(String(lead.appointmentAttendance || 'pending'))) return false;
+  if (profile.role === 'admin') return true;
+  if (profile.role === 'captor') {
+    return lead.capturedByUid === profile.uid
+      && canAccessStore(profile, lead.storeId)
+      && hasPermission(profile, 'leads.create');
+  }
+  return profile.role === 'manager'
+    && canAccessStore(profile, lead.storeId)
+    && hasPermission(profile, 'appointments.attendance');
+}
+
+export async function rescheduleAppointment(profile, lead, input, reasonValues) {
+  const reasonValidation = validateAppointmentReschedule(reasonValues);
+  if (!reasonValidation.isValid) return reasonValidation;
+  const leadValidation = createLeadUpdate(input);
+  if (!leadValidation.isValid) return leadValidation;
+  if (!isFirebaseConfigured || !canRescheduleAppointment(profile, lead)) {
+    const error = new Error('Reagendamento não autorizado.');
+    error.code = 'permission-denied';
+    throw error;
+  }
+
+  const next = leadValidation.data;
+  const scheduleChanged = String(lead.appointmentDate || '') !== String(next.appointmentDate || '')
+    || String(lead.appointmentTime || '') !== String(next.appointmentTime || '');
+  if (!scheduleChanged || !next.appointmentDate || !next.appointmentTime) {
+    return { isValid: false, errors: { appointmentTime: 'Escolha uma nova data ou horário.' } };
+  }
+
+  const oldBlocks = lead.appointmentSchedulingMode === 'controlled'
+    ? reservationBlocks(lead.storeId, lead.appointmentDate, lead.appointmentTime, lead.appointmentDurationMinutes || 20)
+    : [];
+  const newBlocks = next.appointmentSchedulingMode === 'controlled'
+    ? reservationBlocks(lead.storeId, next.appointmentDate, next.appointmentTime, next.appointmentDurationMinutes || 20)
+    : [];
+  const newBlockIds = new Set(newBlocks.map((block) => block.id));
+  const oldBlocksToRelease = oldBlocks.filter((block) => !newBlockIds.has(block.id));
+  const slotIds = [...new Set([...newBlocks, ...oldBlocksToRelease].map((block) => block.id))];
+  const now = new Date();
+  const { reason, details } = reasonValidation.data;
+  const actorName = String(profile.displayName || 'Usuário');
+
+  await runTransaction(db, async (transaction) => {
+    const slotSnapshots = await Promise.all(slotIds.map((slotId) => (
+      transaction.get(doc(db, 'appointmentSlots', slotId))
+    )));
+    const slotsById = new Map(slotSnapshots.map((snapshot, index) => [slotIds[index], snapshot]));
+    if (newBlocks.some((block) => {
+      const snapshot = slotsById.get(block.id);
+      return snapshot?.exists() && snapshot.data().leadId !== lead.id;
+    })) throw appointmentConflictError();
+
+    const appointmentUpdate = {
+      appointmentDate: next.appointmentDate,
+      appointmentTime: next.appointmentTime,
+      appointmentSchedulingMode: next.appointmentSchedulingMode,
+      appointmentDurationMinutes: next.appointmentDurationMinutes,
+      appointmentServiceId: next.appointmentServiceId,
+      appointmentServiceName: next.appointmentServiceName,
+      appointmentStatus: 'scheduled',
+      appointmentAttendance: 'pending',
+      appointmentRescheduledAtServer: serverTimestamp(),
+      appointmentRescheduledByUid: profile.uid,
+      appointmentRescheduledByName: actorName,
+      appointmentRescheduleReason: reason,
+      appointmentRescheduleDetails: details,
+      funnelStage: 'scheduled',
+      funnelReasonCode: reason,
+      funnelUpdatedAtClient: now.toISOString(),
+      funnelUpdatedAtServer: serverTimestamp(),
+      updatedAtServer: serverTimestamp()
+    };
+    transaction.set(doc(db, 'leads', lead.id), appointmentUpdate, { merge: true });
+
+    oldBlocksToRelease.forEach((block) => {
+      const snapshot = slotsById.get(block.id);
+      if (snapshot?.exists() && snapshot.data().leadId === lead.id) {
+        transaction.delete(doc(db, 'appointmentSlots', block.id));
+      }
+    });
+    newBlocks.forEach((block) => transaction.set(doc(db, 'appointmentSlots', block.id), {
+      storeId: lead.storeId,
+      appointmentDate: next.appointmentDate,
+      appointmentTime: next.appointmentTime,
+      blockTime: block.blockTime,
+      durationMinutes: next.appointmentDurationMinutes,
+      leadId: lead.id,
+      capturedByUid: lead.capturedByUid,
+      createdAt: serverTimestamp()
+    }));
+    addLeadHistoryEvents(transaction, lead.id, [{
+      leadId: lead.id,
+      storeId: lead.storeId,
+      eventType: 'appointment_rescheduled',
+      funnelStage: 'scheduled',
+      reasonCode: reason,
+      description: `Reagendado de ${formatHistoryDate(lead.appointmentDate)} às ${lead.appointmentTime} para ${formatHistoryDate(next.appointmentDate)} às ${next.appointmentTime}. Motivo: ${appointmentRescheduleReasonLabel(reason)}.${details ? ` Observação: ${details}` : ''}`,
+      actorUid: profile.uid,
+      actorName,
+      actorRole: String(profile.role || 'captor'),
+      occurredAtClient: now.toISOString(),
+      schemaVersion: 1
+    }]);
+  });
+
+  return {
+    isValid: true,
+    errors: {},
+    data: {
+      appointmentDate: next.appointmentDate,
+      appointmentTime: next.appointmentTime,
+      appointmentSchedulingMode: next.appointmentSchedulingMode,
+      appointmentDurationMinutes: next.appointmentDurationMinutes,
+      appointmentServiceId: next.appointmentServiceId,
+      appointmentServiceName: next.appointmentServiceName,
+      appointmentStatus: 'scheduled',
+      appointmentAttendance: 'pending',
+      appointmentRescheduleReason: reason,
+      appointmentRescheduleDetails: details,
+      funnelStage: 'scheduled',
+      funnelReasonCode: reason
+    }
+  };
 }
 
 function appointmentReminderId(lead) {
