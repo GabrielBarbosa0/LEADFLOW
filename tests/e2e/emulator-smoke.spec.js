@@ -81,6 +81,17 @@ test('renders the compact registration fields and product payment options', asyn
   await page.getByLabel('Loja de destino').selectOption('loja-02');
   await expect(page.getByLabel('Interesse principal')).toBeEnabled();
 
+  const examPrice = page.getByLabel('Valor do exame');
+  expect(Number(await examPrice.inputValue())).toBeGreaterThan(0);
+  await examPrice.fill('0');
+  await expect(page.getByLabel('Tipo do exame')).toHaveValue('courtesy');
+  await expect(page.locator('[data-exam-price-detail]')).toHaveText('Cortesia');
+  await expect(page.locator('[data-exam-payment-method-row]')).toBeHidden();
+  await examPrice.fill('175.50');
+  await expect(page.getByLabel('Tipo do exame')).toHaveValue('paid');
+  await expect(examPrice).toHaveValue('175.5');
+  await expect(page.locator('[data-exam-payment-method-row]')).toBeVisible();
+
   const pairedFields = [
     ['#customerRg', '#customerCpf'],
     ['#birthDate', '#sex'],

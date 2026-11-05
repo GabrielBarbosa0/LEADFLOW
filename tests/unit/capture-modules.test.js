@@ -61,8 +61,34 @@ describe('capture feature modules', () => {
     const triageMarkup = eyeTriageFields(values, settings);
     expect(triageMarkup).toContain('Oftalmologista');
     expect(triageMarkup).toContain('name="careRouteSelection"');
+    expect(triageMarkup).toContain('name="examPrice" type="number"');
+    expect(triageMarkup).toContain('value="260" data-exam-price');
     expect(triageMarkup).not.toContain('>Automático<');
     expect(triageConfigFields(settings)).toContain('name="ophthalmologistExamPrice"');
+  });
+
+  it('turns a manually zeroed exam price into courtesy', () => {
+    const enriched = enrichLeadTriage({
+      pathologyIds: [],
+      examPaymentType: 'paid',
+      examPrice: '0',
+      examPaymentMethods: ['pix']
+    }, DEFAULT_STORE_SCHEDULE);
+    const markup = eyeTriageFields(enriched, DEFAULT_STORE_SCHEDULE);
+
+    expect(enriched).toMatchObject({ examPaymentType: 'courtesy', examPrice: 0 });
+    expect(markup).toContain('<option value="courtesy" selected>Cortesia</option>');
+    expect(markup).toContain('data-exam-payment-method-row hidden');
+  });
+
+  it('shows a configured zero price as courtesy from the start', () => {
+    const markup = eyeTriageFields({ pathologyIds: [], examPaymentType: 'paid' }, {
+      ...DEFAULT_STORE_SCHEDULE,
+      optometristExamPrice: 0
+    });
+
+    expect(markup).toContain('<option value="courtesy" selected>Cortesia</option>');
+    expect(markup).toContain('value="0" data-exam-price');
   });
 
   it('shows credit fields only when boleto is selected', () => {

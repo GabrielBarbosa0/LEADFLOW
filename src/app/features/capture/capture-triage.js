@@ -6,6 +6,7 @@ import {
   PATHOLOGIES,
   SEX_OPTIONS,
   DIABETES_MEDICAL_ALERT_LEVEL,
+  examPaymentTypeForPrice,
   examPricing,
   ophthalmologyTriage
 } from '../../../utils/lead.js';
@@ -51,15 +52,18 @@ export function triageConfigFields(settings) {
 
 export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, idPrefix = 'eye') {
   const triage = ophthalmologyTriage(values, settings);
-  const configuredPricing = examPricing(triage.careRoute, values.examPaymentType, settings);
+  const selectedPaymentType = examPaymentTypeForPrice(values.examPaymentType, values.examPrice);
+  const configuredPricing = examPricing(triage.careRoute, selectedPaymentType, settings);
   const storedExamPrice = Number(values.examPrice);
+  const resolvedExamPrice = configuredPricing.examPaymentType === 'courtesy'
+    ? 0
+    : Number.isFinite(storedExamPrice) && values.examPrice !== ''
+      ? storedExamPrice
+      : values.id ? examPricing(triage.careRoute, values.examPaymentType).examPrice : configuredPricing.examPrice;
   const pricing = {
     ...configuredPricing,
-    examPrice: configuredPricing.examPaymentType === 'courtesy'
-      ? 0
-      : Number.isFinite(storedExamPrice) && values.examPrice !== ''
-        ? storedExamPrice
-        : values.id ? examPricing(triage.careRoute, values.examPaymentType).examPrice : configuredPricing.examPrice
+    examPaymentType: resolvedExamPrice === 0 ? 'courtesy' : configuredPricing.examPaymentType,
+    examPrice: resolvedExamPrice
   };
   const selectedPaymentMethods = Array.isArray(values.examPaymentMethods)
     ? values.examPaymentMethods
@@ -78,7 +82,6 @@ export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
   const diabetesLevel = Number(values.diabetesLevel);
   const diabetesAlert = hasDiabetes && Number.isFinite(diabetesLevel) && diabetesLevel > DIABETES_MEDICAL_ALERT_LEVEL;
   return `<section class="eye-triage-section" data-eye-triage data-initial-care-route="${triage.careRoute}" data-initial-payment-type="${pricing.examPaymentType}" data-initial-exam-price="${pricing.examPrice}" data-preserve-exam-price="${Boolean(values.id)}">
-    <input type="hidden" name="examPrice" value="${pricing.examPrice}" data-exam-price-value />
     <div class="field" data-field="diabetesLevel" data-diabetes-level ${hasDiabetes ? '' : 'hidden'}>
       <label for="${idPrefix}-diabetes-level">Nivel de glicemia (mg/dL)</label>
       <input id="${idPrefix}-diabetes-level" name="diabetesLevel" type="number" inputmode="numeric" min="20" max="600" step="1" value="${hasDiabetes && values.diabetesLevel !== null && values.diabetesLevel !== undefined ? escapeHtml(values.diabetesLevel) : ''}" placeholder="Ex.: 150" />
@@ -105,8 +108,8 @@ export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
     </div>
     <div class="field-row exam-billing-fields">
       <div class="field eye-route-override"><label for="${idPrefix}-care-route">Encaminhamento</label><input type="hidden" name="careRouteOverride" value="${escapeHtml(triage.careRouteOverride)}" /><select id="${idPrefix}-care-route" name="careRouteSelection"><option value="optometrist" ${triage.careRoute === 'optometrist' ? 'selected' : ''}>Optometrista</option><option value="ophthalmologist" ${triage.careRoute === 'ophthalmologist' ? 'selected' : ''}>Oftalmologista</option></select></div>
-      <div class="field"><label for="${idPrefix}-exam-payment">Tipo do exame</label><select id="${idPrefix}-exam-payment" name="examPaymentType"><option value="paid" ${values.examPaymentType !== 'courtesy' ? 'selected' : ''}>Exame pago</option><option value="courtesy" ${values.examPaymentType === 'courtesy' ? 'selected' : ''}>Cortesia</option></select></div>
-      <div class="field exam-price-field"><span class="exam-price-label">Valor do exame</span><div class="exam-price-display"><strong data-exam-price>${pricing.examPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong><small data-exam-price-detail>${triage.careRoute === 'ophthalmologist' ? 'Oftalmologista' : 'Optometrista'}</small></div></div>
+      <div class="field"><label for="${idPrefix}-exam-payment">Tipo do exame</label><select id="${idPrefix}-exam-payment" name="examPaymentType"><option value="paid" ${pricing.examPaymentType === 'paid' ? 'selected' : ''}>Exame pago</option><option value="courtesy" ${pricing.examPaymentType === 'courtesy' ? 'selected' : ''}>Cortesia</option></select></div>
+      <div class="field exam-price-field"><label class="exam-price-label" for="${idPrefix}-exam-price">Valor do exame</label><div class="exam-price-display"><span aria-hidden="true">R$</span><input id="${idPrefix}-exam-price" name="examPrice" type="number" inputmode="decimal" min="0" max="100000" step="0.01" value="${escapeHtml(pricing.examPrice)}" data-exam-price aria-label="Valor do exame" /><small data-exam-price-detail>${triage.careRoute === 'ophthalmologist' ? 'Oftalmologista' : 'Optometrista'}</small></div></div>
     </div>
     <div class="field-row exam-payment-method-row" data-exam-payment-method-row ${pricing.examPaymentType === 'courtesy' ? 'hidden' : ''}>
       <fieldset class="field ametropia-field exam-payment-method-field" data-field="examPaymentMethods"><legend>Forma de pagamento do exame</legend><small>Marque todas as formas que serão utilizadas.</small><div class="ametropia-options exam-payment-method-options">${paymentMethodOptions}</div><small class="field-error"></small></fieldset>
@@ -122,13 +125,16 @@ export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
 
 export function enrichLeadTriage(values, settings) {
   const triage = ophthalmologyTriage(values, settings);
-  const configuredPricing = examPricing(triage.careRoute, values.examPaymentType, settings);
+  const selectedPaymentType = examPaymentTypeForPrice(values.examPaymentType, values.examPrice);
+  const configuredPricing = examPricing(triage.careRoute, selectedPaymentType, settings);
   const storedExamPrice = Number(values.examPrice);
+  const resolvedExamPrice = configuredPricing.examPaymentType === 'courtesy'
+    ? 0
+    : Number.isFinite(storedExamPrice) && storedExamPrice >= 0 ? storedExamPrice : configuredPricing.examPrice;
   const pricing = {
     ...configuredPricing,
-    examPrice: configuredPricing.examPaymentType === 'courtesy'
-      ? 0
-      : Number.isFinite(storedExamPrice) && storedExamPrice >= 0 ? storedExamPrice : configuredPricing.examPrice
+    examPaymentType: resolvedExamPrice === 0 ? 'courtesy' : configuredPricing.examPaymentType,
+    examPrice: resolvedExamPrice
   };
   return {
     ...values,
@@ -162,7 +168,7 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
     const typeField = section.querySelector('[data-eye-surgery-type]');
     const detailsField = section.querySelector('[data-eye-surgery-details]');
     const routeStatus = section.querySelector('[data-eye-route-status]');
-    const price = section.querySelector('[data-exam-price]');
+    const priceInput = section.querySelector('[data-exam-price]');
     const priceDetail = section.querySelector('[data-exam-price-detail]');
     question.hidden = false;
     const surgeryTypeEnabled = values.eyeSurgeryStatus === 'yes';
@@ -184,13 +190,23 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
     routeStatus.classList.toggle('is-ophthalmology', triage.careRoute === 'ophthalmologist');
     const routeSelection = form.elements.careRouteSelection;
     if (routeSelection) routeSelection.value = triage.careRoute;
-    const configuredPricing = examPricing(triage.careRoute, values.examPaymentType, settings);
+    const configuredPricing = examPricing(triage.careRoute, form.elements.examPaymentType.value, settings);
     const preservePrice = section.dataset.preserveExamPrice === 'true'
       && triage.careRoute === section.dataset.initialCareRoute
       && configuredPricing.examPaymentType === section.dataset.initialPaymentType;
+    const enteredPrice = Number(priceInput.value);
+    const preserveEnteredPrice = section.dataset.examPriceEdited === 'true'
+      && priceInput.value !== ''
+      && Number.isFinite(enteredPrice)
+      && enteredPrice >= 0
+      && enteredPrice <= 100000;
     const pricing = {
       ...configuredPricing,
-      examPrice: preservePrice ? Number(section.dataset.initialExamPrice) : configuredPricing.examPrice
+      examPrice: configuredPricing.examPaymentType === 'courtesy'
+        ? 0
+        : preserveEnteredPrice
+          ? enteredPrice
+          : preservePrice ? Number(section.dataset.initialExamPrice) : configuredPricing.examPrice
     };
     const paymentMethodRow = section.querySelector('[data-exam-payment-method-row]');
     const paymentMethodInputs = [...form.querySelectorAll('[name="examPaymentMethods"]')];
@@ -211,8 +227,7 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
       input.required = false;
       if (!usesStoreCredit) input.value = '';
     });
-    price.textContent = pricing.examPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    section.querySelector('[data-exam-price-value]').value = String(pricing.examPrice);
+    priceInput.value = String(pricing.examPrice);
     priceDetail.textContent = pricing.examPaymentType === 'courtesy'
       ? 'Cortesia'
       : triage.careRoute === 'ophthalmologist' ? 'Oftalmologista' : 'Optometrista';
@@ -225,7 +240,23 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
     form.elements.careRouteOverride.value = event.target.value;
     refresh();
   });
-  form.elements.examPaymentType?.addEventListener('change', refresh);
+  form.elements.examPaymentType?.addEventListener('change', () => {
+    section.dataset.examPriceEdited = 'false';
+    refresh();
+  });
+  section.querySelector('[data-exam-price]')?.addEventListener('input', (event) => {
+    section.dataset.examPriceEdited = 'true';
+    const enteredPrice = Number(event.target.value);
+    if (event.target.value === '' || !Number.isFinite(enteredPrice) || enteredPrice < 0 || enteredPrice > 100000) return;
+    form.elements.examPaymentType.value = enteredPrice === 0 ? 'courtesy' : 'paid';
+    refresh();
+  });
+  section.querySelector('[data-exam-price]')?.addEventListener('blur', (event) => {
+    const enteredPrice = Number(event.target.value);
+    if (event.target.value !== '' && Number.isFinite(enteredPrice) && enteredPrice >= 0 && enteredPrice <= 100000) return;
+    section.dataset.examPriceEdited = 'false';
+    refresh();
+  });
   form.querySelectorAll('[name="examPaymentMethods"]').forEach((input) => input.addEventListener('change', refresh));
   form.elements.interestId?.addEventListener('change', refresh);
   form.querySelectorAll('[name="productPaymentMethods"]').forEach((input) => input.addEventListener('change', refresh));

@@ -2,7 +2,7 @@ const NEW_LEAD_DRAFT_FIELDS = Object.freeze([
   'fullName', 'savwinCode', 'score', 'phone', 'customerRg', 'customerCpf', 'birthDate', 'sex', 'preferredName',
   'postalCode', 'street', 'streetNumber', 'neighborhood', 'city', 'state', 'addressReference', 'interestId', 'productPaymentMethods', 'appointmentServiceId',
   'ametropiaIds', 'pathologyIds', 'diabetesLevel', 'eyeSurgeryStatus', 'eyeSurgeryType', 'eyeSurgeryDetails',
-  'careRouteOverride', 'examPaymentType', 'examPaymentMethods', 'creditFatherName', 'creditMotherName', 'creditAuxiliaryPhone',
+  'careRouteOverride', 'examPaymentType', 'examPrice', 'examPaymentMethods', 'creditFatherName', 'creditMotherName', 'creditAuxiliaryPhone',
   'needsTransport', 'companionCount', 'notes'
 ]);
 

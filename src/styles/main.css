@@ -1438,7 +1438,9 @@ svg {
 
 .exam-price-display {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-content: center;
+  align-items: baseline;
   gap: 1px;
   height: 50px;
   padding: 5px 12px;
@@ -1447,14 +1449,34 @@ svg {
   background: var(--surface-subtle);
 }
 
+.exam-price-display:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgb(16 69 139 / 12%);
+}
+
+.exam-price-display > span,
+.exam-price-display input {
+  color: var(--brand);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.exam-price-display input {
+  width: 100%;
+  min-width: 0;
+  padding: 0 0 0 4px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.exam-price-display small {
+  grid-column: 1 / -1;
+}
+
 .exam-price-field small {
   color: var(--muted);
   font-size: 0.74rem;
-}
-
-.exam-price-field strong {
-  color: var(--brand);
-  font-size: 1rem;
 }
 
 .eye-route-status {
@@ -6614,7 +6636,8 @@ svg {
     padding-left: 8px;
   }
 
-  .exam-price-field strong {
+  .exam-price-display > span,
+  .exam-price-display input {
     font-size: 0.9rem;
     white-space: nowrap;
   }

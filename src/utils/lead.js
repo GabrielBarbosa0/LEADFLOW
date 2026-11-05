@@ -101,6 +101,12 @@ export function examPricing(careRoute, paymentType = 'paid', settings = {}) {
   };
 }
 
+export function examPaymentTypeForPrice(paymentType, examPrice) {
+  const requestedPrice = String(examPrice ?? '').trim();
+  if (requestedPrice !== '' && Number(requestedPrice) === 0) return 'courtesy';
+  return paymentType === 'courtesy' ? 'courtesy' : 'paid';
+}
+
 function normalizeAmetropias(values) {
   const requested = Array.isArray(values) ? values : [values].filter(Boolean);
   const validIds = new Set(AMETROPIAS.map((item) => item.id));
@@ -295,8 +301,9 @@ export function validateLeadInput(input, options = {}) {
     ophthalmologyPathologyIds: input.ophthalmologyPathologyIds,
     ophthalmologySurgeryIds: input.ophthalmologySurgeryIds
   });
-  const configuredPricing = examPricing(triage.careRoute, input.examPaymentType, input);
   const requestedExamPrice = Number(input.examPrice);
+  const examPaymentType = examPaymentTypeForPrice(input.examPaymentType, input.examPrice);
+  const configuredPricing = examPricing(triage.careRoute, examPaymentType, input);
   const pricing = {
     ...configuredPricing,
     examPrice: configuredPricing.examPaymentType === 'courtesy'

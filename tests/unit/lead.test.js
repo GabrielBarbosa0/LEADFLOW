@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { birthMonthDay, calculateAge, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPricing, formatBrazilianPostalCode, normalizePostalCode, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
+import { birthMonthDay, calculateAge, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPaymentTypeForPrice, examPricing, formatBrazilianPostalCode, normalizePostalCode, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
 
 const validInput = {
   fullName: 'Cliente Exemplo',
@@ -265,6 +265,18 @@ describe('lead validation', () => {
 
     expect(result.data.examPrice).toBe(300);
     expect(createLeadUpdate({ ...validInput, pathologyIds: [], examPrice: 200 }).data.examPrice).toBe(200);
+  });
+
+  it('normalizes a zero exam price as courtesy', () => {
+    const result = createLeadDocument({
+      ...validInput,
+      examPaymentType: 'paid',
+      examPrice: '0',
+      examPaymentMethods: ['pix']
+    }, profile, 'installation-test');
+
+    expect(examPaymentTypeForPrice('paid', '0')).toBe('courtesy');
+    expect(result.data).toMatchObject({ examPaymentType: 'courtesy', examPrice: 0, examPaymentMethods: [] });
   });
 
   it('supports more than one companion within the store limit', () => {
