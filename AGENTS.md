@@ -257,7 +257,29 @@ O Service Worker cuida do app shell, nao do banco de clientes.
 - atualizacoes nao podem recarregar a pagina enquanto houver formulario nao salvo;
 - toda mudanca no cache deve ser testada em atualizacao de versao, nao apenas em primeira instalacao.
 
-## 15. Fluxo de trabalho para qualquer alteracao
+## 15. Uso do RTK no Codex Desktop
+
+Para reduzir o consumo de tokens neste repositorio, use o RTK explicitamente
+nos comandos de terminal compativeis. O hook global pode nao interceptar os
+comandos executados pela ferramenta interna do Codex Desktop.
+
+Exemplos:
+
+- `rtk git status`, `rtk git diff` e `rtk git log`;
+- `rtk npm test` para suites de testes;
+- `rtk docker ps` e outros comandos Docker suportados.
+
+Continue usando as ferramentas normais de pesquisa e leitura de codigo. No
+Windows, o executavel `rg` fornecido internamente pelo Codex pode nao estar
+visivel para o processo filho do RTK.
+
+Use o comando original ou `rtk bypass <comando>` quando a saida condensada
+estiver vazia, contradizer o codigo de saida, estiver ilegivel ou omitir um
+detalhe necessario para diagnosticar uma falha. O RTK reduz ruido, mas nao deve
+substituir evidencias completas em investigacoes de permissao, Firestore ou
+publicacao.
+
+## 16. Fluxo de trabalho para qualquer alteracao
 
 Antes de editar:
 
@@ -286,7 +308,7 @@ Antes de concluir:
 
 Quando o `package.json` existir, use os scripts declarados nele como fonte de verdade para os comandos. Nao invente comandos paralelos que contornem a configuracao do projeto.
 
-## 16. Testes obrigatorios por area
+## 17. Testes obrigatorios por area
 
 ### Formularios e dados
 
@@ -323,7 +345,7 @@ Quando o `package.json` existir, use os scripts declarados nele como fonte de ve
 - estados vazio, carregando, offline, erro e sincronizado;
 - instalacao e abertura do PWA.
 
-## 17. Criterio de conclusao
+## 18. Criterio de conclusao
 
 Uma tarefa so esta concluida quando:
 
@@ -337,7 +359,7 @@ Uma tarefa so esta concluida quando:
 - nao foram incluidos segredos nem dados pessoais;
 - limitacoes ou testes nao executados foram comunicados.
 
-## 18. Decisoes que exigem confirmacao
+## 19. Decisoes que exigem confirmacao
 
 Nao tome sozinho uma decisao que:
 
@@ -353,7 +375,7 @@ Nao tome sozinho uma decisao que:
 
 Apresente a necessidade, alternativas, custo e impacto. Depois da decisao, registre-a no TDD.
 
-## 19. Pendencias de negocio atuais
+## 20. Pendencias de negocio atuais
 
 Antes do piloto ainda precisam ser definidos:
 
@@ -367,7 +389,7 @@ Antes do piloto ainda precisam ser definidos:
 
 Nao bloqueie a fundacao tecnica por essas respostas quando for possivel usar configuracoes ou dados ficticios seguros. Nao publique para uso real sem resolve-las.
 
-## 20. Resumo rapido para novos agentes
+## 21. Resumo rapido para novos agentes
 
 Se voce acabou de chegar ao repositorio, retenha isto:
 
