@@ -27,7 +27,6 @@ describe('goals feature modules', () => {
   it('loads dashboard records and assigns an initial store to the draft', async () => {
     const state = {
       profile: { role: 'manager', storeId: 'loja-06' },
-      demoMode: false,
       goals: { loading: false, saving: true, error: '', records: [], members: [], truncated: false, loaded: false, draft: { storeId: '' } }
     };
     const render = vi.fn();

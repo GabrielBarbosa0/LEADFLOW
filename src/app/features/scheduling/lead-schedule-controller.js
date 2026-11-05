@@ -19,12 +19,6 @@ export function startLeadDetailDayAppointmentsSubscription({ state, lead, findLe
     refreshLeadDetailAppointmentTime(lead, renderTimeField);
     return;
   }
-  if (state.demoMode) {
-    state.leadDetailSchedule.appointments = state.leads.filter((item) => item.appointmentDate === appointmentDate);
-    state.leadDetailSchedule.appointmentLoading = false;
-    refreshLeadDetailAppointmentTime(lead, renderTimeField);
-    return;
-  }
   state.leadDetailSchedule.appointmentLoading = true;
   refreshLeadDetailAppointmentTime(lead, renderTimeField);
   try {
@@ -51,9 +45,7 @@ export async function ensureLeadDetailSchedule({ state, routeParam, findLead, re
   if (!lead?.storeId || (state.leadDetailSchedule.leadId === lead.id && state.leadDetailSchedule.storeId === lead.storeId)) return;
   Object.assign(state.leadDetailSchedule, { loading: true, leadId: lead.id, appointmentDate: lead.appointmentDate || '', appointments: [], services: [], serviceId: lead.appointmentServiceId || '', triage: {}, error: '' });
   try {
-    const [settings, services] = state.demoMode
-      ? [state.settings.records.find((item) => item.id === lead.storeId) || { ...DEFAULT_STORE_SCHEDULE, id: lead.storeId }, state.settings.services.length ? state.settings.services : [defaultAppointmentService(lead.storeId, lead.appointmentDurationMinutes || DEFAULT_STORE_SCHEDULE.appointmentDurationMinutes)]]
-      : await Promise.all([loadStoreSchedule(state.profile, lead.storeId), loadAppointmentServices(state.profile)]);
+    const [settings, services] = await Promise.all([loadStoreSchedule(state.profile, lead.storeId), loadAppointmentServices(state.profile)]);
     state.leadDetailSchedule.storeId = lead.storeId;
     state.leadDetailSchedule.settings = { ...DEFAULT_STORE_SCHEDULE, ...settings };
     state.leadDetailSchedule.services = services;

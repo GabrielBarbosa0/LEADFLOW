@@ -582,64 +582,18 @@ export function bindScheduleDialogController({ state, render, showToast }) {
       state.settings.error = '';
       setFieldErrors(scheduleSettingsForm, {});
       try {
-        if (state.demoMode) {
-          const record = state.settings.records.find((item) => item.id === values.storeId);
-          Object.assign(record, values, {
-            appointmentDurationMinutes: Number(values.appointmentDurationMinutes),
-            noShowGraceMinutes: Number(values.noShowGraceMinutes),
-            rescheduleAfterMinutes: Number(values.rescheduleAfterMinutes),
-            automaticPendingFollowUp: values.automaticPendingFollowUp,
-            showAmetropiaFields: values.showAmetropiaFields,
-            storeHoursRules: values.storeHoursRules,
-            limitedDaysEnabled: values.limitedDaysEnabled,
-            limitedDayRules: values.limitedDayRules,
-            limitedWeekdays: values.limitedWeekdays,
-            limitedDayCapacity: values.limitedDayCapacity,
-            meiDailyQuota: values.meiDailyQuota,
-            meiQuotaEnabled: values.meiQuotaEnabled,
-            meiQuotaRules: values.meiQuotaRules,
-            meiQuotaWeekdays: values.meiQuotaWeekdays,
-            meiMorningQuota: values.meiMorningQuota,
-            meiAfternoonQuota: values.meiAfternoonQuota,
-            optometristEnabled: values.optometristEnabled,
-            optometristWeekdays: values.optometristWeekdays,
-            optometristOpeningTime: values.optometristOpeningTime,
-            optometristClosingTime: values.optometristClosingTime,
-            optometristHoursRules: values.optometristHoursRules,
-            ophthalmologyRoutingEnabled: values.ophthalmologyRoutingEnabled,
-            ophthalmologyMinimumAge: values.ophthalmologyMinimumAge,
-            ophthalmologyWeekdays: values.ophthalmologyWeekdays,
-            ophthalmologyOpeningTime: values.ophthalmologyOpeningTime,
-            ophthalmologyClosingTime: values.ophthalmologyClosingTime,
-            ophthalmologyHoursRules: values.ophthalmologyHoursRules,
-            ophthalmologyPathologyIds: values.ophthalmologyPathologyIds,
-            ophthalmologySurgeryIds: values.ophthalmologySurgeryIds,
-            optometristExamPrice: values.optometristExamPrice,
-            ophthalmologistExamPrice: values.ophthalmologistExamPrice,
-            transportEnabled: values.transportEnabled,
-            maxCompanions: values.maxCompanions,
-            transportHoursRules: values.transportHoursRules,
-            offlineCaptureEnabled: values.offlineCaptureEnabled
-          });
-          if (values.storeId === state.profile.storeId) {
-            state.newLeadSchedule.settings = { ...state.newLeadSchedule.settings, ...record };
-            state.followUps.settings = { ...state.followUps.settings, ...record };
-            state.offlineCapture = { loaded: true, enabled: record.offlineCaptureEnabled };
-          }
-        } else {
-          const result = await saveStoreSchedule(state.profile, values.storeId, values);
-          if (!result.isValid) {
-            state.settings.saving = false;
-            setFieldErrors(scheduleSettingsForm, result.errors);
-            return;
-          }
-          const record = state.settings.records.find((item) => item.id === values.storeId);
-          Object.assign(record, result.data);
-          if (values.storeId === state.profile.storeId) {
-            state.newLeadSchedule.settings = { ...state.newLeadSchedule.settings, ...result.data };
-            state.followUps.settings = { ...state.followUps.settings, ...result.data };
-            state.offlineCapture = { loaded: true, enabled: result.data.offlineCaptureEnabled };
-          }
+        const result = await saveStoreSchedule(state.profile, values.storeId, values);
+        if (!result.isValid) {
+          state.settings.saving = false;
+          setFieldErrors(scheduleSettingsForm, result.errors);
+          return;
+        }
+        const record = state.settings.records.find((item) => item.id === values.storeId);
+        Object.assign(record, result.data);
+        if (values.storeId === state.profile.storeId) {
+          state.newLeadSchedule.settings = { ...state.newLeadSchedule.settings, ...result.data };
+          state.followUps.settings = { ...state.followUps.settings, ...result.data };
+          state.offlineCapture = { loaded: true, enabled: result.data.offlineCaptureEnabled };
         }
         state.settings.saving = false;
         render();

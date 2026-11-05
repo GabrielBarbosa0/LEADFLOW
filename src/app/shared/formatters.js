@@ -84,7 +84,6 @@ export function formatDateTimeValue(value) {
 }
 
 export function syncLabel(lead) {
-  if (lead.syncState === 'demo') return ['Somente neste navegador', 'neutral'];
   if (lead.syncState === 'error') return ['Não sincronizado', 'danger'];
   if (lead.syncState === 'syncing') return ['Sincronizando', 'warning'];
   if (lead.syncState === 'pending') return ['Pendente de sincronização', 'warning'];

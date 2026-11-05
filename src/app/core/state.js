@@ -9,7 +9,6 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
     route,
     loading: true,
     profile: null,
-    demoMode: false,
     leads: [],
     authError: '',
     authMessage: '',

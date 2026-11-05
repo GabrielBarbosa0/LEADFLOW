@@ -14,8 +14,8 @@ import {
   storeLabel
 } from '../../shared/formatters.js';
 
-export function pendingFollowUps({ demoMode, canViewTeam, records, leads, profile, settings, settingsByStore, now }) {
-  const source = !demoMode && canViewTeam ? records : leads;
+export function pendingFollowUps({ canViewTeam, records, leads, profile, settings, settingsByStore, now }) {
+  const source = canViewTeam ? records : leads;
   return appointmentFollowUps(source, profile, { ...settings, byStore: settingsByStore }, now);
 }
 

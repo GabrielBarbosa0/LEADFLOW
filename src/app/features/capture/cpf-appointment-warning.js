@@ -19,15 +19,6 @@ export function hasActiveAppointment(lead = {}, today = localDateKey()) {
   );
 }
 
-export function hasDemoCpfAppointment(leads = [], cpf = '', today = localDateKey()) {
-  const normalized = normalizeCpf(cpf);
-  if (!isValidCpf(normalized)) return false;
-  return leads.some((lead) => (
-    normalizeCpf(lead.customerCpf) === normalized
-    && hasActiveAppointment(lead, today)
-  ));
-}
-
 export function cpfAppointmentStatusMarkup() {
   return '<small class="cpf-appointment-status" data-cpf-appointment-status role="status" aria-live="polite" hidden></small>';
 }

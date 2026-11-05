@@ -13,10 +13,9 @@ export function validateManagementPeriod({ startDate, endDate }, maxRangeDays = 
   return '';
 }
 
-export async function loadManagementRecords({ profile, filters, demoMode, demoRecords, loadRecords }) {
+export async function loadManagementRecords({ profile, filters, loadRecords }) {
   const periodError = validateManagementPeriod(filters);
   if (periodError) return { error: periodError };
-  if (demoMode) return { records: [...demoRecords], truncated: false };
   try {
     return await loadRecords(profile, filters.startDate, filters.endDate);
   } catch (error) {

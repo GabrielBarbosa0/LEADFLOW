@@ -33,8 +33,5 @@ export function homeView({ state, hasAccess, canManage, canManageGoals, isAdmin,
     cards.push(actionCard('settings', 'settings', 'Configurações', 'Agenda e preferências do sistema'));
   }
 
-  const demoNotice = state.demoMode
-    ? '<div class="notice notice-warning"><i data-lucide="flask-conical"></i><div><strong>Modo de desenvolvimento</strong><span>Não utilize dados reais. Os registros ficam somente neste navegador.</span></div></div>'
-    : '';
-  return `${profileCard(state.profile)}${demoNotice}<section class="action-grid" aria-label="Ações principais">${cards.join('')}</section>`;
+  return `${profileCard(state.profile)}<section class="action-grid" aria-label="Ações principais">${cards.join('')}</section>`;
 }

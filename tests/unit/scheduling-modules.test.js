@@ -6,11 +6,11 @@ describe('scheduling controllers', () => {
   it('starts only the live subscription for the active scheduling route', () => {
     const startAppointments = vi.fn();
     const startConfirmations = vi.fn();
-    ensureAppointmentData({ state: { route: 'appointments', demoMode: false, unsubscribeAppointments: null, unsubscribeConfirmations: null }, hasAccess: () => true, startAppointments, startConfirmations });
+    ensureAppointmentData({ state: { route: 'appointments', unsubscribeAppointments: null, unsubscribeConfirmations: null }, hasAccess: () => true, startAppointments, startConfirmations });
     expect(startAppointments).toHaveBeenCalledOnce();
     expect(startConfirmations).not.toHaveBeenCalled();
 
-    ensureAppointmentData({ state: { route: 'confirmations', demoMode: false, unsubscribeAppointments: null, unsubscribeConfirmations: null }, hasAccess: () => true, startAppointments, startConfirmations });
+    ensureAppointmentData({ state: { route: 'confirmations', unsubscribeAppointments: null, unsubscribeConfirmations: null }, hasAccess: () => true, startAppointments, startConfirmations });
     expect(startConfirmations).toHaveBeenCalledOnce();
   });
 
@@ -36,7 +36,6 @@ describe('scheduling controllers', () => {
     const subscribe = vi.fn(() => vi.fn());
     const state = {
       route: 'confirmations',
-      demoMode: false,
       profile: { uid: 'manager-1' },
       confirmations: { days: 14, loading: false, loaded: false, error: '' },
       unsubscribeConfirmations: null

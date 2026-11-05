@@ -1,5 +1,5 @@
 import { deleteAppointmentService, saveAppointmentService, setAppointmentServiceActive } from '../../../services/service-catalog-service.js';
-import { servicesForStore, validateAppointmentService } from '../../../utils/service-catalog.js';
+import { servicesForStore } from '../../../utils/service-catalog.js';
 import { setFieldErrors } from '../../shared/form-helpers.js';
 
 export function serviceFormValues(form) {
@@ -17,25 +17,15 @@ export function bindServiceEvents({ state, render, showToast, refreshServices })
     state.settings.saving = true;
     setFieldErrors(form, {});
     try {
-      const result = state.demoMode
-        ? { ...validateAppointmentService(values), id: editingId || crypto.randomUUID() }
-        : await saveAppointmentService(state.profile, values, editingId);
+      const result = await saveAppointmentService(state.profile, values, editingId);
       if (!result.isValid) {
         state.settings.saving = false;
         setFieldErrors(form, result.errors);
         return;
       }
-      if (state.demoMode) {
-        const saved = { id: result.id, ...result.data };
-        state.settings.services = editingId
-          ? state.settings.services.map((item) => item.id === editingId ? saved : item)
-          : [...state.settings.services, saved];
-        state.settings.saving = false;
-      }
       state.settings.serviceEditorOpen = false;
       state.settings.editingServiceId = '';
-      if (state.demoMode) render();
-      else await refreshServices();
+      await refreshServices();
       showToast('Serviço salvo com sucesso.');
     } catch (error) {
       state.settings.saving = false;
@@ -136,14 +126,8 @@ async function toggleService(button, { state, render, showToast, refreshServices
   state.settings.saving = true;
   button.disabled = true;
   try {
-    if (state.demoMode) {
-      state.settings.services = state.settings.services.map((item) => item.id === service.id ? { ...item, active: !item.active } : item);
-      state.settings.saving = false;
-      render();
-    } else {
-      await setAppointmentServiceActive(state.profile, service, !service.active);
-      await refreshServices();
-    }
+    await setAppointmentServiceActive(state.profile, service, !service.active);
+    await refreshServices();
     showToast(service.active ? 'Serviço desativado.' : 'Serviço ativado.');
   } catch (error) {
     state.settings.saving = false;
@@ -160,20 +144,9 @@ async function removeService(button, { state, render, showToast, refreshServices
   state.settings.saving = true;
   render();
   try {
-    if (state.demoMode) {
-      if (service.active && uncoveredStoreIds(service, state.settings.services).length) {
-        const error = new Error('Mantenha pelo menos um serviço ativo em cada unidade atendida.');
-        error.code = 'last-active-service';
-        throw error;
-      }
-      state.settings.services = state.settings.services.filter((item) => item.id !== service.id);
-      state.settings.saving = false;
-    } else {
-      await deleteAppointmentService(state.profile, service);
-    }
+    await deleteAppointmentService(state.profile, service);
     state.settings.pendingDeleteServiceId = '';
-    if (state.demoMode) render();
-    else await refreshServices();
+    await refreshServices();
     showToast('Serviço excluído.');
   } catch (error) {
     state.settings.saving = false;

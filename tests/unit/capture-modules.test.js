@@ -9,8 +9,7 @@ import { leadDetailAppointmentTimeField } from '../../src/app/features/leads/lea
 import {
   bindCpfAppointmentWarning,
   cpfAppointmentConfirmationDialog,
-  hasActiveAppointment,
-  hasDemoCpfAppointment
+  hasActiveAppointment
 } from '../../src/app/features/capture/cpf-appointment-warning.js';
 
 afterEach(() => {
@@ -163,7 +162,7 @@ describe('capture feature modules', () => {
     expect(markup).toContain('data-time-field');
   });
 
-  it('detects only active appointments for the same CPF', () => {
+  it('detects only active appointments', () => {
     const cpf = '529.982.247-25';
     const leads = [
       { customerCpf: cpf, appointmentDate: '2026-10-29', appointmentTime: '08:00', appointmentAttendance: 'pending' },
@@ -174,8 +173,6 @@ describe('capture feature modules', () => {
     expect(hasActiveAppointment(leads[0], '2026-10-30')).toBe(false);
     expect(hasActiveAppointment(leads[1], '2026-10-30')).toBe(false);
     expect(hasActiveAppointment(leads[2], '2026-10-30')).toBe(true);
-    expect(hasDemoCpfAppointment(leads, cpf, '2026-10-30')).toBe(true);
-    expect(hasDemoCpfAppointment(leads, '111.444.777-35', '2026-10-30')).toBe(false);
   });
 
   it('shows the inline CPF warning and renders a confirmation dialog', async () => {

@@ -41,7 +41,7 @@ Uma divida so pode ser marcada como concluida quando houver evidencia no codigo,
 | --- | --- |
 | Prioridade | P0 - Critica |
 | Area | Qualidade e Firebase |
-| Problema | Parte dos testes de interface usa dados de demonstracao e nao percorre Authentication, Security Rules e Firestore Emulator como a aplicacao publicada. |
+| Problema | Os testes E2E autenticam usuarios semeados no Emulator, mas ainda cobrem apenas os fluxos essenciais de acesso e agenda. |
 | Impacto | A interface pode passar nos testes e ainda falhar ao criar, sincronizar ou agendar um lead por causa das regras reais. |
 | Conclusao | Playwright autentica usuarios semeados no Auth Emulator, usa Firestore Emulator e valida cadastro online, offline, reconexao, agendamento e permissoes. |
 

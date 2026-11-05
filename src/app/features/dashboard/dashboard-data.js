@@ -13,8 +13,7 @@ export function filterDashboardRecords(records, filters) {
   });
 }
 
-export async function loadDashboardUpcomingRecords({ profile, filters, demoMode, demoRecords, loadAppointments, now = new Date() }) {
-  if (demoMode) return { records: [...demoRecords], truncated: false };
+export async function loadDashboardUpcomingRecords({ profile, filters, loadAppointments, now = new Date() }) {
   try {
     const { startDate, endDate } = upcomingDateRange(now);
     const result = await loadAppointments(profile, startDate, endDate, filters.storeId);

@@ -29,7 +29,7 @@ export function groupGoalRecords(records) {
 }
 
 export async function loadGoalsData(state, { render }) {
-  if (!state.profile || state.demoMode || state.goals.loading) return;
+  if (!state.profile || state.goals.loading) return;
   state.goals.loading = true;
   state.goals.error = '';
   render();
@@ -56,7 +56,7 @@ export async function loadGoalsData(state, { render }) {
 }
 
 export function ensureGoalsData(state, { render }) {
-  if (state.route === 'goals' && state.profile && !state.demoMode && !state.goals.loaded) {
+  if (state.route === 'goals' && state.profile && !state.goals.loaded) {
     return loadGoalsData(state, { render });
   }
   return undefined;

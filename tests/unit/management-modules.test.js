@@ -23,10 +23,10 @@ describe('management feature modules', () => {
     expect(validateManagementPeriod({ startDate: '2026-10-01', endDate: '2026-10-29' })).toBe('');
   });
 
-  it('loads demo and remote records with normalized errors', async () => {
-    await expect(loadManagementRecords({ profile: {}, filters: { startDate: '2026-10-01', endDate: '2026-10-29' }, demoMode: true, demoRecords: records, loadRecords: vi.fn() })).resolves.toMatchObject({ records, truncated: false });
+  it('loads remote records with normalized errors', async () => {
+    await expect(loadManagementRecords({ profile: {}, filters: { startDate: '2026-10-01', endDate: '2026-10-29' }, loadRecords: vi.fn().mockResolvedValue({ records, truncated: false }) })).resolves.toMatchObject({ records, truncated: false });
     const denied = Object.assign(new Error('denied'), { code: 'permission-denied' });
-    await expect(loadManagementRecords({ profile: {}, filters: { startDate: '2026-10-01', endDate: '2026-10-29' }, demoMode: false, demoRecords: [], loadRecords: vi.fn().mockRejectedValue(denied) })).resolves.toMatchObject({ error: 'Seu perfil não possui permissão para esta consulta.' });
+    await expect(loadManagementRecords({ profile: {}, filters: { startDate: '2026-10-01', endDate: '2026-10-29' }, loadRecords: vi.fn().mockRejectedValue(denied) })).resolves.toMatchObject({ error: 'Seu perfil não possui permissão para esta consulta.' });
   });
 
   it('finds records across management, appointments and active detail', () => {

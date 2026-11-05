@@ -12,12 +12,10 @@ import {
   where,
   writeBatch
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '../firebase/client.js';
+import { db } from '../firebase/client.js';
 import { createLeadDocument, createLeadUpdate } from '../utils/lead.js';
-import { followUpAppointmentKey } from '../utils/follow-up.js';
 import { getInstallationId } from '../utils/installation.js';
 import { createId } from '../utils/id.js';
-import { canAccessStore } from '../utils/permissions.js';
 import { appointmentBlockTimes, appointmentSlotId } from '../utils/schedule.js';
 import { appointmentChangeEvent, leadCreationEvents } from '../app/features/funnel/funnel-model.js';
 import { addLeadHistoryEvents } from './lead-history-service.js';
@@ -29,7 +27,6 @@ import {
   updateOfflineLeadState
 } from './offline-lead-store.js';
 
-const DEMO_STORAGE_KEY = 'fascinlead:demo-leads';
 let synchronizationPromise = null;
 
 function reservationBlocks(storeId, appointmentDate, appointmentTime, durationMinutes) {
@@ -65,27 +62,7 @@ async function commitReservationBatch(batch, blocks, leadId) {
   }
 }
 
-function readDemoLeads() {
-  try {
-    return JSON.parse(localStorage.getItem(DEMO_STORAGE_KEY) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function writeDemoLeads(leads) {
-  localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(leads));
-  window.dispatchEvent(new Event('fascinlead:demo-leads'));
-}
-
-export function subscribeToLeads(profile, demoMode, onData, onError) {
-  if (demoMode || !isFirebaseConfigured) {
-    const emit = () => onData(readDemoLeads());
-    window.addEventListener('fascinlead:demo-leads', emit);
-    emit();
-    return () => window.removeEventListener('fascinlead:demo-leads', emit);
-  }
-
+export function subscribeToLeads(profile, onData, onError) {
   let remoteLeads = [];
   let offlineLeads = [];
   let confirmedRemoteIds = new Set();
@@ -148,25 +125,11 @@ function appointmentConflictError() {
   return error;
 }
 
-export function saveLead(input, profile, demoMode, onRemoteError, options = {}) {
+export function saveLead(input, profile, onRemoteError, options = {}) {
   const result = createLeadDocument(input, profile, getInstallationId());
   if (!result.isValid) return result;
 
   const id = createId();
-
-  if (demoMode || !isFirebaseConfigured) {
-    const leads = readDemoLeads();
-    writeDemoLeads([
-      {
-        id,
-        ...result.data,
-        syncState: 'demo',
-        fromCache: true
-      },
-      ...leads
-    ]);
-    return { ...result, id };
-  }
 
   const offline = options.offline === true || !navigator.onLine;
   if (offline) {
@@ -219,7 +182,7 @@ export function saveLead(input, profile, demoMode, onRemoteError, options = {}) 
   return { ...result, id, writePromise };
 }
 
-export function updateLead(id, input, demoMode, onRemoteError, existingLead = null, options = {}) {
+export function updateLead(id, input, onRemoteError, existingLead = null, options = {}) {
   const result = createLeadUpdate(input);
   if (!result.isValid) return result;
 
@@ -241,22 +204,6 @@ export function updateLead(id, input, demoMode, onRemoteError, existingLead = nu
   const historyEvent = appointmentChanged && options.profile
     ? appointmentChangeEvent(existingLead, { id, ...existingLead, ...result.data }, options.profile, now)
     : null;
-
-  if (demoMode || !isFirebaseConfigured) {
-    const leads = readDemoLeads();
-    const index = leads.findIndex((lead) => lead.id === id);
-    if (index === -1) return { isValid: false, errors: {}, notFound: true };
-    leads[index] = {
-      ...leads[index],
-      ...result.data,
-      ...appointmentFunnelUpdate,
-      ...(appointmentChanged && result.data.appointmentDate ? { appointmentAttendance: 'pending' } : {}),
-      syncState: 'demo',
-      fromCache: true
-    };
-    writeDemoLeads(leads);
-    return { ...result, id };
-  }
 
   const appointmentUpdate = {
     appointmentDate: result.data.appointmentDate,
@@ -337,39 +284,6 @@ export function updateLead(id, input, demoMode, onRemoteError, existingLead = nu
   return { ...result, id, writePromise };
 }
 
-export function updateDemoAppointmentAttendance(id, attendance, profile) {
-  const allowed = new Set(['pending', 'attended', 'missed']);
-  if (!allowed.has(attendance)) return false;
-  const leads = readDemoLeads();
-  const index = leads.findIndex((lead) => lead.id === id);
-  if (index === -1) return false;
-  leads[index] = {
-    ...leads[index],
-    appointmentAttendance: attendance,
-    appointmentAttendanceUpdatedAt: new Date().toISOString(),
-    appointmentAttendanceUpdatedByUid: profile.uid
-  };
-  writeDemoLeads(leads);
-  return true;
-}
-
-export function markDemoFollowUpContact(id, profile) {
-  const leads = readDemoLeads();
-  const index = leads.findIndex((lead) => lead.id === id && (
-    lead.capturedByUid === profile.uid || ['manager', 'admin'].includes(profile?.role)
-  ));
-  if (index === -1) return false;
-  leads[index] = {
-    ...leads[index],
-    followUpContactedAt: new Date().toISOString(),
-    followUpContactedByUid: profile.uid,
-    followUpContactedByName: profile.displayName,
-    followUpContactedAppointmentKey: followUpAppointmentKey(leads[index])
-  };
-  writeDemoLeads(leads);
-  return true;
-}
-
 async function synchronizeOfflineLeads(profile) {
   if (!profile?.uid) return { synchronized: 0, failed: 0 };
   const leads = await listOfflineLeads(profile.uid);
@@ -424,49 +338,13 @@ async function synchronizeOfflineLeads(profile) {
   return { synchronized, failed };
 }
 
-export function markDemoAppointmentReminderDone(id, profile) {
-  const leads = readDemoLeads();
-  const index = leads.findIndex((lead) => lead.id === id && (
-    profile.role === 'admin' || (profile.role === 'manager' && canAccessStore(profile, lead.storeId))
-  ));
-  if (index === -1 || !leads[index].appointmentDate || !leads[index].appointmentTime) return false;
-  leads[index] = {
-    ...leads[index],
-    appointmentReminderSentAt: new Date().toISOString(),
-    appointmentReminderSentByUid: profile.uid,
-    appointmentReminderSentByName: profile.displayName,
-    appointmentReminderAppointmentKey: followUpAppointmentKey(leads[index])
-  };
-  writeDemoLeads(leads);
-  return true;
-}
-
-export function undoDemoAppointmentReminderDone(id, profile) {
-  const leads = readDemoLeads();
-  const index = leads.findIndex((lead) => lead.id === id && (
-    profile.role === 'admin' || (profile.role === 'manager' && canAccessStore(profile, lead.storeId))
-  ));
-  if (index === -1) return false;
-  const {
-    appointmentReminderSentAt,
-    appointmentReminderSentByUid,
-    appointmentReminderSentByName,
-    appointmentReminderAppointmentKey,
-    ...pendingLead
-  } = leads[index];
-  leads[index] = pendingLead;
-  writeDemoLeads(leads);
-  return true;
-}
-
-export async function synchronizeNow(demoMode, profile = null) {
-  if (demoMode || !isFirebaseConfigured) return { demo: true };
+export async function synchronizeNow(profile = null) {
   if (synchronizationPromise) return synchronizationPromise;
 
   synchronizationPromise = (async () => {
     const offline = await synchronizeOfflineLeads(profile);
     await waitForPendingWrites(db);
-    return { demo: false, ...offline };
+    return offline;
   })().finally(() => {
     synchronizationPromise = null;
   });

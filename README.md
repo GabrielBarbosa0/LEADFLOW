@@ -276,7 +276,7 @@ O build do GitHub Pages usa o caminho `/FASCINLEAD/`. O desenvolvimento local co
 
 Copie `.env.example` para `.env.local` e preencha a configuracao web do projeto Firebase. Para usar os emuladores, defina `VITE_USE_FIREBASE_EMULATORS=true`.
 
-Sem configuracao Firebase, o servidor de desenvolvimento oferece um modo local identificado como `DEMO`. Ele existe apenas para validar a interface e nunca deve receber dados reais.
+Sem configuracao Firebase, o acesso ao sistema permanece bloqueado. Testes locais autenticados devem usar o Firebase Emulator Suite.
 
 ## Plano de entrega
 

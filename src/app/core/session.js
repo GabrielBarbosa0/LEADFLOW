@@ -4,79 +4,12 @@ import { DEFAULT_STORE_SCHEDULE } from '../../utils/schedule.js';
 import { STORES } from '../../utils/stores.js';
 import { toLocalDateInput } from '../shared/formatters.js';
 
-export const DEMO_SESSION_KEY = 'fascinlead:demo-session';
-export const DEMO_ROLE_KEY = 'fascinlead:demo-role';
-
-const demoProfile = {
-  uid: 'demo-user',
-  displayName: 'Equipe Fascinante',
-  email: 'modo.de.desenvolvimento@local',
-  role: 'captor',
-  storeId: 'loja-06',
-  active: true
-};
-
-export function createDemoProfile(role = sessionStorage.getItem(DEMO_ROLE_KEY)) {
-  if (role === 'admin') {
-    return { ...demoProfile, uid: 'demo-admin', displayName: 'Administrador de Teste', role: 'admin', storeId: 'loja-06', storeIds: STORES.map((store) => store.id) };
-  }
-  if (role === 'manager') {
-    return { ...demoProfile, uid: 'demo-manager', displayName: 'Gestor de Teste', role: 'manager', storeId: 'loja-06', storeIds: ['loja-06', 'loja-02'] };
-  }
-  if (role === 'mei') {
-    const mei = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-mei');
-    return {
-      ...demoProfile,
-      uid: 'demo-mei',
-      displayName: 'MEI de Teste',
-      role: mei.baseRole,
-      roleProfileId: mei.id,
-      roleProfileName: mei.name,
-      permissions: [...mei.permissions],
-      storeId: 'loja-06',
-      storeIds: STORES.map((store) => store.id)
-    };
-  }
-  if (role === 'receptionist') {
-    const receptionist = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-receptionist');
-    return {
-      ...demoProfile,
-      uid: 'demo-receptionist',
-      displayName: 'Atendente de Teste',
-      role: receptionist.baseRole,
-      roleProfileId: receptionist.id,
-      roleProfileName: receptionist.name,
-      permissions: [...receptionist.permissions],
-      storeId: 'loja-06',
-      storeIds: ['loja-06']
-    };
-  }
-  return { ...demoProfile };
-}
-
-export function hasDemoSession(enabled) {
-  return enabled && sessionStorage.getItem(DEMO_SESSION_KEY) === 'true';
-}
-
-export function startDemoSession(state) {
-  sessionStorage.setItem(DEMO_SESSION_KEY, 'true');
-  state.demoMode = true;
-  state.profile = createDemoProfile();
-  state.authError = '';
-  state.authMessage = '';
-}
-
-export function clearDemoSession() {
-  sessionStorage.removeItem(DEMO_SESSION_KEY);
-}
-
 export function resetSessionState(state, {
   createDefaultManagementFilters,
   createDefaultGoalDraft,
   createDefaultRoleDraft
 }) {
   state.profile = null;
-  state.demoMode = false;
   state.leads = [];
   state.leadSearch = { query: '', loading: false, searched: false, error: '', results: [] };
   state.management = {

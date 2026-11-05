@@ -11,11 +11,6 @@ export function ensureLeadHistory({ state, lead, render }) {
     state.leadHistory = { leadId: '', loading: false, error: '', records: [], stage: '' };
     return;
   }
-  if (state.demoMode) {
-    stopLeadHistorySubscription(state);
-    state.leadHistory = { leadId: lead.id, loading: false, error: '', records: [], stage: lead.funnelStage || '' };
-    return;
-  }
   if (state.leadHistory.leadId === lead.id) return;
   stopLeadHistorySubscription(state);
   state.leadHistory = { leadId: lead.id, loading: true, error: '', records: [], stage: lead.funnelStage || '' };

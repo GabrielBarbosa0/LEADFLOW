@@ -18,7 +18,7 @@ export function stopConfirmationsSubscription(state) {
 }
 
 export function startConfirmationsSubscription({ state, render, hasAccess, subscribe }) {
-  if (!hasAccess('appointments.view') || state.demoMode || state.route !== 'confirmations') return;
+  if (!hasAccess('appointments.view') || state.route !== 'confirmations') return;
   stopConfirmationsSubscription(state);
   const startDate = toLocalDateInput(new Date());
   const endDate = confirmationEndDate(startDate, state.confirmations.days);
@@ -48,7 +48,7 @@ export function startConfirmationsSubscription({ state, render, hasAccess, subsc
 }
 
 export function startAppointmentsSubscription({ state, render, hasAccess, isAdmin, subscribe }) {
-  if (!hasAccess('appointments.view') || state.demoMode || state.route !== 'appointments') return;
+  if (!hasAccess('appointments.view') || state.route !== 'appointments') return;
   stopAppointmentsSubscription(state);
   state.appointments.loading = true;
   state.appointments.loaded = false;
@@ -84,8 +84,8 @@ export function startAppointmentsSubscription({ state, render, hasAccess, isAdmi
 }
 
 export function ensureAppointmentData({ state, hasAccess, startAppointments, startConfirmations }) {
-  if (state.route === 'appointments' && hasAccess('appointments.view') && !state.demoMode && !state.unsubscribeAppointments) startAppointments();
-  if (state.route === 'confirmations' && hasAccess('appointments.view') && !state.demoMode && !state.unsubscribeConfirmations) startConfirmations();
+  if (state.route === 'appointments' && hasAccess('appointments.view') && !state.unsubscribeAppointments) startAppointments();
+  if (state.route === 'confirmations' && hasAccess('appointments.view') && !state.unsubscribeConfirmations) startConfirmations();
 }
 
 export async function openAppointmentCreateDialog({ state, render, profileStoreIds }) {
@@ -95,12 +95,7 @@ export async function openAppointmentCreateDialog({ state, render, profileStoreI
   render();
   document.querySelector('#appointment-create-dialog')?.showModal();
   try {
-    if (state.demoMode) {
-      state.appointmentCreate.schedules = allowedStores.map((store) => ({ ...store, ...DEFAULT_STORE_SCHEDULE }));
-      state.appointmentCreate.services = state.settings.services.length ? state.settings.services.filter((service) => service.active) : [defaultAppointmentService(allowedStores.map((store) => store.id))];
-    } else {
-      [state.appointmentCreate.schedules, state.appointmentCreate.services] = await Promise.all([loadStoreSchedules(state.profile), loadAppointmentServices(state.profile)]);
-    }
+    [state.appointmentCreate.schedules, state.appointmentCreate.services] = await Promise.all([loadStoreSchedules(state.profile), loadAppointmentServices(state.profile)]);
     const schedule = state.appointmentCreate.schedules.find((item) => item.id === preferredStoreId) || DEFAULT_STORE_SCHEDULE;
     if (!servicesForStore(state.appointmentCreate.services, preferredStoreId).length) state.appointmentCreate.services.push(defaultAppointmentService(preferredStoreId, schedule.appointmentDurationMinutes));
     state.appointmentCreate.serviceId = servicesForStore(state.appointmentCreate.services, preferredStoreId)[0]?.id || '';

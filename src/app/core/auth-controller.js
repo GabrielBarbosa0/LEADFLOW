@@ -1,6 +1,6 @@
 import { completeRedirectSignIn, createEmailPasswordAccess, loadAuthorizedProfile, observeAuth, observeAuthorizedProfile, requestPasswordReset, signInWithEmail, signInWithGoogle, signOutUser } from '../../firebase/auth.js';
 import { profileAccessSignature } from '../shared/formatters.js';
-import { clearDemoSession, hasDemoSession, resetSessionState, startDemoSession } from './session.js';
+import { resetSessionState } from './session.js';
 
 function readableAuthError(error, fallback) {
   const code = String(error?.code || '');
@@ -54,16 +54,6 @@ export async function handleAuthenticationAction(action, dependencies) {
     createDefaultGoalDraft,
     createDefaultRoleDraft
   } = dependencies;
-
-  if (action === 'demo-login') {
-    startDemoSession(state);
-    subscribeProfileLeads();
-    startOfflineCaptureSubscription();
-    startFollowUpScheduleSubscription();
-    navigate('home');
-    render();
-    return true;
-  }
 
   if (action === 'google-login') {
     state.authError = '';
@@ -130,7 +120,6 @@ export async function handleAuthenticationAction(action, dependencies) {
   stopNewLeadScheduleSubscriptions();
   stopOfflineCaptureSubscription();
   stopFollowUpScheduleSubscription();
-  clearDemoSession();
   await signOutUser();
   resetSessionState(state, { createDefaultManagementFilters, createDefaultGoalDraft, createDefaultRoleDraft });
   render();
@@ -141,8 +130,6 @@ export async function startAuthenticationController(dependencies) {
   const {
     state,
     render,
-    devMode,
-    createDemoProfile,
     subscribeProfileLeads,
     startOfflineCaptureSubscription,
     stopOfflineCaptureSubscription,
@@ -154,17 +141,6 @@ export async function startAuthenticationController(dependencies) {
     stopConfirmationsSubscription,
     stopWalkInsSubscription
   } = dependencies;
-
-  if (hasDemoSession(devMode)) {
-    state.demoMode = true;
-    state.profile = createDemoProfile();
-    state.loading = false;
-    subscribeProfileLeads();
-    startOfflineCaptureSubscription();
-    startFollowUpScheduleSubscription();
-    render();
-    return;
-  }
 
   try {
     await completeRedirectSignIn();
@@ -187,7 +163,6 @@ export async function startAuthenticationController(dependencies) {
 
     try {
       state.profile = await loadAuthorizedProfile(firebaseUser);
-      state.demoMode = false;
       state.authError = '';
       subscribeProfileLeads();
       if (navigator.onLine) synchronizePendingRegistrations();

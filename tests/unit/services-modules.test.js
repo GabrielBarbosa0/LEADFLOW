@@ -69,7 +69,7 @@ describe('services feature modules', () => {
   it('prevents disabling the last active service of a store', async () => {
     const button = { dataset: { serviceToggle: 'exam' }, disabled: false };
     const showToast = vi.fn();
-    const state = { settings: settings({ services: [services[0]] }), demoMode: true };
+    const state = { settings: settings({ services: [services[0]] }) };
     await handleServiceClick(clickEvent({ '[data-service-toggle]': button }), {
       state,
       render: vi.fn(),

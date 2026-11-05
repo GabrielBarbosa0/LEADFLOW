@@ -3,7 +3,7 @@ import { renderIcons, syncConnectivityIndicator } from '../shared/ui.js';
 
 export async function synchronizePendingRegistrations(state, { announce = false, showToast }) {
   try {
-    const result = await synchronizeNow(false, state.profile);
+    const result = await synchronizeNow(state.profile);
     if (result.failed > 0) {
       showToast(`${result.failed} cadastro(s) não foram confirmados pela nuvem e continuam salvos neste aparelho.`, 'danger', 'circle-alert');
     } else if (announce && result.synchronized > 0) {
@@ -20,7 +20,7 @@ export async function synchronizePendingRegistrations(state, { announce = false,
 
 export function handleConnectivityChange({ state, render, synchronize, selectedNewLeadStoreId, refreshAppointmentTimeControl }) {
   syncConnectivityIndicator();
-  if (navigator.onLine && state.profile && !state.demoMode) synchronize(true);
+  if (navigator.onLine && state.profile) synchronize(true);
   if (state.route !== 'new') return;
 
   const form = document.querySelector('#lead-form');
@@ -103,7 +103,7 @@ export async function startLifecycle({
     if (['captor', 'manager', 'admin'].includes(state.profile?.role) && ['home', 'follow-ups'].includes(state.route)) render();
   }, 60_000);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && state.profile && !state.demoMode) synchronize(false);
+    if (document.visibilityState === 'visible' && state.profile) synchronize(false);
   });
 
   await startAuthentication();

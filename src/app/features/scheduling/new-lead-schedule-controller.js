@@ -58,12 +58,6 @@ export function startDayAppointmentsSubscription({ state, selectedStoreId, captu
     refresh();
     return;
   }
-  if (state.demoMode) {
-    state.newLeadSchedule.appointments = state.leads.filter((lead) => lead.storeId === selectedStoreId() && lead.appointmentDate === appointmentDate);
-    state.newLeadSchedule.loading = false;
-    refresh();
-    return;
-  }
   state.newLeadSchedule.loading = true;
   refresh();
   try {
@@ -86,18 +80,6 @@ export async function ensureNewLeadSchedule({ state, render, selectedStoreId, ca
   if (state.route !== 'new' || !state.profile || state.newLeadSchedule.loaded || state.newLeadSchedule.loading) return;
   const storeId = selectedStoreId();
   state.newLeadSchedule.loading = true;
-  if (state.demoMode) {
-    const configured = state.settings.records.find((item) => item.id === storeId);
-    state.newLeadSchedule.settings = { ...DEFAULT_STORE_SCHEDULE, ...(configured || {}) };
-    state.newLeadSchedule.services = [...state.settings.services];
-    if (storeId && !servicesForStore(state.newLeadSchedule.services, storeId).length) state.newLeadSchedule.services.push(defaultAppointmentService(storeId, state.newLeadSchedule.settings.appointmentDurationMinutes));
-    const available = servicesForStore(state.newLeadSchedule.services, storeId);
-    state.newLeadSchedule.serviceId = available.some((service) => service.id === state.newLeadSchedule.draft.appointmentServiceId) ? state.newLeadSchedule.draft.appointmentServiceId : available[0]?.id || '';
-    state.newLeadSchedule.loaded = true;
-    state.newLeadSchedule.loading = false;
-    render();
-    return;
-  }
   try {
     state.newLeadSchedule.services = await loadAppointmentServices(state.profile);
     if (storeId && !servicesForStore(state.newLeadSchedule.services, storeId).length) state.newLeadSchedule.services.push(defaultAppointmentService(storeId, state.newLeadSchedule.settings.appointmentDurationMinutes));

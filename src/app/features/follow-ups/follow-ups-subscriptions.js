@@ -1,6 +1,6 @@
-export function initialFollowUpsState(current, { demoMode, role, defaultSettings }) {
+export function initialFollowUpsState(current, { role, defaultSettings }) {
   return {
-    loaded: demoMode || !['captor', 'manager', 'admin'].includes(role),
+    loaded: !['captor', 'manager', 'admin'].includes(role),
     error: '',
     records: [],
     truncated: false,
@@ -13,7 +13,6 @@ export function initialFollowUpsState(current, { demoMode, role, defaultSettings
 
 export function startFollowUpsSubscriptions({
   profile,
-  demoMode,
   canViewTeam,
   storeIds,
   loadSchedules,
@@ -31,7 +30,7 @@ export function startFollowUpsSubscriptions({
     render();
   };
 
-  if (!['captor', 'manager', 'admin'].includes(profile?.role) || demoMode) return () => { active = false; };
+  if (!['captor', 'manager', 'admin'].includes(profile?.role)) return () => { active = false; };
 
   if (profile.role === 'admin' || storeIds.length > 1) {
     loadSchedules(profile)

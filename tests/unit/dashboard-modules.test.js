@@ -18,7 +18,7 @@ describe('dashboard feature modules', () => {
   it('loads and filters upcoming records independently', async () => {
     const loadAppointments = vi.fn().mockResolvedValue({ records, truncated: false });
     const result = await loadDashboardUpcomingRecords({
-      profile: {}, filters: { storeId: 'loja-06', capturedByUid: 'captor-1' }, demoMode: false, demoRecords: [], loadAppointments,
+      profile: {}, filters: { storeId: 'loja-06', capturedByUid: 'captor-1' }, loadAppointments,
       now: new Date('2026-10-29T12:00:00-03:00')
     });
     expect(loadAppointments).toHaveBeenCalledWith({}, '2026-10-29', '2026-11-04', 'loja-06');

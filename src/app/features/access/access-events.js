@@ -35,7 +35,7 @@ export async function loadAccessData(state, { render }) {
 }
 
 export function ensureAccessData(state, dependencies) {
-  if (state.route === 'access' && state.profile?.role === 'admin' && !state.demoMode && !state.access.loaded) {
+  if (state.route === 'access' && state.profile?.role === 'admin' && !state.access.loaded) {
     loadAccessData(state, dependencies);
   }
 }

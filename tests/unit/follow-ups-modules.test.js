@@ -35,7 +35,6 @@ function handlers(overrides = {}) {
 describe('follow-ups feature modules', () => {
   it('selects pending records without depending on application-global state', () => {
     const records = pendingFollowUps({
-      demoMode: false,
       canViewTeam: true,
       records: [sampleLead()],
       leads: [],
@@ -80,7 +79,6 @@ describe('follow-ups feature modules', () => {
     const render = vi.fn();
     const stop = startFollowUpsSubscriptions({
       profile: { role: 'manager' },
-      demoMode: false,
       canViewTeam: true,
       storeIds: ['loja-06'],
       loadSchedules: vi.fn(),
@@ -104,7 +102,6 @@ describe('follow-ups feature modules', () => {
 
   it('preserves the active filter when resetting follow-up state', () => {
     expect(initialFollowUpsState({ filter: 'contacted' }, {
-      demoMode: false,
       role: 'captor',
       defaultSettings: DEFAULT_STORE_SCHEDULE
     })).toMatchObject({ filter: 'contacted', loaded: false, records: [] });

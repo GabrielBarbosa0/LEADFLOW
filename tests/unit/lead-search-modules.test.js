@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { searchDemoLeads, validateLeadSearch } from '../../src/app/features/search/lead-search-data.js';
+import { validateLeadSearch } from '../../src/app/features/search/lead-search-data.js';
 import { leadSearchView } from '../../src/app/features/search/lead-search-view.js';
 
 const leads = [
@@ -10,6 +10,7 @@ const leads = [
     storeId: 'loja-06',
     capturedByUid: 'captor-1',
     capturedByName: 'Ana',
+    canOpen: true,
     appointmentDate: '2026-11-05',
     appointmentTime: '08:20',
     appointmentServiceName: 'Exame de vista'
@@ -19,7 +20,8 @@ const leads = [
     fullName: 'Mariana Souza',
     customerCpf: '12345678909',
     storeId: 'loja-06',
-    capturedByUid: 'captor-2'
+    capturedByUid: 'captor-2',
+    canOpen: false
   }
 ];
 
@@ -31,17 +33,9 @@ describe('lead appointment search', () => {
     expect(validateLeadSearch('529.982.247-25')).toBe('');
   });
 
-  it('finds demo leads by name or exact CPF', () => {
-    const profile = { uid: 'captor-1', role: 'captor' };
-    expect(searchDemoLeads(leads, 'maria', profile)).toHaveLength(2);
-    expect(searchDemoLeads(leads, '529.982.247-25', profile).map((lead) => lead.id)).toEqual(['scheduled']);
-    expect(searchDemoLeads(leads, '52998224725', profile)[0].canOpen).toBe(true);
-  });
-
   it('renders scheduled and unscheduled results', () => {
-    const results = searchDemoLeads(leads, 'maria', { uid: 'captor-1', role: 'captor' });
     const markup = leadSearchView({
-      search: { query: 'maria', loading: false, searched: true, error: '', results }
+      search: { query: 'maria', loading: false, searched: true, error: '', results: leads }
     });
     expect(markup).toContain('Agendado');
     expect(markup).toContain('Sem agendamento');

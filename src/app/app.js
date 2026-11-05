@@ -1,5 +1,5 @@
 import { isFirebaseConfigured } from '../firebase/client.js';
-import { markDemoAppointmentReminderDone, markDemoFollowUpContact, saveLead, subscribeToLeads, undoDemoAppointmentReminderDone, updateDemoAppointmentAttendance, updateLead } from '../services/lead-service.js';
+import { saveLead, subscribeToLeads, updateLead } from '../services/lead-service.js';
 import { markFollowUpContactStarted, subscribeToTeamFollowUps } from '../services/follow-up-service.js';
 import { loadRoleProfiles } from '../services/role-profile-service.js';
 import { deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
@@ -16,7 +16,7 @@ import { buildAppointmentSlots, DEFAULT_STORE_SCHEDULE } from '../utils/schedule
 import { followUpAppointmentKey } from '../utils/follow-up.js';
 import { STORES } from '../utils/stores.js';
 import { profileStoreIds } from '../utils/permissions.js';
-import { SYSTEM_ROLE_PROFILES, hasPermission as profileHasPermission } from '../utils/role-profile.js';
+import { hasPermission as profileHasPermission } from '../utils/role-profile.js';
 import { formatBrazilianCpf } from '../utils/savwin-matching.js';
 import { defaultAppointmentService, servicesForStore } from '../utils/service-catalog.js';
 import { validateWalkInDraft, WALK_IN_CLOSED_STATUSES } from '../utils/walk-in.js';
@@ -46,14 +46,14 @@ import { captureAppointmentTimeField, careRouteAppointmentSchedule, isCareRouteD
 import { ametropiaOptions, bindEyeTriage, enrichLeadTriage } from './features/capture/capture-triage.js';
 import { bindTransportFields } from './features/capture/capture-transport.js';
 import { captureView } from './features/capture/capture-view.js';
-import { bindCpfAppointmentWarning, confirmDuplicateCpfAppointment, hasDemoCpfAppointment } from './features/capture/cpf-appointment-warning.js';
+import { bindCpfAppointmentWarning, confirmDuplicateCpfAppointment } from './features/capture/cpf-appointment-warning.js';
 import { initializeLeadDetailForm, leadDetailSubmissionValues } from './features/leads/lead-detail-events.js';
 import { leadDetailAppointmentTimeField as renderLeadDetailAppointmentTimeField, selectedLeadDetailService as resolveLeadDetailService } from './features/leads/lead-appointment.js';
 import { leadDetailView as renderLeadDetailView } from './features/leads/lead-detail-view.js';
 import { ensureLeadHistory, stopLeadHistorySubscription } from './features/funnel/lead-history-subscriptions.js';
 import { leadHistoryView } from './features/funnel/lead-history-view.js';
 import { leadsView as renderLeadsView } from './features/leads/leads-view.js';
-import { searchDemoLeads, validateLeadSearch } from './features/search/lead-search-data.js';
+import { validateLeadSearch } from './features/search/lead-search-data.js';
 import { checkCpfActiveAppointment, loadSearchLead, searchLeadAppointments } from './features/search/lead-search-service.js';
 import { leadSearchView as renderLeadSearchView } from './features/search/lead-search-view.js';
 import { handleFollowUpsClick } from './features/follow-ups/follow-ups-events.js';
@@ -95,7 +95,6 @@ import { accessView as renderAccessView } from './features/access/access-view.js
 import { bindRoleProfileEvents, createDefaultRoleDraft, handleRoleProfileClick } from './features/access/role-profiles-events.js';
 import { roleProfilesView as renderRoleProfilesView } from './features/access/role-profiles-view.js';
 import { bindAuthenticationForm, handleAuthenticationAction, startAuthenticationController } from './core/auth-controller.js';
-import { createDemoProfile } from './core/session.js';
 import { createAppState } from './core/state.js';
 import { renderApplication, syncAgendaSidebarHeight } from './core/renderer.js';
 import { handleConnectivityChange as handleLifecycleConnectivityChange, startLifecycle, synchronizePendingRegistrations as synchronizeLifecyclePendingRegistrations } from './core/lifecycle.js';
@@ -166,7 +165,6 @@ function canManageGoals() {
 
 function pendingFollowUps() {
   return selectPendingFollowUps({
-    demoMode: state.demoMode,
     canViewTeam: hasAccess('followups.team'),
     records: state.followUps.records,
     leads: state.leads,
@@ -181,7 +179,7 @@ function filteredManagementRecords() {
 }
 
 function loginView() {
-  return renderLoginView({ state, firebaseConfigured: isFirebaseConfigured, devMode: import.meta.env.DEV });
+  return renderLoginView({ state, firebaseConfigured: isFirebaseConfigured });
 }
 
 function homeView() {
@@ -403,7 +401,7 @@ function kanbanView() {
   });
 }
 function dashboardView() {
-  const source = state.demoMode ? state.leads : state.management.records;
+  const source = state.management.records;
   const periodFilters = { ...state.management.filters, storeId: '', capturedByUid: '' };
   const comparisonRecords = filterDashboardRecords(source, periodFilters);
   const records = filterDashboardRecords(comparisonRecords, {
@@ -413,7 +411,7 @@ function dashboardView() {
     capturedByUid: ''
   });
   const upcomingRecords = filterDashboardRecords(
-    state.demoMode ? state.leads : state.dashboardUpcoming.records,
+    state.dashboardUpcoming.records,
     { startDate: '', endDate: '', storeId: state.dashboardFilters.storeId, capturedByUid: '' }
   );
   const rankingRecords = comparisonRecords;
@@ -442,9 +440,7 @@ function dashboardView() {
   });
 }
 function appointmentRecords() {
-  return state.demoMode
-    ? state.leads.filter((lead) => String(lead.appointmentDate || '').startsWith(`${state.appointments.month}-`))
-    : state.appointments.records;
+  return state.appointments.records;
 }
 
 function allowedAppointmentStores() {
@@ -470,7 +466,7 @@ function appointmentsView() {
 function confirmationsView() {
   return renderConfirmationsView({
     allowed: hasAccess('appointments.view'),
-    source: state.demoMode ? state.leads : state.confirmations.records,
+    source: state.confirmations.records,
     confirmations: state.confirmations,
     profileName: state.profile?.displayName || '',
     queryLimit: APPOINTMENTS_QUERY_LIMIT
@@ -564,9 +560,6 @@ function render() {
 }
 
 function lookupCpfAppointment(customerCpf) {
-  if (state.demoMode) {
-    return Promise.resolve({ hasAppointment: hasDemoCpfAppointment(state.leads, customerCpf) });
-  }
   return checkCpfActiveAppointment(customerCpf);
 }
 
@@ -731,7 +724,7 @@ function bindPageEvents() {
       submitButton.disabled = true;
       let result;
       try {
-        result = saveLead(values, { ...state.profile, storeId }, state.demoMode, () => {});
+        result = saveLead(values, { ...state.profile, storeId }, () => {});
       } catch {
         submitButton.disabled = false;
         showToast(
@@ -777,11 +770,9 @@ function bindPageEvents() {
       form.reset();
       state.newLeadSchedule.draft = {};
       navigate('leads');
-      showToast(state.demoMode
-        ? 'Cadastro salvo somente neste navegador.'
-        : navigator.onLine
-          ? 'Cadastro salvo com sucesso.'
-          : 'Cadastro salvo neste aparelho. Ele será sincronizado quando a internet voltar.');
+      showToast(navigator.onLine
+        ? 'Cadastro salvo com sucesso.'
+        : 'Cadastro salvo neste aparelho. Ele será sincronizado quando a internet voltar.');
     });
   }
 
@@ -829,9 +820,7 @@ function bindPageEvents() {
 
       if (managementEdit) {
         try {
-          const result = state.demoMode
-            ? updateLead(editLeadForm.dataset.leadId, values, true, () => {}, existingLead)
-            : await updateManagementLead(state.profile, existingLead, values);
+          const result = await updateManagementLead(state.profile, existingLead, values);
           setFieldErrors(editLeadForm, result.errors || {});
           if (!result.isValid) {
             submitButton.disabled = false;
@@ -856,7 +845,7 @@ function bindPageEvents() {
         return;
       }
 
-      const result = updateLead(editLeadForm.dataset.leadId, values, state.demoMode, () => {
+      const result = updateLead(editLeadForm.dataset.leadId, values, () => {
         if (!values.appointmentDate || !values.appointmentTime) {
           state.dataError = 'A correção não foi aceita pela nuvem. Verifique o acesso e tente novamente.';
           render();
@@ -891,7 +880,7 @@ function bindPageEvents() {
       }
       if (state.leadDetailDialog.leadId) closeLeadDetailDialog();
       else navigate('leads');
-      showToast(state.demoMode ? 'Cadastro atualizado neste navegador.' : values.appointmentDate ? 'Agendamento salvo com sucesso.' : 'Alterações salvas com sucesso.');
+      showToast(values.appointmentDate ? 'Agendamento salvo com sucesso.' : 'Alterações salvas com sucesso.');
     });
   }
 
@@ -941,9 +930,7 @@ function bindPageEvents() {
       };
       render();
       try {
-        const results = state.demoMode
-          ? searchDemoLeads(state.leads, queryText, state.profile)
-          : await searchLeadAppointments(queryText);
+        const results = await searchLeadAppointments(queryText);
         state.leadSearch = { ...state.leadSearch, loading: false, searched: true, results };
       } catch (error) {
         const unavailable = ['functions/unavailable', 'functions/deadline-exceeded'].includes(error?.code);
@@ -994,9 +981,7 @@ function bindPageEvents() {
       };
       render();
       try {
-        const results = state.demoMode
-          ? searchDemoLeads(state.leads, queryText, state.profile)
-          : await searchLeadAppointments(queryText);
+        const results = await searchLeadAppointments(queryText);
         state.walkIns = { ...state.walkIns, searchLoading: false, searchSearched: true, searchResults: results };
       } catch (error) {
         state.walkIns = {
@@ -1037,7 +1022,7 @@ function bindPageEvents() {
     });
     walkInCreateForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (!navigator.onLine && !state.demoMode) {
+      if (!navigator.onLine) {
         showToast('Conecte-se a internet para criar um encaixe.', 'danger', 'wifi-off');
         return;
       }
@@ -1079,9 +1064,7 @@ function bindPageEvents() {
       try {
         let reusedExistingLead = false;
         if (quickCreate && quickValues.customerCpf) {
-          const cpfResults = state.demoMode
-            ? searchDemoLeads(state.leads, quickValues.customerCpf, state.profile)
-            : await searchLeadAppointments(quickValues.customerCpf);
+          const cpfResults = await searchLeadAppointments(quickValues.customerCpf);
           const cpfDigits = String(quickValues.customerCpf).replace(/\D/g, '');
           const duplicate = cpfResults.find((item) => String(item.customerCpf || '').replace(/\D/g, '') === cpfDigits);
           if (duplicate) {
@@ -1097,25 +1080,13 @@ function bindPageEvents() {
         }
 
         if (quickCreate && !reusedExistingLead) {
-          const result = await createQuickWalkIn(state.profile, quickValues, values, { demoMode: state.demoMode });
+          const result = await createQuickWalkIn(state.profile, quickValues, values);
           if (!result.isValid) throw Object.assign(new Error('Dados invalidos.'), { code: 'walk-in-invalid', result });
           selectedLead = result.lead;
           values.leadId = result.lead.id;
-          if (state.demoMode) state.leads = [result.lead, ...state.leads];
-        } else if (!state.demoMode) {
+        } else {
           const result = await createWalkIn(state.profile, values);
           if (!result.isValid) throw Object.assign(new Error('Dados invalidos.'), { code: 'walk-in-invalid' });
-        }
-
-        if (state.demoMode) {
-          const now = new Date();
-          state.walkIns.records = [{
-            ...values,
-            id: `${values.queueDate}__${values.leadId}`,
-            status: 'waiting', priority: 0, arrivedAt: now, createdAt: now,
-            createdByUid: state.profile.uid, createdByName: state.profile.displayName,
-            updatedAt: now, updatedByUid: state.profile.uid, lead: selectedLead, schemaVersion: 1
-          }, ...state.walkIns.records];
         }
         state.walkIns = {
           ...state.walkIns,
@@ -1211,8 +1182,7 @@ function bindPageEvents() {
     state.confirmations.days = days;
     state.confirmations.loaded = false;
     state.confirmations.error = '';
-    if (state.demoMode) render();
-    else startConfirmationsSubscription();
+    startConfirmationsSubscription();
   };
   confirmationDays?.addEventListener('change', () => updateConfirmationDays(confirmationDays.value));
   document.querySelectorAll('[data-confirmation-days-adjust]').forEach((button) => {
@@ -1276,7 +1246,7 @@ function bindPageEvents() {
         state.appointmentCreate.saving = true;
         const submitButton = form.querySelector('[type="submit"]');
         submitButton.disabled = true;
-        const result = saveLead(values, { ...state.profile, storeId }, state.demoMode, () => {
+        const result = saveLead(values, { ...state.profile, storeId }, () => {
           state.appointmentCreate.error = 'O cadastro não foi aceito pela nuvem.';
           render();
         });
@@ -1329,13 +1299,9 @@ function subscribeProfileLeads() {
   state.unsubscribeLeads?.();
   state.unsubscribeLeads = subscribeToLeads(
     state.profile,
-    state.demoMode,
     (leads) => {
       state.leads = leads;
       state.dataError = '';
-      if (state.route === 'new' && state.demoMode && state.newLeadSchedule.appointmentDate) {
-        state.newLeadSchedule.appointments = leads.filter((lead) => lead.appointmentDate === state.newLeadSchedule.appointmentDate);
-      }
       render();
       ensureLeadDetailSchedule();
     },
@@ -1353,8 +1319,8 @@ function stopOfflineCaptureSubscription() {
 
 function startOfflineCaptureSubscription() {
   stopOfflineCaptureSubscription();
-  state.offlineCapture = { loaded: state.demoMode, enabled: false };
-  if (!state.profile || state.demoMode) return;
+  state.offlineCapture = { loaded: false, enabled: false };
+  if (!state.profile) return;
 
   try {
     state.unsubscribeOfflineCapture = subscribeToStoreSchedule(
@@ -1382,13 +1348,11 @@ function stopFollowUpScheduleSubscription() {
 function startFollowUpScheduleSubscription() {
   stopFollowUpScheduleSubscription();
   state.followUps = initialFollowUpsState(state.followUps, {
-    demoMode: state.demoMode,
     role: state.profile?.role,
     defaultSettings: DEFAULT_STORE_SCHEDULE
   });
   state.unsubscribeFollowUpSchedule = startFollowUpsSubscriptions({
     profile: state.profile,
-    demoMode: state.demoMode,
     canViewTeam: hasAccess('followups.team'),
     storeIds: profileStoreIds(state.profile),
     loadSchedules: loadStoreSchedules,
@@ -1415,8 +1379,6 @@ async function loadManagementData() {
   const result = await loadManagementRecords({
     profile: state.profile,
     filters: state.management.filters,
-    demoMode: state.demoMode,
-    demoRecords: state.leads,
     loadRecords: loadManagementLeads
   });
   if (result.error) {
@@ -1442,8 +1404,6 @@ async function loadDashboardUpcomingData() {
   const result = await loadDashboardUpcomingRecords({
     profile: state.profile,
     filters: { ...state.management.filters, storeId: state.dashboardFilters.storeId, capturedByUid: '' },
-    demoMode: state.demoMode,
-    demoRecords: state.leads,
     loadAppointments: loadUpcomingAppointments
   });
   if (result.error) {
@@ -1512,13 +1472,6 @@ async function startWalkInsSubscription() {
   state.walkIns.error = '';
   render();
   try {
-    if (state.demoMode) {
-      state.walkIns.services = [defaultAppointmentService(profileStoreIds(state.profile), DEFAULT_STORE_SCHEDULE.appointmentDurationMinutes)];
-      state.walkIns.loaded = true;
-      state.walkIns.loading = false;
-      render();
-      return;
-    }
     state.walkIns.services = await loadAppointmentServices(state.profile);
     state.unsubscribeWalkIns = subscribeToWalkIns(
       state.profile,
@@ -1596,22 +1549,14 @@ async function loadSettingsData() {
   state.settings.error = '';
   render();
   try {
-    const [records, roleProfiles, loadedServices] = state.demoMode
-      ? [
-          STORES.map((store) => ({ ...store, ...DEFAULT_STORE_SCHEDULE })),
-          SYSTEM_ROLE_PROFILES,
-          [defaultAppointmentService(STORES.map((store) => store.id), DEFAULT_STORE_SCHEDULE.appointmentDurationMinutes)]
-        ]
-      : await Promise.all([
-          loadStoreSchedules(state.profile),
-          loadRoleProfiles(state.profile),
-          loadAppointmentServices(state.profile, { includeInactive: true })
-        ]);
+    const [records, roleProfiles, loadedServices] = await Promise.all([
+      loadStoreSchedules(state.profile),
+      loadRoleProfiles(state.profile),
+      loadAppointmentServices(state.profile, { includeInactive: true })
+    ]);
     state.settings.records = records;
     state.settings.roleProfiles = roleProfiles.map((item) => ({ ...item, permissions: [...item.permissions] }));
-    state.settings.services = state.demoMode
-      ? loadedServices
-      : await ensureDefaultAppointmentServices(state.profile, records, loadedServices);
+    state.settings.services = await ensureDefaultAppointmentServices(state.profile, records, loadedServices);
     state.settings.loaded = true;
   } catch (error) {
     state.settings.error = error?.code === 'permission-denied'
@@ -1626,9 +1571,7 @@ async function loadSettingsData() {
 async function loadServiceCatalogData() {
   if (!isAdmin()) return;
   try {
-    state.settings.services = state.demoMode
-      ? state.settings.services
-      : await loadAppointmentServices(state.profile, { includeInactive: true });
+    state.settings.services = await loadAppointmentServices(state.profile, { includeInactive: true });
     state.settings.saving = false;
     render();
   } catch (error) {
@@ -1670,8 +1613,6 @@ function authControllerDependencies() {
     state,
     render,
     navigate,
-    devMode: import.meta.env.DEV,
-    createDemoProfile,
     subscribeProfileLeads,
     startOfflineCaptureSubscription,
     stopOfflineCaptureSubscription,
@@ -1794,21 +1735,7 @@ export async function startApp() {
       state.walkIns.updatingId = item.id;
       render();
       try {
-        if (state.demoMode) {
-          const now = new Date();
-          state.walkIns.records = state.walkIns.records.map((record) => record.id === item.id ? {
-            ...record,
-            status: nextStatus,
-            closedReason: reason,
-            ...(nextStatus === 'called' ? { calledAt: now } : {}),
-            ...(nextStatus === 'in_service' ? { startedAt: now } : {}),
-            ...(nextStatus === 'completed' ? { completedAt: now } : {}),
-            updatedAt: now,
-            updatedByUid: state.profile.uid
-          } : record);
-        } else {
-          await transitionWalkIn(state.profile, item, nextStatus, reason);
-        }
+        await transitionWalkIn(state.profile, item, nextStatus, reason);
         showToast(nextStatus === 'completed' ? 'Atendimento concluido.' : 'Fila de encaixes atualizada.', 'success', 'circle-check');
       } catch (error) {
         showToast(error?.code === 'walk-in-stale-state'
@@ -1828,9 +1755,7 @@ export async function startApp() {
       if (!result?.canOpen) return;
       searchLeadButton.disabled = true;
       try {
-        const lead = state.demoMode
-          ? state.leads.find((item) => item.id === result.id)
-          : await loadSearchLead(result.id);
+        const lead = await loadSearchLead(result.id);
         if (!lead) throw new Error('not-found');
         if (lead.capturedByUid === state.profile?.uid && hasAccess('leads.view_own')) {
           if (!state.leads.some((item) => item.id === lead.id)) state.leads = [lead, ...state.leads];
@@ -1889,24 +1814,19 @@ export async function startApp() {
         render();
       },
       markDone: async (leadId) => {
-        const records = state.demoMode ? state.leads : state.confirmations.records;
-        const lead = records.find((item) => item.id === leadId);
+        const lead = state.confirmations.records.find((item) => item.id === leadId);
         if (!lead) return;
         state.confirmations.updatingId = lead.id;
         render();
         try {
-          if (state.demoMode) {
-            if (!markDemoAppointmentReminderDone(lead.id, state.profile)) throw new Error('not-found');
-          } else {
-            await markAppointmentReminderDone(state.profile, lead);
-            const reminderUpdate = {
-              appointmentReminderSentAt: new Date().toISOString(),
-              appointmentReminderSentByUid: state.profile.uid,
-              appointmentReminderSentByName: state.profile.displayName,
-              appointmentReminderAppointmentKey: followUpAppointmentKey(lead)
-            };
-            state.confirmations.records = state.confirmations.records.map((item) => item.id === lead.id ? { ...item, ...reminderUpdate } : item);
-          }
+          await markAppointmentReminderDone(state.profile, lead);
+          const reminderUpdate = {
+            appointmentReminderSentAt: new Date().toISOString(),
+            appointmentReminderSentByUid: state.profile.uid,
+            appointmentReminderSentByName: state.profile.displayName,
+            appointmentReminderAppointmentKey: followUpAppointmentKey(lead)
+          };
+          state.confirmations.records = state.confirmations.records.map((item) => item.id === lead.id ? { ...item, ...reminderUpdate } : item);
           showToast('Lembrete marcado como feito.');
         } catch (error) {
           showToast(error?.code === 'permission-denied' ? 'Seu perfil não pode concluir este lembrete.' : 'Não foi possível marcar o lembrete como feito.', 'danger', 'circle-alert');
@@ -1916,22 +1836,17 @@ export async function startApp() {
         }
       },
       undo: async (leadId) => {
-        const records = state.demoMode ? state.leads : state.confirmations.records;
-        const lead = records.find((item) => item.id === leadId);
+        const lead = state.confirmations.records.find((item) => item.id === leadId);
         if (!lead) return;
         state.confirmations.updatingId = lead.id;
         render();
         try {
-          if (state.demoMode) {
-            if (!undoDemoAppointmentReminderDone(lead.id, state.profile)) throw new Error('not-found');
-          } else {
-            await undoAppointmentReminderDone(state.profile, lead);
-            state.confirmations.records = state.confirmations.records.map((item) => {
-              if (item.id !== lead.id) return item;
-              const { appointmentReminderSentAt, appointmentReminderSentByUid, appointmentReminderSentByName, appointmentReminderAppointmentKey, ...pendingLead } = item;
-              return pendingLead;
-            });
-          }
+          await undoAppointmentReminderDone(state.profile, lead);
+          state.confirmations.records = state.confirmations.records.map((item) => {
+            if (item.id !== lead.id) return item;
+            const { appointmentReminderSentAt, appointmentReminderSentByUid, appointmentReminderSentByName, appointmentReminderAppointmentKey, ...pendingLead } = item;
+            return pendingLead;
+          });
           showToast('Conclusão do lembrete desfeita.');
         } catch (error) {
           showToast(error?.code === 'permission-denied' ? 'Seu perfil não pode reabrir este lembrete.' : 'Não foi possível desfazer a conclusão.', 'danger', 'circle-alert');
@@ -1975,8 +1890,7 @@ export async function startApp() {
         const lead = [...state.leads, ...state.followUps.records].find((item) => item.id === leadId);
         if (!lead) return;
         try {
-          if (state.demoMode) markDemoFollowUpContact(lead.id, state.profile);
-          else await markFollowUpContactStarted(state.profile, lead);
+          await markFollowUpContactStarted(state.profile, lead);
           const contactUpdate = {
             followUpContactedAt: new Date().toISOString(),
             followUpContactedByUid: state.profile.uid,
@@ -2034,11 +1948,8 @@ export async function startApp() {
         state.appointments.updatingId = lead.id;
         render();
         try {
-          if (state.demoMode) updateDemoAppointmentAttendance(lead.id, nextAttendance, state.profile);
-          else {
-            await setAppointmentAttendance(state.profile, lead, nextAttendance);
-            state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: nextAttendance } : item);
-          }
+          await setAppointmentAttendance(state.profile, lead, nextAttendance);
+          state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: nextAttendance } : item);
           showToast(nextAttendance === 'pending'
             ? 'Comparecimento removido.'
             : nextAttendance === 'attended' ? 'Comparecimento registrado.' : 'Falta registrada.');

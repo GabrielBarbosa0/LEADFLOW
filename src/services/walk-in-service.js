@@ -155,7 +155,7 @@ export async function createWalkIn(profile, values) {
   return { ...validation, id };
 }
 
-export async function createQuickWalkIn(profile, leadValues, walkInValues, options = {}) {
+export async function createQuickWalkIn(profile, leadValues, walkInValues) {
   const leadId = createId();
   const quickLead = createQuickLeadDocument(
     { ...leadValues, ...walkInValues },
@@ -188,10 +188,6 @@ export async function createQuickWalkIn(profile, leadValues, walkInValues, optio
     updatedByUid: profile.uid,
     schemaVersion: 1
   };
-
-  if (options.demoMode === true || !isFirebaseConfigured) {
-    return { isValid: true, errors: {}, id, lead: { id: leadId, ...quickLead.data }, walkIn: { ...walkIn, id } };
-  }
 
   await runTransaction(db, async (transaction) => {
     const leadReference = doc(db, 'leads', leadId);

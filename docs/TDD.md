@@ -822,7 +822,6 @@ O agendamento nao opera offline:
 | --- | --- | --- |
 | Aguardando agendamento | Cadastro local ou confirmado, ainda sem data e horario | Entrar em contato e agendar quando estiver online |
 | Agendado | Cadastro confirmado com data, horario e blocos reservados | Consultar na agenda |
-| Local de teste | Registro criado somente no modo de desenvolvimento | Nenhuma |
 
 O estado tecnico de sincronizacao e metadado local; nao sera salvo como verdade global dentro do proprio documento. Enquanto a nuvem nao confirmar o documento, a interface prioriza `Pendente de sincronizacao`, `Sincronizando` ou `Nao sincronizado`. `Aguardando agendamento` so pode ser exibido depois da confirmacao no servidor.
 

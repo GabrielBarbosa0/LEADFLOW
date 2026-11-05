@@ -1,5 +1,5 @@
 import { deleteRoleProfile, loadRoleProfiles, resetSystemRolePermissions, saveRoleProfile, saveSystemRolePermissions } from '../../../services/role-profile-service.js';
-import { SYSTEM_ROLE_PROFILES, normalizeRolePermissions, permissionsForScope, systemRoleProfileForId, validateRoleProfile } from '../../../utils/role-profile.js';
+import { normalizeRolePermissions, permissionsForScope, systemRoleProfileForId } from '../../../utils/role-profile.js';
 import { setFieldErrors } from '../../shared/form-helpers.js';
 
 const MANAGEMENT_DEPENDENTS = ['followups.team', 'goals.manage', 'dashboard.view', 'leads.export'];
@@ -30,7 +30,7 @@ function syncPermissionControls(container, selector, permissions, countSelector)
 export async function loadRoleProfilesData(state, { render }) {
   if (state.profile?.role !== 'admin') return;
   try {
-    const profiles = state.demoMode ? SYSTEM_ROLE_PROFILES : await loadRoleProfiles(state.profile);
+    const profiles = await loadRoleProfiles(state.profile);
     state.settings.roleProfiles = profiles.map((item) => ({ ...item, permissions: [...item.permissions] }));
     state.settings.saving = false;
     render();
@@ -72,26 +72,16 @@ export function bindRoleProfileEvents({ state, render, showToast }) {
       state.settings.error = '';
       setFieldErrors(form, {});
       try {
-        const result = state.demoMode
-          ? { ...validateRoleProfile(values), id: state.settings.editingRoleId || crypto.randomUUID() }
-          : await saveRoleProfile(state.profile, values, state.settings.editingRoleId);
+        const result = await saveRoleProfile(state.profile, values, state.settings.editingRoleId);
         if (!result.isValid) {
           state.settings.saving = false;
           setFieldErrors(form, result.errors);
           return;
         }
-        if (state.demoMode) {
-          const savedProfile = { id: result.id, ...result.data, active: true, system: false };
-          state.settings.roleProfiles = state.settings.editingRoleId
-            ? state.settings.roleProfiles.map((item) => item.id === result.id ? savedProfile : item)
-            : [...state.settings.roleProfiles, savedProfile];
-          state.settings.saving = false;
-        }
         state.settings.roleDraft = createDefaultRoleDraft();
         state.settings.editingRoleId = '';
         state.settings.roleEditorOpen = false;
-        if (state.demoMode) render();
-        else await loadRoleProfilesData(state, { render });
+        await loadRoleProfilesData(state, { render });
         showToast('Cargo salvo com sucesso.');
       } catch (error) {
         state.settings.saving = false;
@@ -201,25 +191,16 @@ export async function handleRoleProfileClick(event, { state, render, showToast }
     state.settings.saving = true;
     saveSystemButton.disabled = true;
     try {
-      if (state.demoMode) {
-        const permissions = normalizeRolePermissions(profile.scope, state.settings.detailsRolePermissions);
-        state.settings.roleProfiles = state.settings.roleProfiles.map((item) => item.id === roleProfileId
-          ? { ...item, permissions, customized: true }
-          : item);
+      const result = await saveSystemRolePermissions(state.profile, roleProfileId, state.settings.detailsRolePermissions);
+      if (!result.isValid) {
         state.settings.saving = false;
-      } else {
-        const result = await saveSystemRolePermissions(state.profile, roleProfileId, state.settings.detailsRolePermissions);
-        if (!result.isValid) {
-          state.settings.saving = false;
-          showToast(result.errors.permissions || 'Escolha permissões válidas.', 'danger', 'circle-alert');
-          render();
-          return true;
-        }
+        showToast(result.errors.permissions || 'Escolha permissões válidas.', 'danger', 'circle-alert');
+        render();
+        return true;
       }
       state.settings.detailsRoleId = '';
       state.settings.detailsRolePermissions = [];
-      if (state.demoMode) render();
-      else await loadRoleProfilesData(state, { render });
+      await loadRoleProfilesData(state, { render });
       showToast('Permissões do perfil atualizadas.');
     } catch (error) {
       state.settings.saving = false;
@@ -239,18 +220,10 @@ export async function handleRoleProfileClick(event, { state, render, showToast }
     state.settings.saving = true;
     resetSystemButton.disabled = true;
     try {
-      if (state.demoMode) {
-        state.settings.roleProfiles = state.settings.roleProfiles.map((item) => item.id === roleProfileId
-          ? { ...item, permissions: [...defaultProfile.permissions], customized: false }
-          : item);
-        state.settings.saving = false;
-      } else {
-        await resetSystemRolePermissions(state.profile, roleProfileId);
-      }
+      await resetSystemRolePermissions(state.profile, roleProfileId);
       state.settings.detailsRoleId = '';
       state.settings.detailsRolePermissions = [];
-      if (state.demoMode) render();
-      else await loadRoleProfilesData(state, { render });
+      await loadRoleProfilesData(state, { render });
       showToast('Permissões restauradas para o padrão.');
     } catch (error) {
       state.settings.saving = false;
@@ -301,15 +274,9 @@ export async function handleRoleProfileClick(event, { state, render, showToast }
     state.settings.saving = true;
     render();
     try {
-      if (state.demoMode) {
-        state.settings.roleProfiles = state.settings.roleProfiles.filter((item) => item.id !== roleProfile.id);
-        state.settings.saving = false;
-      } else {
-        await deleteRoleProfile(state.profile, roleProfile);
-      }
+      await deleteRoleProfile(state.profile, roleProfile);
       state.settings.pendingDeleteRoleId = '';
-      if (state.demoMode) render();
-      else await loadRoleProfilesData(state, { render });
+      await loadRoleProfilesData(state, { render });
       showToast('Cargo excluído.');
     } catch (error) {
       state.settings.saving = false;

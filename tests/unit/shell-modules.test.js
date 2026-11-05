@@ -4,16 +4,16 @@ import { homeView } from '../../src/app/shell/home-view.js';
 import { bottomNavigation } from '../../src/app/shell/navigation.js';
 
 const profile = { displayName: 'Ana Silva', role: 'manager', roleProfileName: 'Gestor loja', storeId: 'loja-06', storeIds: ['loja-06'] };
-const state = { route: 'home', demoMode: false, leads: [{ id: 'lead-1' }], profile };
+const state = { route: 'home', leads: [{ id: 'lead-1' }], profile };
 const hasAccess = (permission) => ['leads.create', 'leads.view_own', 'followups.own', 'goals.view_own'].includes(permission);
 
 describe('application shell modules', () => {
   it('renders the login shell with its authentication actions', () => {
-    const markup = loginView({ state: { authError: '', authMessage: '' }, firebaseConfigured: true, devMode: true });
+    const markup = loginView({ state: { authError: '', authMessage: '' }, firebaseConfigured: true });
     expect(markup).toContain('email-login-form');
     expect(markup).toContain('data-action="google-login"');
     expect(markup).toContain('Entrar com Google');
-    expect(markup).toContain('Abrir modo de desenvolvimento');
+    expect(markup).not.toContain('Abrir modo de desenvolvimento');
   });
 
   it('renders the home actions according to permissions', () => {
