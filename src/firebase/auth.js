@@ -170,7 +170,21 @@ export function observeAuth(callback) {
     return () => {};
   }
 
-  return onAuthStateChanged(auth, callback);
+  let active = true;
+  let unsubscribe = () => {};
+
+  authPersistenceReady
+    .catch(() => {
+      // Firebase still provides an in-memory session when persistent storage is unavailable.
+    })
+    .then(() => {
+      if (active) unsubscribe = onAuthStateChanged(auth, callback);
+    });
+
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 }
 
 export async function loadAuthorizedProfile(firebaseUser) {

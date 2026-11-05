@@ -19,6 +19,35 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   await expect(page.getByRole('button', { name: /Configurações/ })).toBeVisible();
 });
 
+test('keeps the same account authenticated on multiple devices', async ({ browser }) => {
+  const mobileContext = await browser.newContext({
+    viewport: { width: 412, height: 915 },
+    isMobile: true,
+    hasTouch: true
+  });
+  const desktopContext = await browser.newContext({
+    viewport: { width: 1440, height: 1000 }
+  });
+
+  try {
+    const mobilePage = await mobileContext.newPage();
+    const desktopPage = await desktopContext.newPage();
+
+    await signIn(mobilePage, 'admin@leadflow.test');
+    await signIn(desktopPage, 'admin@leadflow.test');
+
+    await mobilePage.reload();
+    await desktopPage.reload();
+
+    await expect(mobilePage.getByRole('heading', { name: 'Início' })).toBeVisible();
+    await expect(desktopPage.getByRole('heading', { name: 'Início' })).toBeVisible();
+    await expect(mobilePage.getByText('Administrador Teste')).toBeVisible();
+    await expect(desktopPage.getByText('Administrador Teste')).toBeVisible();
+  } finally {
+    await Promise.all([mobileContext.close(), desktopContext.close()]);
+  }
+});
+
 test('loads the real appointment flow for a receptionist profile', async ({ page }) => {
   await signIn(page, 'balcao@leadflow.test');
 
