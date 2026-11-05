@@ -174,9 +174,10 @@ emuladores ativados e bloqueia IDs conhecidos dos projetos remotos. O arquivo
 projeto local explicitamente.
 
 O modo descartavel e complementar ao ambiente remoto de homologacao. O proximo
-passo e criar um seed repetivel com perfis, lojas, leads e agendamentos
-ficticios; depois, os testes de fluxo completo poderao usar sempre essa mesma
-base conhecida.
+passo implementado e um seed repetivel com perfis, lojas, leads e agendamentos
+ficticios. Os acessos e a senha local estao registrados em
+[`DADOS-HOMOLOGACAO-LOCAL.md`](DADOS-HOMOLOGACAO-LOCAL.md). Os proximos testes de
+fluxo completo devem usar sempre essa mesma base conhecida.
 
 ## Controle das regras do Firestore
 

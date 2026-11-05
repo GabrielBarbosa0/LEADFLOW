@@ -55,8 +55,8 @@ services:
     command: npm run dev:emulator
     init: true
     depends_on:
-      emulators:
-        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:5176:5176"
     environment:
@@ -83,6 +83,26 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
+
+  seed:
+    profiles: ["disposable"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run seed:emulator
+    depends_on:
+      emulators:
+        condition: service_healthy
+    environment:
+      GCLOUD_PROJECT: demo-leadflow
+      GOOGLE_CLOUD_PROJECT: demo-leadflow
+      METADATA_SERVER_DETECTION: none
+      NO_GCE_CHECK: "true"
+      FIREBASE_AUTH_EMULATOR_HOST: emulators:9099
+      FIRESTORE_EMULATOR_HOST: emulators:8180
+    volumes:
+      - .:/app
+      - leadflow_node_modules:/app/node_modules
 
 volumes:
   leadflow_node_modules:

@@ -17,6 +17,8 @@
     "verify:firebase": "npm run test:rules && node --check functions/index.js",
     "verify:staging": "node scripts/verify-staging-env.js",
     "verify:emulator": "node scripts/verify-emulator-env.js",
+    "seed:emulator": "node scripts/seed-emulator.js",
+    "seed:emulator:reset": "node scripts/seed-emulator.js --reset",
     "verify:docker": "npm run test && npm run test:rules && npm run build:staging",
     "deploy:firebase": "npm run verify:firebase && firebase deploy --only firestore:rules",
     "deploy:firebase:full": "npm run verify:firebase && firebase deploy --only firestore:rules,functions",
