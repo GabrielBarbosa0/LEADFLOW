@@ -56,10 +56,10 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
         <span class="avatar access-avatar">${escapeHtml(profileInitials(item.displayName))}</span>
         <div class="access-identity-copy"><strong>${escapeHtml(item.displayName)}</strong><span>${escapeHtml(item.email)}</span>${item.phone ? `<small>${escapeHtml(formatBrazilianPhone(item.phone))}</small>` : ''}</div>
       </div>
-      <div class="access-detail"><span>Perfil</span><strong>${escapeHtml(roleProfileLabel(item, roleProfiles))}</strong></div>
+      <div class="access-detail"><span>Perfil</span><strong title="${escapeHtml(roleProfileLabel(item, roleProfiles))}">${escapeHtml(roleProfileLabel(item, roleProfiles))}</strong></div>
       <div class="access-detail access-permissions"><span>Unidades</span><strong title="${escapeHtml(storeSummary.full)}">${escapeHtml(storeSummary.short)}</strong></div>
-      <div class="access-detail"><span>Código SavWin</span><strong>${escapeHtml(item.savwinCode || 'Não informado')}</strong></div>
-      <div class="access-status"><span class="status-badge status-${item.active ? 'success' : 'danger'}">${item.active ? 'Ativo' : 'Bloqueado'}</span><small>Primeiro acesso: ${item.hasLoggedIn ? 'realizado' : 'pendente'}</small></div>
+      <div class="access-detail"><span>Código SavWin</span><strong title="${escapeHtml(item.savwinCode || 'Não informado')}">${escapeHtml(item.savwinCode || 'Não informado')}</strong></div>
+      <div class="access-status"><span class="status-badge status-${item.active ? 'success' : 'danger'}">${item.active ? 'Ativo' : 'Bloqueado'}</span><small>Acesso ${item.hasLoggedIn ? 'realizado' : 'pendente'}</small></div>
       <div class="access-actions">
         <button class="icon-button" type="button" data-access-edit="${escapeHtml(item.email)}" title="Editar acesso" ${saving ? 'disabled' : ''}><i data-lucide="pencil"></i></button>
         <button class="button button-secondary access-toggle" type="button" data-access-email="${escapeHtml(item.email)}" data-access-active="${item.active}" ${isCurrentUser || saving ? 'disabled' : ''}>

@@ -135,3 +135,24 @@ test('opens the lead archive workflow only from active management records', asyn
   await expect(dialog.getByText('O histórico é preservado.')).toBeVisible();
   await expect(dialog.locator('input[name="leadId"]').first()).toBeVisible();
 });
+
+test('keeps team access cards compact on mobile', async ({ page }) => {
+  await signIn(page, 'admin@leadflow.test');
+
+  await page.getByRole('button', { name: /Acessos da equipe/ }).click();
+  await expect(page).toHaveURL(/#\/access$/);
+  const firstCard = page.locator('.access-row').first();
+  await expect(firstCard).toBeVisible();
+
+  if ((page.viewportSize()?.width || 0) <= 600) {
+    const cardBox = await firstCard.boundingBox();
+    const detailBoxes = await firstCard.locator('.access-detail').evaluateAll((details) => (
+      details.map((detail) => detail.getBoundingClientRect()).map(({ x, y, width, height }) => ({ x, y, width, height }))
+    ));
+    const actionsBox = await firstCard.locator('.access-actions').boundingBox();
+
+    expect(cardBox.height).toBeLessThan(190);
+    expect(Math.max(...detailBoxes.map((box) => box.y)) - Math.min(...detailBoxes.map((box) => box.y))).toBeLessThan(4);
+    expect(actionsBox.y).toBeGreaterThan(detailBoxes[0].y + detailBoxes[0].height);
+  }
+});
