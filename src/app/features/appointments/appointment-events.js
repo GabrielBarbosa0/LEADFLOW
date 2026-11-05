@@ -23,3 +23,7 @@ export async function handleAppointmentClick(event, handlers) {
   if (monthButton) { handlers.shiftMonth(Number(monthButton.dataset.appointmentMonth)); return true; }
   return false;
 }
+
+export function nextAppointmentAttendance(currentAttendance, selectedAttendance) {
+  return currentAttendance === selectedAttendance ? 'pending' : selectedAttendance;
+}

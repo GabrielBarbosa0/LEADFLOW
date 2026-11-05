@@ -875,6 +875,12 @@ describe('appointment calendar queries', () => {
       appointmentAttendanceUpdatedByUid: 'manager-uid',
       updatedAtServer: Timestamp.now()
     }));
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'complete-appointment'), {
+      appointmentAttendance: 'pending',
+      appointmentAttendanceUpdatedAt: Timestamp.now(),
+      appointmentAttendanceUpdatedByUid: 'manager-uid',
+      updatedAtServer: Timestamp.now()
+    }));
   });
 
   it('does not let a manager edit customer data while registering attendance', async () => {

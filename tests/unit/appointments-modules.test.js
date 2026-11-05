@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { appointmentCreateDialog, appointmentCreateSchedule, appointmentCreateTimeField } from '../../src/app/features/appointments/appointment-dialog.js';
-import { handleAppointmentClick } from '../../src/app/features/appointments/appointment-events.js';
+import { handleAppointmentClick, nextAppointmentAttendance } from '../../src/app/features/appointments/appointment-events.js';
 import { startAppointmentsLiveSubscription, startConfirmationsLiveSubscription } from '../../src/app/features/appointments/appointment-subscriptions.js';
 import { appointmentsView } from '../../src/app/features/appointments/appointments-view.js';
 import { handleConfirmationClick } from '../../src/app/features/appointments/confirmation-events.js';
@@ -63,6 +63,13 @@ describe('appointments feature modules', () => {
     const selectFilter = vi.fn();
     await handleConfirmationClick(clickEvent('[data-confirmation-filter]', { confirmationFilter: 'done' }), { selectFilter, markDone: vi.fn(), undo: vi.fn() });
     expect(selectFilter).toHaveBeenCalledWith('done');
+  });
+
+  it('returns attendance to pending when the active option is selected again', () => {
+    expect(nextAppointmentAttendance('pending', 'attended')).toBe('attended');
+    expect(nextAppointmentAttendance('attended', 'attended')).toBe('pending');
+    expect(nextAppointmentAttendance('missed', 'missed')).toBe('pending');
+    expect(nextAppointmentAttendance('attended', 'missed')).toBe('missed');
   });
 
   it('renders pending and completed confirmation states', () => {
