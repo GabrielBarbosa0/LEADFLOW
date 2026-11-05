@@ -778,8 +778,9 @@ svg {
 
 .follow-up-captor-card > div span {
   margin-top: 3px;
-  color: var(--muted);
+  color: #52657a;
   font-size: 0.78rem;
+  font-weight: 500;
 }
 
 .follow-up-captor-open {
@@ -800,8 +801,14 @@ svg {
 
 .follow-up-captor-open span {
   margin-top: 3px;
-  color: var(--muted);
+  color: #52657a;
   font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.follow-up-captor-open strong {
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .follow-up-captor-open:hover strong,
@@ -883,8 +890,14 @@ svg {
 
 .follow-up-team-heading div > span {
   margin-top: 2px;
-  color: var(--muted);
+  color: #52657a;
   font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.follow-up-team-heading div > strong {
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .follow-up-team-group .follow-up-list {
@@ -918,8 +931,14 @@ svg {
 
 .follow-up-heading > div span {
   margin-top: 3px;
-  color: var(--muted);
+  color: #52657a;
   font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.follow-up-heading > div strong {
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .follow-up-icon {
@@ -952,7 +971,7 @@ svg {
 }
 
 .follow-up-details dt {
-  color: var(--muted);
+  color: #52657a;
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -962,7 +981,7 @@ svg {
   margin-top: 4px;
   color: var(--ink);
   font-size: 0.86rem;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .follow-up-actions {
