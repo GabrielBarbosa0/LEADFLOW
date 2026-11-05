@@ -83,6 +83,11 @@ test('renders the compact registration fields and product payment options', asyn
 
   const examPrice = page.getByLabel('Valor do exame');
   expect(Number(await examPrice.inputValue())).toBeGreaterThan(0);
+  await expect(examPrice).toHaveCSS('border-top-width', '0px');
+  await expect(examPrice).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  const priceInputBox = await examPrice.boundingBox();
+  const priceDisplayBox = await page.locator('.exam-price-display').boundingBox();
+  expect(priceInputBox.height).toBeLessThan(priceDisplayBox.height);
   await examPrice.fill('0');
   await expect(page.getByLabel('Tipo do exame')).toHaveValue('courtesy');
   await expect(page.locator('[data-exam-price-detail]')).toHaveText('Cortesia');

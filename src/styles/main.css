@@ -1666,6 +1666,32 @@ svg {
   background: var(--surface);
 }
 
+.field .exam-price-display input {
+  height: auto;
+  min-height: 0;
+  padding: 0 0 0 4px;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  color: var(--brand);
+  background: transparent;
+  box-shadow: none;
+  line-height: 1.2;
+  appearance: textfield;
+}
+
+.field .exam-price-display input:focus {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.field .exam-price-display input::-webkit-inner-spin-button,
+.field .exam-price-display input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 .field.has-error input,
 .field.has-error select,
 .field.has-error textarea {
