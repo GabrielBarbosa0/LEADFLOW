@@ -22,6 +22,19 @@ const leads = [
     storeId: 'loja-06',
     capturedByUid: 'captor-2',
     canOpen: false
+  },
+  {
+    id: 'cancelled',
+    fullName: 'Marina Cancelada',
+    customerCpf: '11144477735',
+    storeId: 'loja-06',
+    capturedByName: 'Carlos',
+    canOpen: true,
+    canClaim: true,
+    appointmentDate: '2026-11-04',
+    appointmentTime: '10:00',
+    appointmentStatus: 'cancelled',
+    appointmentAttendance: 'cancelled'
   }
 ];
 
@@ -39,6 +52,8 @@ describe('lead appointment search', () => {
     });
     expect(markup).toContain('Agendado');
     expect(markup).toContain('Sem agendamento');
+    expect(markup).toContain('Cancelado');
+    expect(markup).toContain('Consultar lead cancelado');
     expect(markup).toContain('05 de novembro às 08:20');
     expect(markup).toContain('CPF 529.982.247-25');
     expect(markup).toContain('data-search-open-lead="scheduled"');

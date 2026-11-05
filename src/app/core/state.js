@@ -158,6 +158,15 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       leadId: ''
     },
     leadHistoryDialogOpen: false,
+    leadAssignment: {
+      leadId: '',
+      mode: '',
+      loading: false,
+      saving: false,
+      error: '',
+      members: [],
+      targetUid: ''
+    },
     offlineCapture: {
       loaded: false,
       enabled: false

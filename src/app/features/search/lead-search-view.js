@@ -2,6 +2,7 @@ import { formatBrazilianCpf } from '../../../utils/savwin-matching.js';
 import { escapeHtml, formatAppointmentDate, storeLabel } from '../../shared/formatters.js';
 
 function appointmentStatus(lead) {
+  if (lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled') return ['Cancelado', 'warning', 'calendar-x'];
   if (lead.appointmentAttendance === 'attended') return ['Compareceu', 'success', 'circle-check'];
   if (lead.appointmentAttendance === 'missed') return ['Não compareceu', 'danger', 'circle-x'];
   if (lead.appointmentDate && lead.appointmentTime) return ['Agendado', 'success', 'calendar-check'];
@@ -17,7 +18,7 @@ function searchResult(lead) {
     <div class="lead-search-result-icon status-${tone}"><i data-lucide="${icon}"></i></div>
     <div class="lead-search-result-person"><strong>${escapeHtml(lead.fullName)}</strong><span>${lead.customerCpf ? `CPF ${escapeHtml(formatBrazilianCpf(lead.customerCpf))}` : 'CPF não informado'}</span><small>${escapeHtml(storeLabel(lead.storeId))}${lead.capturedByName ? ` · ${escapeHtml(lead.capturedByName)}` : ''}</small></div>
     <div class="lead-search-result-appointment"><span class="status-badge status-${tone}">${status}</span><strong>${escapeHtml(appointment)}</strong>${lead.appointmentServiceName ? `<small>${escapeHtml(lead.appointmentServiceName)}</small>` : ''}</div>
-    ${lead.canOpen ? `<button class="icon-button lead-search-open" type="button" data-search-open-lead="${escapeHtml(lead.id)}" title="Abrir cadastro" aria-label="Abrir cadastro de ${escapeHtml(lead.fullName)}"><i data-lucide="chevron-right"></i></button>` : ''}
+    ${lead.canOpen ? `<button class="icon-button lead-search-open" type="button" data-search-open-lead="${escapeHtml(lead.id)}" title="${lead.canClaim ? 'Consultar lead cancelado' : 'Abrir cadastro'}" aria-label="Abrir cadastro de ${escapeHtml(lead.fullName)}"><i data-lucide="chevron-right"></i></button>` : ''}
   </article>`;
 }
 

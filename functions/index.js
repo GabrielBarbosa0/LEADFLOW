@@ -332,7 +332,7 @@ async function searchCallerProfile(request) {
       ? profile.permissions
       : role === 'manager'
         ? ['leads.view_own', 'management.view']
-        : ['leads.view_own'];
+        : ['leads.create', 'leads.view_own', 'leads.edit_own'];
   if (!permissions.includes('leads.view_own')) {
     throw new HttpsError('permission-denied', 'Seu perfil nao possui acesso a pesquisa.');
   }
@@ -345,6 +345,12 @@ async function searchCallerProfile(request) {
 function searchResultForLead(snapshot, caller) {
   const lead = snapshot.data();
   const ownsLead = lead.capturedByUid === caller.uid;
+  const cancelled = lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled';
+  const canClaim = cancelled
+    && caller.role === 'captor'
+    && caller.storeIds.includes(lead.storeId)
+    && caller.permissions.includes('leads.create')
+    && caller.permissions.includes('leads.edit_own');
   const canManageLead = caller.role === 'admin'
     || (caller.role === 'manager'
       && (caller.permissions.includes('management.view') || caller.permissions.includes('leads.view_stores'))
@@ -357,9 +363,11 @@ function searchResultForLead(snapshot, caller) {
     appointmentDate: String(lead.appointmentDate || ''),
     appointmentTime: String(lead.appointmentTime || ''),
     appointmentAttendance: String(lead.appointmentAttendance || ''),
+    appointmentStatus: String(lead.appointmentStatus || ''),
     appointmentServiceName: String(lead.appointmentServiceName || ''),
     capturedByName: String(lead.capturedByName || ''),
-    canOpen: ownsLead || canManageLead
+    canOpen: ownsLead || canManageLead || canClaim,
+    canClaim
   };
 }
 

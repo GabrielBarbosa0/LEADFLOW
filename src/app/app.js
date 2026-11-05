@@ -4,6 +4,7 @@ import { markFollowUpContactStarted, subscribeToTeamFollowUps } from '../service
 import { loadRoleProfiles } from '../services/role-profile-service.js';
 import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
 import { APPOINTMENTS_QUERY_LIMIT, canCancelAppointment, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, rescheduleAppointment, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
+import { canClaimCancelledLead, canTransferLead, claimCancelledLead, loadAssignableLeadOwners, transferLead } from '../services/lead-assignment-service.js';
 import { createQuickWalkIn, createWalkIn, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
 import { ensureDefaultAppointmentServices, loadAppointmentServices } from '../services/service-catalog-service.js';
@@ -56,6 +57,7 @@ import { bindProductPaymentFields } from './features/capture/product-payment.js'
 import { initializeLeadDetailForm, leadDetailSubmissionValues } from './features/leads/lead-detail-events.js';
 import { leadDetailAppointmentTimeField as renderLeadDetailAppointmentTimeField, selectedLeadDetailService as resolveLeadDetailService } from './features/leads/lead-appointment.js';
 import { leadDetailView as renderLeadDetailView } from './features/leads/lead-detail-view.js';
+import { leadAssignmentDialog as renderLeadAssignmentDialog } from './features/leads/lead-assignment-dialog.js';
 import { ensureLeadHistory, stopLeadHistorySubscription } from './features/funnel/lead-history-subscriptions.js';
 import { leadHistoryView } from './features/funnel/lead-history-view.js';
 import { leadsView as renderLeadsView } from './features/leads/leads-view.js';
@@ -197,7 +199,7 @@ function homeView() {
 function appView() {
   const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
   const page = pages[state.route] || homeView;
-  return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${appointmentCancellationDialogView()}${appointmentRescheduleDialogView()}`, canManage, hasAccess, pendingFollowUps });
+  return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${leadAssignmentDialogView()}${appointmentCancellationDialogView()}${appointmentRescheduleDialogView()}`, canManage, hasAccess, pendingFollowUps });
 }
 
 function appointmentTimeField() {
@@ -308,7 +310,6 @@ function leadDetailView() {
     : state.leads.find((item) => item.id === leadId);
   const readOnly = Boolean(lead
     && lead.capturedByUid !== state.profile?.uid
-    && hasAccess('leads.view_stores')
     && !hasAccess('leads.edit_all'));
   return renderLeadDetailView({
     lead,
@@ -320,6 +321,8 @@ function leadDetailView() {
     canDelete: hasAccess('leads.delete'),
     canCancelAppointment: canCancelAppointment(state.profile, lead),
     canEditClinical: hasAccess('leads.clinical_update'),
+    canClaimLead: canClaimCancelledLead(state.profile, lead),
+    canTransferLead: canTransferLead(state.profile, lead),
     readOnly,
     history: state.leadHistory
   });
@@ -340,6 +343,8 @@ function leadDetailDialogView() {
     canDelete: hasAccess('leads.delete'),
     canCancelAppointment: canCancelAppointment(state.profile, lead),
     canEditClinical: hasAccess('leads.clinical_update'),
+    canClaimLead: canClaimCancelledLead(state.profile, lead),
+    canTransferLead: canTransferLead(state.profile, lead),
     inDialog: true,
     history: state.leadHistory
   })}</dialog>`;
@@ -350,6 +355,29 @@ function leadHistoryDialogView() {
   const lead = existingLeadForDetail(activeLeadDetailId());
   if (!lead) return '';
   return `<dialog id="lead-history-dialog" class="lead-history-dialog" aria-labelledby="lead-history-dialog-title"><header><div><h2 id="lead-history-dialog-title">Histórico do lead</h2><p>${escapeHtml(lead.fullName)}</p></div><div class="lead-history-dialog-actions"><button class="icon-button" type="button" data-close-lead-history title="Fechar" aria-label="Fechar histórico"><i data-lucide="circle-x"></i></button></div></header><div class="lead-history-dialog-body">${leadHistoryView({ ...state.leadHistory, stage: lead.funnelStage || state.leadHistory.stage }, { lead })}</div></dialog>`;
+}
+
+function leadAssignmentDialogView() {
+  const lead = existingLeadForDetail(state.leadAssignment.leadId);
+  return renderLeadAssignmentDialog({ assignment: state.leadAssignment, lead });
+}
+
+function closeLeadAssignmentDialog() {
+  state.leadAssignment = {
+    leadId: '', mode: '', loading: false, saving: false,
+    error: '', members: [], targetUid: ''
+  };
+  render();
+}
+
+function applyLeadOwnerUpdate(updated) {
+  const replace = (item) => item.id === updated.id ? { ...item, ...updated } : item;
+  state.leads = state.leads.map(replace);
+  state.management.records = state.management.records.map(replace);
+  state.appointments.records = state.appointments.records.map(replace);
+  state.confirmations.records = state.confirmations.records.map(replace);
+  state.leadSearch.results = state.leadSearch.results.map(replace);
+  if (state.management.activeLead?.id === updated.id) state.management.activeLead = { ...state.management.activeLead, ...updated };
 }
 
 function findLeadForAppointmentCancellation(leadId) {
@@ -997,6 +1025,20 @@ function bindPageEvents() {
           render();
         }
       }
+    });
+  }
+  const leadAssignmentDialog = document.querySelector('#lead-assignment-dialog');
+  if (leadAssignmentDialog) {
+    requestAnimationFrame(() => {
+      if (leadAssignmentDialog.isConnected && !leadAssignmentDialog.open) leadAssignmentDialog.showModal();
+    });
+    leadAssignmentDialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      if (!state.leadAssignment.saving) closeLeadAssignmentDialog();
+    });
+    leadAssignmentDialog.querySelector('#lead-assignment-target')?.addEventListener('change', (event) => {
+      state.leadAssignment.targetUid = event.target.value;
+      render();
     });
   }
 
@@ -1998,7 +2040,7 @@ export async function startApp() {
         if (lead.capturedByUid === state.profile?.uid && hasAccess('leads.view_own')) {
           if (!state.leads.some((item) => item.id === lead.id)) state.leads = [lead, ...state.leads];
           navigate('lead', lead.id);
-        } else if (hasAccess('leads.view_stores')) {
+        } else if (result.canClaim || hasAccess('leads.view_stores')) {
           if (!state.leads.some((item) => item.id === lead.id)) state.leads = [lead, ...state.leads];
           navigate('lead', lead.id);
         } else if (canManage()) {
@@ -2039,6 +2081,78 @@ export async function startApp() {
     if (closeLeadHistoryButton) {
       state.leadHistoryDialogOpen = false;
       render();
+      return;
+    }
+    const claimLeadButton = event.target.closest('[data-claim-lead]');
+    if (claimLeadButton && !claimLeadButton.disabled) {
+      const lead = existingLeadForDetail(claimLeadButton.dataset.claimLead);
+      if (!canClaimCancelledLead(state.profile, lead)) return;
+      state.leadAssignment = {
+        leadId: lead.id, mode: 'claim', loading: false, saving: false,
+        error: '', members: [], targetUid: state.profile.uid
+      };
+      render();
+      return;
+    }
+    const transferLeadButton = event.target.closest('[data-transfer-lead]');
+    if (transferLeadButton && !transferLeadButton.disabled) {
+      const lead = existingLeadForDetail(transferLeadButton.dataset.transferLead);
+      if (!canTransferLead(state.profile, lead)) return;
+      state.leadAssignment = {
+        leadId: lead.id, mode: 'reassign', loading: true, saving: false,
+        error: '', members: [], targetUid: ''
+      };
+      render();
+      try {
+        const members = await loadAssignableLeadOwners(state.profile, lead);
+        state.leadAssignment = {
+          ...state.leadAssignment,
+          loading: false,
+          members,
+          targetUid: members[0]?.uid || '',
+          error: members.length ? '' : 'Nenhum colaborador ativo desta unidade esta disponivel.'
+        };
+      } catch {
+        state.leadAssignment = { ...state.leadAssignment, loading: false, error: 'Nao foi possivel carregar a equipe.' };
+      }
+      render();
+      return;
+    }
+    if (event.target.closest('[data-close-lead-assignment]')) {
+      closeLeadAssignmentDialog();
+      return;
+    }
+    const confirmLeadAssignmentButton = event.target.closest('[data-confirm-lead-assignment]');
+    if (confirmLeadAssignmentButton && !confirmLeadAssignmentButton.disabled) {
+      const lead = existingLeadForDetail(state.leadAssignment.leadId);
+      if (!lead || state.leadAssignment.saving) return;
+      const target = state.leadAssignment.mode === 'claim'
+        ? state.profile
+        : state.leadAssignment.members.find((member) => member.uid === state.leadAssignment.targetUid);
+      if (!target) return;
+      state.leadAssignment = { ...state.leadAssignment, saving: true, error: '' };
+      render();
+      try {
+        const updated = state.leadAssignment.mode === 'claim'
+          ? await claimCancelledLead(state.profile, lead)
+          : await transferLead(state.profile, lead, target);
+        applyLeadOwnerUpdate(updated);
+        closeLeadAssignmentDialog();
+        showToast(state.profile.uid === updated.capturedByUid
+          ? 'Lead assumido. Agora voce e o responsavel pelo cadastro.'
+          : 'Responsavel do lead transferido com sucesso.');
+      } catch (error) {
+        state.leadAssignment = {
+          ...state.leadAssignment,
+          saving: false,
+          error: error?.code === 'lead-owner-changed'
+            ? 'Outra pessoa ja assumiu ou transferiu este lead. Atualize a pesquisa.'
+            : error?.code === 'permission-denied'
+              ? 'Seu perfil nao pode realizar esta alteracao.'
+              : 'Nao foi possivel alterar o responsavel pelo lead.'
+        };
+        render();
+      }
       return;
     }
     const closeLeadDetailButton = event.target.closest('[data-close-lead-detail]');

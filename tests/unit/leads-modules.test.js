@@ -120,6 +120,25 @@ describe('leads feature modules', () => {
     expect(markup).toContain('Importado do Captar');
   });
 
+  it('warns and offers ownership of a cancelled lead in read-only mode', () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const markup = leadDetailView({
+      lead: sampleLead({ appointmentStatus: 'cancelled', appointmentAttendance: 'cancelled' }),
+      managementMode: false,
+      canManage: false,
+      profileRole: 'captor',
+      scheduleState: scheduleState(),
+      appointmentTimeMarkup: '<div id="edit-appointment-time-field"></div>',
+      canDelete: false,
+      canClaimLead: true,
+      readOnly: true
+    });
+    expect(markup).toContain('Este agendamento foi cancelado');
+    expect(markup).toContain('data-claim-lead');
+    expect(markup).toContain('Assumir este lead');
+    expect(markup).not.toContain('type="submit"');
+  });
+
   it('preserves original data when a manager only reschedules', () => {
     class FormDataStub {
       constructor(form) {

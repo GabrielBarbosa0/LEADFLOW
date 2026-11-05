@@ -87,6 +87,7 @@ function leadRecord({
   appointmentDate = '',
   appointmentTime = '',
   appointmentAttendance,
+  appointmentStatus,
   funnelStage,
   funnelReasonCode = '',
   createdOffset = -3,
@@ -151,7 +152,8 @@ function leadRecord({
     ...(scheduled ? {
       appointmentServiceId: 'default-eye-exam',
       appointmentServiceName: 'Exame de vista',
-      appointmentAttendance: appointmentAttendance || 'pending'
+      appointmentAttendance: appointmentAttendance || 'pending',
+      ...(appointmentStatus ? { appointmentStatus } : {})
     } : {}),
     notes,
     source: 'street',
@@ -259,7 +261,7 @@ async function writeSeed(db, roleConfig, users) {
     leadRecord({ id: 'lead-unscheduled', fullName: 'Cliente Sem Agendamento', phoneSearch: '81990000004' }),
     leadRecord({ id: 'lead-other-store', fullName: 'Cliente Outra Unidade', phoneSearch: '81990000005', storeId: 'loja-05', capturedByUid: 'test-receptionist-05', capturedByName: 'Balcao Loja 05', appointmentDate: dateInSaoPaulo(1), appointmentTime: '10:00' }),
     leadRecord({ id: 'lead-rescheduled', fullName: 'Cliente Reagendado', phoneSearch: '81990000006', appointmentDate: dateInSaoPaulo(1), appointmentTime: '10:40', funnelReasonCode: 'schedule_conflict', notes: 'Reagendado pelo seed para validar o historico.' }),
-    leadRecord({ id: 'lead-cancelled', fullName: 'Cliente Cancelado', phoneSearch: '81990000007', funnelStage: 'cancelled', funnelReasonCode: 'client_request', notes: 'Registro de teste para o funil cancelado.' }),
+    leadRecord({ id: 'lead-cancelled', fullName: 'Cliente Cancelado', phoneSearch: '81990000007', appointmentDate: dateInSaoPaulo(1), appointmentTime: '11:20', appointmentAttendance: 'cancelled', appointmentStatus: 'cancelled', funnelStage: 'cancelled', funnelReasonCode: 'client_request', notes: 'Registro de teste para o funil cancelado.' }),
     leadRecord({ id: 'lead-mei', fullName: 'Cliente Captado por MEI', phoneSearch: '81990000008', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste' }),
     leadRecord({ id: 'lead-walkin-waiting', fullName: 'Cliente Encaixe Aguardando', phoneSearch: '81990000009' }),
     leadRecord({ id: 'lead-walkin-called', fullName: 'Cliente Encaixe Chamado', phoneSearch: '81990000010' })
@@ -283,7 +285,7 @@ async function writeSeed(db, roleConfig, users) {
         'Cancelado pelo seed para validar o funil.'
       ));
     }
-    if (lead.appointmentDate && lead.appointmentTime) {
+    if (lead.appointmentDate && lead.appointmentTime && lead.appointmentStatus !== 'cancelled') {
       for (const blockTime of appointmentBlockTimes(lead.appointmentTime, lead.appointmentDurationMinutes)) {
         const slotId = `slot-${appointmentResourceId(lead.storeId)}-${lead.appointmentDate}-${blockTime}`;
         batch.set(db.doc(`appointmentSlots/${slotId}`), {

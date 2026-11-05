@@ -2549,6 +2549,29 @@ svg {
   box-shadow: var(--shadow);
 }
 
+.lead-cancelled-notice > div {
+  display: grid;
+  gap: 4px;
+}
+
+.lead-cancelled-notice strong,
+.lead-cancelled-notice span {
+  display: block;
+}
+
+.lead-cancelled-notice .button {
+  width: fit-content;
+  margin-top: 10px;
+}
+
+.lead-assignment-dialog .field {
+  margin-top: 18px;
+}
+
+.lead-assignment-dialog .notice {
+  margin-top: 14px;
+}
+
 .management-archive-dialog {
   width: min(calc(100% - 32px), 680px);
   max-height: min(84vh, 760px);

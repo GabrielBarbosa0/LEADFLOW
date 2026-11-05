@@ -1738,6 +1738,109 @@ describe('appointment slot reservations', () => {
   });
 });
 
+describe('lead responsibility transfers', () => {
+  async function cancelLead() {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'leads', 'lead-test'), {
+        appointmentStatus: 'cancelled',
+        appointmentAttendance: 'cancelled',
+        funnelStage: 'cancelled'
+      });
+    });
+  }
+
+  function ownershipUpdate(targetUid, targetName, actorUid, actorName, type) {
+    return {
+      capturedByUid: targetUid,
+      capturedByName: targetName,
+      originalCapturedByUid: 'captor-uid',
+      originalCapturedByName: 'Captador Teste',
+      ownershipUpdatedAtServer: serverTimestamp(),
+      ownershipUpdatedByUid: actorUid,
+      ownershipUpdatedByName: actorName,
+      ownershipChangeType: type,
+      updatedAtServer: serverTimestamp()
+    };
+  }
+
+  function ownershipHistory(actorUid, actorName, eventType, reasonCode) {
+    return {
+      leadId: 'lead-test', storeId: 'loja-06', eventType, funnelStage: 'cancelled',
+      reasonCode, description: 'Responsabilidade alterada em teste.', actorUid,
+      actorName, actorRole: actorUid === 'manager-uid' ? 'manager' : 'captor',
+      occurredAtClient: '2026-11-05T12:00:00.000Z',
+      occurredAtServer: serverTimestamp(), schemaVersion: 1
+    };
+  }
+
+  it('lets a same-store collaborator claim a cancelled lead and blocks the previous owner afterwards', async () => {
+    await cancelLead();
+    const newOwnerDb = authenticatedDb('outro-uid', 'outro@example.com');
+    await assertSucceeds(getDoc(doc(newOwnerDb, 'leads', 'lead-test')));
+    const batch = writeBatch(newOwnerDb);
+    batch.update(doc(newOwnerDb, 'leads', 'lead-test'), ownershipUpdate(
+      'outro-uid', 'Outro Captador', 'outro-uid', 'Outro Captador', 'claim'
+    ));
+    batch.set(doc(newOwnerDb, 'leads', 'lead-test', 'history', 'claimed'), ownershipHistory(
+      'outro-uid', 'Outro Captador', 'lead_claimed', 'claim'
+    ));
+    await assertSucceeds(batch.commit());
+
+    await assertSucceeds(updateDoc(doc(newOwnerDb, 'leads', 'lead-test'), { notes: 'Novo responsavel', updatedAtServer: serverTimestamp() }));
+    const previousOwnerDb = authenticatedDb('captor-uid', 'captor@example.com');
+    await assertFails(updateDoc(doc(previousOwnerDb, 'leads', 'lead-test'), { notes: 'Edicao antiga', updatedAtServer: serverTimestamp() }));
+  });
+
+  it('rejects claiming an active lead or changing unrelated data during a claim', async () => {
+    const newOwnerDb = authenticatedDb('outro-uid', 'outro@example.com');
+    await assertFails(updateDoc(doc(newOwnerDb, 'leads', 'lead-test'), ownershipUpdate(
+      'outro-uid', 'Outro Captador', 'outro-uid', 'Outro Captador', 'claim'
+    )));
+    await cancelLead();
+    await assertFails(updateDoc(doc(newOwnerDb, 'leads', 'lead-test'), {
+      ...ownershipUpdate('outro-uid', 'Outro Captador', 'outro-uid', 'Outro Captador', 'claim'),
+      fullName: 'Alteracao indevida'
+    }));
+  });
+
+  it('lets a store manager reassign a lead and preserves the original creator', async () => {
+    const slotId = 'slot-consultorio-surubim-2026-10-15-09:30';
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const seedDb = context.firestore();
+      await Promise.all([
+        updateDoc(doc(seedDb, 'users', 'manager-uid'), {
+          permissions: ['management.view', 'leads.edit_all']
+        }),
+        updateDoc(doc(seedDb, 'leads', 'lead-test'), {
+          appointmentSchedulingMode: 'controlled', appointmentDurationMinutes: 20
+        }),
+        setDoc(doc(seedDb, 'appointmentSlots', slotId), {
+          storeId: 'loja-06', appointmentDate: '2026-10-15', appointmentTime: '09:30',
+          blockTime: '09:30', durationMinutes: 20, leadId: 'lead-test',
+          capturedByUid: 'captor-uid', createdAt: Timestamp.now()
+        })
+      ]);
+    });
+    const managerDb = authenticatedDb('manager-uid', 'manager@example.com');
+    const batch = writeBatch(managerDb);
+    batch.update(doc(managerDb, 'leads', 'lead-test'), ownershipUpdate(
+      'outro-uid', 'Outro Captador', 'manager-uid', 'Gestor Teste', 'reassign'
+    ));
+    batch.update(doc(managerDb, 'appointmentSlots', slotId), { capturedByUid: 'outro-uid' });
+    batch.set(doc(managerDb, 'leads', 'lead-test', 'history', 'reassigned'), ownershipHistory(
+      'manager-uid', 'Gestor Teste', 'lead_reassigned', 'reassign'
+    ));
+    await assertSucceeds(batch.commit());
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const verificationDb = context.firestore();
+      const snapshot = await getDoc(doc(verificationDb, 'leads', 'lead-test'));
+      if (snapshot.data().originalCapturedByUid !== 'captor-uid') throw new Error('Autor original nao foi preservado.');
+      const slot = await getDoc(doc(verificationDb, 'appointmentSlots', slotId));
+      if (slot.data().capturedByUid !== 'outro-uid') throw new Error('Reserva nao acompanhou o novo responsavel.');
+    });
+  });
+});
+
 describe('private lead sale tracking', () => {
   const tracking = {
     leadId: 'lead-test',

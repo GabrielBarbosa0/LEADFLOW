@@ -232,6 +232,7 @@ service cloud.firestore {
           'lead_created', 'appointment_scheduled', 'appointment_rescheduled',
           'appointment_cancelled', 'appointment_reminder_sent', 'lead_archived',
           'appointment_attended', 'appointment_missed', 'follow_up_contacted',
+          'lead_claimed', 'lead_reassigned',
           'birthday_benefit_planned', 'birthday_congratulated',
           'walk_in_created', 'walk_in_called', 'walk_in_in_service',
           'walk_in_completed', 'walk_in_gave_up',
@@ -267,6 +268,12 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/leads/$(leadId))
         && (
           (get(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+            && hasPermission('leads.view_own'))
+          || (((('appointmentStatus' in get(/databases/$(database)/documents/leads/$(leadId)).data)
+                && get(/databases/$(database)/documents/leads/$(leadId)).data.appointmentStatus == 'cancelled')
+              || (('appointmentAttendance' in get(/databases/$(database)/documents/leads/$(leadId)).data)
+                && get(/databases/$(database)/documents/leads/$(leadId)).data.appointmentAttendance == 'cancelled'))
+            && userHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
             && hasPermission('leads.view_own'))
           || (managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
             && hasPermission('management.view'))
@@ -584,6 +591,74 @@ service cloud.firestore {
               || request.resource.data.appointmentTime != resource.data.appointmentTime
             )
           ));
+    }
+
+    function targetLeadOwnerIsActive(uid, storeId) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.active == true
+        && get(/databases/$(database)/documents/users/$(uid)).data.role == 'captor'
+        && (
+          get(/databases/$(database)/documents/users/$(uid)).data.storeId == storeId
+          || (('storeIds' in get(/databases/$(database)/documents/users/$(uid)).data)
+            && storeId in get(/databases/$(database)/documents/users/$(uid)).data.storeIds)
+        );
+    }
+
+    function originalLeadOwnerIsPreserved() {
+      return (
+          !('originalCapturedByUid' in resource.data)
+          && request.resource.data.originalCapturedByUid == resource.data.capturedByUid
+          && request.resource.data.originalCapturedByName == resource.data.capturedByName
+        ) || (
+          ('originalCapturedByUid' in resource.data)
+          && request.resource.data.originalCapturedByUid == resource.data.originalCapturedByUid
+          && request.resource.data.originalCapturedByName == resource.data.originalCapturedByName
+        );
+    }
+
+    function validLeadOwnershipChange(changeType) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'capturedByUid', 'capturedByName',
+          'originalCapturedByUid', 'originalCapturedByName',
+          'ownershipUpdatedAtServer', 'ownershipUpdatedByUid',
+          'ownershipUpdatedByName', 'ownershipChangeType', 'updatedAtServer'
+        ])
+        && request.resource.data.capturedByUid != resource.data.capturedByUid
+        && targetLeadOwnerIsActive(request.resource.data.capturedByUid, resource.data.storeId)
+        && request.resource.data.capturedByName
+          == get(/databases/$(database)/documents/users/$(request.resource.data.capturedByUid)).data.displayName
+        && originalLeadOwnerIsPreserved()
+        && request.resource.data.ownershipUpdatedAtServer == request.time
+        && request.resource.data.ownershipUpdatedByUid == request.auth.uid
+        && request.resource.data.ownershipUpdatedByName == userProfile().displayName
+        && request.resource.data.ownershipChangeType == changeType
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function isCancelledLeadClaim() {
+      return activeUser()
+        && request.auth.uid == request.resource.data.capturedByUid
+        && userHasStore(resource.data.storeId)
+        && hasPermission('leads.create')
+        && hasPermission('leads.edit_own')
+        && (
+          (('appointmentStatus' in resource.data) && resource.data.appointmentStatus == 'cancelled')
+          || (('appointmentAttendance' in resource.data) && resource.data.appointmentAttendance == 'cancelled')
+        )
+        && validLeadOwnershipChange('claim');
+    }
+
+    function isManagerLeadReassignment() {
+      return isManager()
+        && managerHasStore(resource.data.storeId)
+        && hasPermission('leads.edit_all')
+        && validLeadOwnershipChange('reassign');
+    }
+
+    function isLeadOwnershipUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'capturedByUid', 'capturedByName', 'ownershipChangeType'
+      ]);
     }
 
     function validAppointmentCancellation() {
@@ -909,7 +984,19 @@ service cloud.firestore {
         && userHasStore(request.resource.data.storeId)
       );
 
-      allow get, list: if activeUser() && (
+      allow get: if activeUser() && (
+        (resource.data.capturedByUid == request.auth.uid && hasPermission('leads.view_own'))
+        || (((('appointmentStatus' in resource.data) && resource.data.appointmentStatus == 'cancelled')
+              || (('appointmentAttendance' in resource.data) && resource.data.appointmentAttendance == 'cancelled'))
+            && userHasStore(resource.data.storeId)
+            && hasPermission('leads.view_own'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('leads.view_stores'))
+        || isAdmin()
+      );
+
+      allow list: if activeUser() && (
         (resource.data.capturedByUid == request.auth.uid && hasPermission('leads.view_own'))
         || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
         || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view'))
@@ -918,6 +1005,8 @@ service cloud.firestore {
       );
 
       allow update: if isAdmin() || (
+        isLeadOwnershipUpdate() && (isCancelledLeadClaim() || isManagerLeadReassignment())
+      ) || (
         activeUser()
         && leadIdentityIsUnchanged()
         && (
@@ -989,6 +1078,15 @@ service cloud.firestore {
                   && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
                   && hasPermission('appointments.attendance'))
               ))
+            || (request.resource.data.eventType == 'lead_claimed'
+              && getAfter(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+              && getAfter(/databases/$(database)/documents/leads/$(leadId)).data.ownershipChangeType == 'claim'
+              && userHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+              && hasPermission('leads.edit_own'))
+            || (request.resource.data.eventType == 'lead_reassigned'
+              && isManager()
+              && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+              && hasPermission('leads.edit_all'))
             || (!request.resource.data.eventType.matches('^walk_in_.*$')
               && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
               && hasPermission('appointments.view'))

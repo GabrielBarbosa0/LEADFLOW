@@ -121,6 +121,55 @@ test('shows the simplified lead history without a duplicated funnel heading', as
   await expect(dialog.locator('.lead-history-list li').first()).toBeVisible();
 });
 
+test('lets another collaborator explicitly claim a cancelled lead', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
+  await signIn(page, 'mei@leadflow.test');
+
+  await page.goto('/#/search');
+  await expect(page.getByLabel('Nome ou CPF')).toBeVisible();
+  await page.waitForTimeout(750);
+  await page.getByLabel('Nome ou CPF').fill('Cliente Cancelado');
+  await page.getByRole('button', { name: 'Pesquisar' }).click();
+  await expect(page.getByText('Cancelado', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Abrir cadastro de Cliente Cancelado' }).click();
+
+  const form = page.locator('#edit-lead-form');
+  await expect(form.getByText('Consulta somente leitura')).toBeVisible();
+  await form.getByRole('button', { name: 'Assumir este lead' }).click();
+  const dialog = page.locator('#lead-assignment-dialog');
+  await expect(dialog.getByRole('heading', { name: 'Assumir este lead?' })).toBeVisible();
+  await expect(dialog).toContainText('Colaborador Teste');
+  await dialog.getByRole('button', { name: 'Assumir lead' }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(form.getByText('Consulta somente leitura')).toHaveCount(0);
+  await expect(form.getByRole('button', { name: /Salvar altera/ })).toBeVisible();
+});
+
+test('lets a store manager transfer a lead with an audited history entry', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
+  await signIn(page, 'gestor@leadflow.test');
+
+  await page.goto('/#/search');
+  await expect(page.getByLabel('Nome ou CPF')).toBeVisible();
+  await page.waitForTimeout(750);
+  await page.getByLabel('Nome ou CPF').fill('Cliente Sem Agendamento');
+  await page.getByRole('button', { name: 'Pesquisar' }).click();
+  await page.getByRole('button', { name: 'Abrir cadastro de Cliente Sem Agendamento' }).click();
+  await page.getByRole('button', { name: 'Transferir responsável' }).click();
+
+  const dialog = page.locator('#lead-assignment-dialog');
+  await expect(dialog.getByRole('heading', { name: 'Transferir responsável' })).toBeVisible();
+  await dialog.getByLabel('Novo responsável').selectOption({ label: 'MEI Teste' });
+  await dialog.getByRole('button', { name: 'Confirmar transferência' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await page.getByText('Ver histórico', { exact: true }).click();
+  const history = page.locator('#lead-history-dialog');
+  await expect(history.getByText('Responsável transferido')).toBeVisible();
+  await expect(history).toContainText('Colaborador Teste para MEI Teste');
+});
+
 test('renders the compact registration fields and product payment options', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
 
