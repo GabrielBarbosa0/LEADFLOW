@@ -157,6 +157,7 @@ describe('capture feature modules', () => {
     expect(markup).toContain('id="lead-form"');
     expect(markup).toContain('name="savwinCode"');
     expect(markup).toContain('name="score"');
+    expect(markup).toContain('name="score" type="text" inputmode="numeric" pattern="[0-9]*"');
     expect(markup).toContain('name="postalCode"');
     expect(markup).toContain('Exame de vista - 20 min');
     expect(markup).toContain('data-time-field');

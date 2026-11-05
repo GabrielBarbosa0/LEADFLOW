@@ -30,6 +30,13 @@ export function bindPostalCodeInput(form) {
   });
 }
 
+export function bindScoreInput(form) {
+  const input = form.elements.score;
+  input?.addEventListener('input', () => {
+    input.value = String(input.value || '').replace(/\D/g, '').slice(0, 4);
+  });
+}
+
 export function birthAgeText(value) {
   const age = calculateAge(value);
   return age === null ? 'A idade será calculada automaticamente.' : `${age} ano${age === 1 ? '' : 's'}`;

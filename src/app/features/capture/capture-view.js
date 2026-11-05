@@ -52,7 +52,7 @@ export function captureView({
       <div class="field-row lead-identification-fields">
         <div class="field" data-field="fullName"><label for="fullName">Nome <span aria-hidden="true">*</span></label><input id="fullName" name="fullName" autocomplete="name" maxlength="120" placeholder="Nome do cliente" required /><small class="field-error"></small></div>
         <div class="field" data-field="savwinCode"><label for="savwinCode">Cod. SavWin</label><input id="savwinCode" name="savwinCode" maxlength="40" autocomplete="off" placeholder="Código do cliente" /><small class="field-error"></small></div>
-        <div class="field" data-field="score"><label for="score">Score</label><input id="score" name="score" type="number" inputmode="numeric" min="0" max="1000" step="1" placeholder="0 a 1000" /><small class="field-error"></small></div>
+        <div class="field" data-field="score"><label for="score">Score</label><input id="score" name="score" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0 a 1000" /><small class="field-error"></small></div>
       </div>
       <div class="field-row contact-fields">
         <div class="field" data-field="phone"><label for="phone">Telefone ou WhatsApp <span aria-hidden="true">*</span></label><input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="(00) 00000-0000" required /><small class="field-error"></small></div>

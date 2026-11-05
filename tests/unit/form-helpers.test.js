@@ -3,6 +3,7 @@ import {
   bindBirthDateInput,
   bindCpfInput,
   bindExclusiveOptions,
+  bindScoreInput,
   birthAgeText,
   revealFirstFormError,
   setFieldErrors
@@ -44,6 +45,13 @@ describe('shared form helpers', () => {
     bindCpfInput({ elements: { customerCpf: input } });
     input.dispatch('input');
     expect(input.value).toBe('123.456.789-01');
+  });
+
+  it('keeps only whole digits in the score input', () => {
+    const input = eventInput('-85,7.2');
+    bindScoreInput({ elements: { score: input } });
+    input.dispatch('input');
+    expect(input.value).toBe('8572');
   });
 
   it('updates the birth age hint', () => {

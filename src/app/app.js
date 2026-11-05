@@ -36,6 +36,7 @@ import {
   bindCpfInput,
   bindExclusiveOptions,
   bindPostalCodeInput,
+  bindScoreInput,
   revealFirstFormError,
   setFieldErrors
 } from './shared/form-helpers.js';
@@ -1193,6 +1194,7 @@ function bindPageEvents() {
   if (appointmentCreateForm) {
     bindCpfInput(appointmentCreateForm);
     bindPostalCodeInput(appointmentCreateForm);
+    bindScoreInput(appointmentCreateForm);
     const cpfAppointmentCheck = bindCpfAppointmentWarning(appointmentCreateForm, { lookup: lookupCpfAppointment });
     bindBirthDateInput(appointmentCreateForm);
     bindExclusiveOptions(appointmentCreateForm, 'ametropiaIds');

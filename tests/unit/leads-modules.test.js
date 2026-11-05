@@ -99,6 +99,7 @@ describe('leads feature modules', () => {
     expect(markup).toContain('Maria Silva');
     expect(markup).toContain('CLI-1234');
     expect(markup).toContain('value="850"');
+    expect(markup).toContain('name="score" type="text" inputmode="numeric" pattern="[0-9]*"');
     expect(markup).toContain('value="50000-123"');
     expect(markup).toContain('Excluir lead');
     expect(markup).toContain('edit-appointment-time-field');
