@@ -1,0 +1,27 @@
+name: leadflow-homologacao
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run dev:staging
+    init: true
+    ports:
+      - "127.0.0.1:5175:5175"
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/app
+      - leadflow_node_modules:/app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:5175/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  leadflow_node_modules:
+

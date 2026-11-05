@@ -114,6 +114,37 @@ Docker Compose nao corrige erros de logica e nao substitui testes em navegadores
 
 O conteiner local nao deve receber credenciais capazes de publicar em producao.
 
+### Uso do Docker nesta branch
+
+A infraestrutura inicial fica na branch `chore/docker-homologacao` e executa a
+mesma aplicacao da `main`, sem portar funcionalidades das branches de backup.
+
+Pre-requisitos:
+
+- Docker Desktop aberto e operacional;
+- `.env.staging.local` configurado para `leadflowtest-d32c2`;
+- porta local `5175` disponivel.
+
+Comandos principais:
+
+```powershell
+# Iniciar a homologacao
+docker compose up --build
+
+# Executar testes unitarios, regras e build de homologacao
+docker compose run --rm app npm run verify:docker
+
+# Encerrar e remover os conteineres
+docker compose down
+```
+
+No Windows, `INICIAR-LEADFLOW-DOCKER.bat` inicia o primeiro comando. O script
+`verify:staging` bloqueia a inicializacao quando o projeto Firebase configurado
+nao for exatamente `leadflowtest-d32c2`.
+
+O Compose nao possui comando de deploy. A publicacao de regras e o build de
+producao continuam sendo etapas separadas e deliberadas.
+
 ## Controle das regras do Firestore
 
 O arquivo `firestore.rules` do repositorio deve ser a unica fonte oficial das regras.
