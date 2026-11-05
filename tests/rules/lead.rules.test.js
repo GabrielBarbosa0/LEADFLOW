@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { createLeadDocument } from '../../src/utils/lead.js';
 
 const projectId = 'demo-fascinlead-leads';
@@ -833,6 +833,25 @@ describe('appointment calendar queries', () => {
       appointmentAttendanceUpdatedByUid: 'manager-uid',
       updatedAtServer: Timestamp.now()
     }));
+  });
+
+  it('lets a receptionist register attendance with the same merge used by the app', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {
+        displayName: 'Atendente Balcão',
+        roleProfileId: 'system-receptionist',
+        permissions: ['appointments.view', 'appointments.attendance'],
+        storeId: 'loja-06',
+        storeIds: ['loja-06']
+      });
+    });
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(setDoc(doc(db, 'leads', 'lead-test'), {
+      appointmentAttendance: 'attended',
+      appointmentAttendanceUpdatedAt: serverTimestamp(),
+      appointmentAttendanceUpdatedByUid: 'manager-uid',
+      updatedAtServer: serverTimestamp()
+    }, { merge: true }));
   });
 
   it('does not let a manager edit customer data while registering attendance', async () => {
