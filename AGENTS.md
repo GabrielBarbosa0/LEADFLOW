@@ -308,6 +308,13 @@ Antes de concluir:
 
 Quando o `package.json` existir, use os scripts declarados nele como fonte de verdade para os comandos. Nao invente comandos paralelos que contornem a configuracao do projeto.
 
+### Empacotamento de releases
+
+- Toda nova release deve ser criada dentro da pasta `release/`.
+- Arquivos ZIP, pastas empacotadas e demais artefatos destinados a publicacao nao devem ser colocados na raiz do repositorio nem em outras pastas.
+- Builds temporarios usados apenas para verificacao podem continuar seguindo os caminhos definidos pelos scripts do projeto, mas o pacote final de publicacao deve sempre ser movido ou gerado em `release/`.
+- Nao apagar nem sobrescrever releases anteriores sem solicitacao explicita do responsavel pelo projeto.
+
 ## 17. Testes obrigatorios por area
 
 ### Formularios e dados
