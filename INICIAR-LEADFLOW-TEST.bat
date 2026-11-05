@@ -22,6 +22,25 @@ if errorlevel 1 (
   exit /b 1
 )
 
+curl.exe -fsS http://localhost:5175/ 2>nul | findstr /C:"<title>LeadFlow Test</title>" >nul
+if not errorlevel 1 (
+  echo.
+  echo A homologacao ja esta em execucao.
+  echo Abrindo http://localhost:5175/
+  start "" http://localhost:5175/
+  exit /b 0
+)
+
+netstat -ano | findstr /R /C:":5175 .*LISTENING" >nul
+if not errorlevel 1 (
+  echo.
+  echo ERRO: a porta 5175 esta sendo usada por outro programa.
+  echo Feche o programa que ocupa a porta e tente novamente.
+  echo.
+  pause
+  exit /b 1
+)
+
 echo.
 echo Iniciando LeadFlow em modo de homologacao...
 echo Firebase esperado: leadflowtest-d32c2
