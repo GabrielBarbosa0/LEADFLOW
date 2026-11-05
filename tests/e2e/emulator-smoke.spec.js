@@ -58,6 +58,21 @@ test('loads the real appointment flow for a receptionist profile', async ({ page
   await expect(page.getByRole('button', { name: 'Não compareceu' }).first()).toBeVisible();
 });
 
+test('shows the simplified lead history without a duplicated funnel heading', async ({ page }) => {
+  await signIn(page, 'admin@leadflow.test');
+
+  await page.getByRole('button', { name: /Agenda de exames/ }).click();
+  await page.getByRole('button', { name: /Abrir cadastro de/ }).first().click();
+  await page.getByText('Ver histórico', { exact: true }).click();
+
+  const dialog = page.locator('#lead-history-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Histórico do lead' })).toHaveCount(1);
+  await expect(dialog.getByText('FUNIL', { exact: true })).toHaveCount(0);
+  await expect(dialog.locator('.lead-history > header')).toHaveCount(0);
+  await expect(dialog.locator('.lead-history-list li').first()).toBeVisible();
+});
+
 test('renders the compact registration fields and product payment options', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
 

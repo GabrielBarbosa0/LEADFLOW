@@ -38,7 +38,7 @@ describe('funnel feature modules', () => {
     expect(event).toMatchObject({ eventType: 'appointment_scheduled', funnelStage: 'scheduled' });
   });
 
-  it('renders the history with its current funnel stage', () => {
+  it('renders a direct history list without a duplicated funnel heading', () => {
     const markup = leadHistoryView({
       loading: false,
       error: '',
@@ -52,8 +52,10 @@ describe('funnel feature modules', () => {
       }]
     });
 
-    expect(markup).toContain('Hist');
     expect(markup).toContain('Agendamento realizado');
     expect(markup).toContain('Agendado');
+    expect(markup).not.toContain('<header>');
+    expect(markup).not.toContain('FUNIL');
+    expect(markup).not.toContain('<h3>Histórico do lead</h3>');
   });
 });
