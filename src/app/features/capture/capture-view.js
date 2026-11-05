@@ -5,6 +5,7 @@ import { escapeHtml, toLocalDateInput } from '../../shared/formatters.js';
 import { ametropiaOptions, eyeTriageFields, pathologyOptions, sexOptions, triageConfigFields } from './capture-triage.js';
 import { transportFields } from './capture-transport.js';
 import { cpfAppointmentConfirmationDialog, cpfAppointmentStatusMarkup } from './cpf-appointment-warning.js';
+import { productPaymentFields } from './product-payment.js';
 
 export function captureView({
   scheduleState,
@@ -54,17 +55,16 @@ export function captureView({
         <div class="field" data-field="savwinCode"><label for="savwinCode">Cod. SavWin</label><input id="savwinCode" name="savwinCode" maxlength="40" autocomplete="off" placeholder="Código do cliente" /><small class="field-error"></small></div>
         <div class="field" data-field="score"><label for="score">Score</label><input id="score" name="score" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0 a 1000" /><small class="field-error"></small></div>
       </div>
-      <div class="field-row contact-fields">
-        <div class="field" data-field="phone"><label for="phone">Telefone ou WhatsApp <span aria-hidden="true">*</span></label><input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="(00) 00000-0000" required /><small class="field-error"></small></div>
+      <div class="field" data-field="phone"><label for="phone">Telefone ou WhatsApp <span aria-hidden="true">*</span></label><input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="(00) 00000-0000" required /><small class="field-error"></small></div>
+      <div class="field-row document-fields">
         <div class="field" data-field="customerRg"><label for="customerRg">RG</label><input id="customerRg" name="customerRg" maxlength="20" autocomplete="off" placeholder="0.000.000" /><small class="field-error"></small></div>
-      </div>
-      <div class="field-row identity-fields">
         <div class="field" data-field="customerCpf"><label for="customerCpf">CPF</label><input id="customerCpf" name="customerCpf" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00" />${cpfAppointmentStatusMarkup()}<small class="field-error"></small></div>
+      </div>
+      <div class="field-row demographic-fields">
         <div class="field" data-field="birthDate"><label for="birthDate">Data de nascimento <span aria-hidden="true">*</span></label><input id="birthDate" name="birthDate" type="date" autocomplete="bday" max="${toLocalDateInput(new Date())}" required /><small class="birth-age-hint" data-birth-age>A idade será calculada automaticamente.</small><small class="field-error"></small></div>
         <div class="field" data-field="sex"><label for="sex">Sexo</label><select id="sex" name="sex">${sexOptions()}</select><small class="field-error"></small></div>
       </div>
-      <div class="field"><label for="preferredName">Como prefere ser chamado</label><input id="preferredName" name="preferredName" maxlength="60" placeholder="Apelido ou nome preferido" /></div>
-      <div class="field" data-field="postalCode"><label for="postalCode">CEP</label><input id="postalCode" name="postalCode" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" /><small class="field-error"></small></div>
+      <div class="field-row preferred-postal-fields"><div class="field"><label for="preferredName">Como prefere ser chamado</label><input id="preferredName" name="preferredName" maxlength="60" placeholder="Apelido ou nome preferido" /></div><div class="field" data-field="postalCode"><label for="postalCode">CEP</label><input id="postalCode" name="postalCode" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" /><small class="field-error"></small></div></div>
       <div class="field-row address-fields">
         <div class="field address-street" data-field="street"><label for="street">Rua</label><input id="street" name="street" maxlength="120" autocomplete="address-line1" /><small class="field-error"></small></div>
         <div class="field address-number" data-field="streetNumber"><label for="streetNumber">Número</label><input id="streetNumber" name="streetNumber" maxlength="12" autocomplete="address-line2" placeholder="S/N" /><small class="field-error"></small></div>
@@ -77,6 +77,7 @@ export function captureView({
         <div class="field"><label for="interestId">Interesse principal</label><select id="interestId" name="interestId">${interests}</select></div>
         <div class="field" data-field="appointmentServiceId"><label for="appointmentServiceId">Serviço do agendamento</label><select id="appointmentServiceId" name="appointmentServiceId" ${selectedStoreId ? '' : 'disabled'}><option value="">${selectedStoreId ? 'Selecione o serviço' : 'Escolha primeiro a loja'}</option>${serviceOptions}</select><small class="field-error"></small></div>
       </div>
+      ${productPaymentFields({}, 'new-lead-product-payment')}
       ${scheduleState.settings.showAmetropiaFields ? `<fieldset id="new-lead-ametropias" class="field ametropia-field"><legend>Ametropias</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${ametropiaOptions()}</div></fieldset>` : ''}
       <fieldset id="new-lead-pathologies" class="field ametropia-field"><legend>Patologias e condições de saúde</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${pathologyOptions()}</div></fieldset>
       ${eyeTriageFields({}, scheduleState.settings, 'new-lead-eye')}

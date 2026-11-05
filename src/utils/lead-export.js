@@ -72,6 +72,9 @@ const CSV_COLUMNS = [
   ['Quantidade de acompanhantes', (lead) => lead.needsTransport ? Number(lead.companionCount ?? (lead.hasCompanion ? 1 : 0)) : 0],
   ['Assentos do transporte', (lead) => Number(lead.transportSeats) || 0],
   ['Interesse principal', (lead) => lead.interestLabel],
+  ['Forma de pagamento do produto', (lead) => Array.isArray(lead.productPaymentMethods) && lead.productPaymentMethods.length
+    ? examPaymentMethodsLabel(lead.productPaymentMethods)
+    : ''],
   ['Ametropias', (lead) => Array.isArray(lead.ametropiaLabels) ? lead.ametropiaLabels.join(', ') : ''],
   ['Patologias e condições de saúde', (lead) => Array.isArray(lead.pathologyLabels) ? lead.pathologyLabels.join(', ') : ''],
   ['CEP', (lead) => formatBrazilianPostalCode(lead.postalCode || '')],

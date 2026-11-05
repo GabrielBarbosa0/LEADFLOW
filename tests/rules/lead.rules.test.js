@@ -593,6 +593,7 @@ describe('lead correction rules', () => {
       careRouteOverride: 'automatic',
       examPaymentType: 'paid',
       examPaymentMethods: ['pix', 'cash'],
+      productPaymentMethods: ['pix', 'credit-card'],
       examPrice: 275,
       updatedAtServer: Timestamp.now()
     }));
@@ -618,6 +619,13 @@ describe('lead correction rules', () => {
     await assertFails(setDoc(doc(db, 'leads', 'invalid-exam-payment-method'), {
       ...result.data,
       examPaymentMethods: ['pix', 'crypto'],
+      createdAtServer: Timestamp.now(),
+      updatedAtServer: Timestamp.now()
+    }));
+    await assertFails(setDoc(doc(db, 'leads', 'invalid-product-payment-method'), {
+      ...result.data,
+      interestId: 'complete-glasses',
+      productPaymentMethods: ['pix', 'crypto'],
       createdAtServer: Timestamp.now(),
       updatedAtServer: Timestamp.now()
     }));

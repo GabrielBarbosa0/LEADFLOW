@@ -3,6 +3,7 @@ import { restoreNewLeadDraft } from '../../src/app/features/capture/capture-form
 import { captureAppointmentTimeField, careRouteAppointmentSchedule } from '../../src/app/features/capture/capture-schedule.js';
 import { enrichLeadTriage, eyeTriageFields, triageConfigFields } from '../../src/app/features/capture/capture-triage.js';
 import { transportFields } from '../../src/app/features/capture/capture-transport.js';
+import { productPaymentFields } from '../../src/app/features/capture/product-payment.js';
 import { captureView } from '../../src/app/features/capture/capture-view.js';
 import { DEFAULT_STORE_SCHEDULE } from '../../src/utils/schedule.js';
 import { leadDetailAppointmentTimeField } from '../../src/app/features/leads/lead-appointment.js';
@@ -71,11 +72,27 @@ describe('capture feature modules', () => {
       examPaymentMethods: ['bank-slip'],
       creditFatherName: 'João da Silva'
     });
+    const productCreditMarkup = eyeTriageFields({
+      examPaymentType: 'paid',
+      examPaymentMethods: [],
+      productPaymentMethods: ['bank-slip']
+    });
 
     expect(hiddenMarkup).toContain('data-credit-details-fields hidden');
     expect(visibleMarkup).toContain('Boleto');
     expect(visibleMarkup).toContain('name="creditFatherName"');
     expect(visibleMarkup).not.toContain('data-credit-details-fields hidden');
+    expect(productCreditMarkup).not.toContain('data-credit-details-fields hidden');
+  });
+
+  it('shows product payment methods only for product interests', () => {
+    const productMarkup = productPaymentFields({ interestId: 'complete-glasses', productPaymentMethods: ['pix'] });
+    const examMarkup = productPaymentFields({ interestId: 'eye-exam', productPaymentMethods: [] });
+
+    expect(productMarkup).toContain('Forma de pagamento do produto de interesse');
+    expect(productMarkup).toContain('value="pix" checked');
+    expect(productMarkup).not.toContain('data-product-payment data-field="productPaymentMethods" hidden');
+    expect(examMarkup).toContain('data-product-payment data-field="productPaymentMethods" hidden');
   });
 
   it('renders transport limits and availability from store settings', () => {
@@ -159,6 +176,10 @@ describe('capture feature modules', () => {
     expect(markup).toContain('name="score"');
     expect(markup).toContain('name="score" type="text" inputmode="numeric" pattern="[0-9]*"');
     expect(markup).toContain('name="postalCode"');
+    expect(markup).toContain('class="field-row document-fields"');
+    expect(markup).toContain('class="field-row demographic-fields"');
+    expect(markup).toContain('class="field-row preferred-postal-fields"');
+    expect(markup).not.toContain('name="pathologyIds" value="unknown"');
     expect(markup).toContain('Exame de vista - 20 min');
     expect(markup).toContain('data-time-field');
   });

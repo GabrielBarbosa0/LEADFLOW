@@ -32,6 +32,7 @@ const validInput = {
   appointmentDurationMinutes: 30,
   schedulingMode: 'controlled',
   examPaymentMethods: ['pix', 'cash'],
+  productPaymentMethods: ['credit-card', 'pix'],
   notes: ''
 };
 
@@ -74,6 +75,20 @@ describe('lead validation', () => {
   it('normalizes an optional RG and limits its length', () => {
     expect(createLeadUpdate(validInput).data.customerRg).toBe('12.345.678-X');
     expect(validateLeadInput({ ...validInput, customerRg: '1'.repeat(21) }).errors.customerRg).toBeDefined();
+  });
+
+  it('stores valid product payment methods only for product interests', () => {
+    expect(createLeadDocument(validInput, profile, 'installation-test').data.productPaymentMethods)
+      .toEqual(['credit-card', 'pix']);
+    expect(createLeadUpdate({ ...validInput, interestId: 'eye-exam' }).data.productPaymentMethods).toEqual([]);
+    expect(validateLeadInput({ ...validInput, productPaymentMethods: ['crypto'] }).errors.productPaymentMethods)
+      .toBeDefined();
+    expect(createLeadUpdate({
+      ...validInput,
+      examPaymentMethods: [],
+      productPaymentMethods: ['bank-slip'],
+      creditFatherName: 'José Exemplo'
+    }).data.creditFatherName).toBe('José Exemplo');
   });
 
   it('creates an explicitly incomplete quick walk-in registration without inventing clinical data', () => {

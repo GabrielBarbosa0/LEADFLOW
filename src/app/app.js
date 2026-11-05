@@ -48,6 +48,7 @@ import { ametropiaOptions, bindEyeTriage, enrichLeadTriage } from './features/ca
 import { bindTransportFields } from './features/capture/capture-transport.js';
 import { captureView } from './features/capture/capture-view.js';
 import { bindCpfAppointmentWarning, confirmDuplicateCpfAppointment } from './features/capture/cpf-appointment-warning.js';
+import { bindProductPaymentFields } from './features/capture/product-payment.js';
 import { initializeLeadDetailForm, leadDetailSubmissionValues } from './features/leads/lead-detail-events.js';
 import { leadDetailAppointmentTimeField as renderLeadDetailAppointmentTimeField, selectedLeadDetailService as resolveLeadDetailService } from './features/leads/lead-appointment.js';
 import { leadDetailView as renderLeadDetailView } from './features/leads/lead-detail-view.js';
@@ -1197,6 +1198,7 @@ function bindPageEvents() {
     bindScoreInput(appointmentCreateForm);
     const cpfAppointmentCheck = bindCpfAppointmentWarning(appointmentCreateForm, { lookup: lookupCpfAppointment });
     bindBirthDateInput(appointmentCreateForm);
+    bindProductPaymentFields(appointmentCreateForm);
     bindExclusiveOptions(appointmentCreateForm, 'ametropiaIds');
     bindExclusiveOptions(appointmentCreateForm, 'pathologyIds');
     const refreshCreateTimeField = (values) => {

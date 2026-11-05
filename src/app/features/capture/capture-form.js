@@ -1,6 +1,6 @@
 const NEW_LEAD_DRAFT_FIELDS = Object.freeze([
   'fullName', 'savwinCode', 'score', 'phone', 'customerRg', 'customerCpf', 'birthDate', 'sex', 'preferredName',
-  'postalCode', 'street', 'streetNumber', 'neighborhood', 'city', 'state', 'addressReference', 'interestId', 'appointmentServiceId',
+  'postalCode', 'street', 'streetNumber', 'neighborhood', 'city', 'state', 'addressReference', 'interestId', 'productPaymentMethods', 'appointmentServiceId',
   'ametropiaIds', 'pathologyIds', 'diabetesLevel', 'eyeSurgeryStatus', 'eyeSurgeryType', 'eyeSurgeryDetails',
   'careRouteOverride', 'examPaymentType', 'examPaymentMethods', 'creditFatherName', 'creditMotherName', 'creditAuxiliaryPhone',
   'needsTransport', 'companionCount', 'notes'
@@ -12,7 +12,8 @@ export function leadFormValues(form) {
     ...Object.fromEntries(formData),
     ametropiaIds: formData.getAll('ametropiaIds'),
     pathologyIds: formData.getAll('pathologyIds'),
-    examPaymentMethods: formData.getAll('examPaymentMethods')
+    examPaymentMethods: formData.getAll('examPaymentMethods'),
+    productPaymentMethods: formData.getAll('productPaymentMethods')
   };
 }
 

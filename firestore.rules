@@ -209,6 +209,9 @@ service cloud.firestore {
           && data.examPaymentMethods.hasOnly(['cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'])))
         && (!('examPaymentMethods' in data) || !('examPaymentType' in data)
           || data.examPaymentType == 'paid' || data.examPaymentMethods.size() == 0)
+        && (!('productPaymentMethods' in data) || (data.productPaymentMethods is list
+          && data.productPaymentMethods.size() <= 6
+          && data.productPaymentMethods.hasOnly(['cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'])))
         && data.source == 'street'
         && data.schemaVersion == 1;
     }
@@ -513,6 +516,12 @@ service cloud.firestore {
         && (!('addressReference' in request.resource.data)
           || (request.resource.data.addressReference is string
             && request.resource.data.addressReference.size() <= 160))
+        && (!('productPaymentMethods' in request.resource.data)
+          || (request.resource.data.productPaymentMethods is list
+            && request.resource.data.productPaymentMethods.size() <= 6
+            && request.resource.data.productPaymentMethods.hasOnly([
+              'cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'
+            ])))
         && (!('ametropiaIds' in request.resource.data)
           || (request.resource.data.ametropiaIds is list
             && request.resource.data.ametropiaIds.size() <= 4

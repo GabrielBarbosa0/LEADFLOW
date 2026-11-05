@@ -16,6 +16,7 @@ describe('createLeadsCsv', () => {
       phoneSearch: '81999991234',
       customerRg: '12.345.678-X',
       interestLabel: 'Armação',
+      productPaymentMethods: ['pix', 'credit-card'],
       ametropiaLabels: ['Miopia', 'Astigmatismo'],
       pathologyLabels: ['Glaucoma', 'Pressao alta'],
       postalCode: '50000123',
@@ -43,6 +44,8 @@ describe('createLeadsCsv', () => {
     expect(csv).toContain('"ID do lead";"Nome do cliente"');
     expect(csv).toContain('"lead-001";"Cliente Exemplo";"CLI-1234";"850";"Cliente";"(81) 99999-1234"');
     expect(csv).toContain('"Cod. SavWin";"Score"');
+    expect(csv).toContain('"Forma de pagamento do produto"');
+    expect(csv).toContain('Pix + Cartão de crédito');
     expect(csv).toContain('"Data de nascimento";"Idade atual"');
     expect(csv).toContain('"Telefone";"RG"');
     expect(csv).toContain('"12.345.678-X"');

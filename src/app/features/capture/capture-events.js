@@ -2,6 +2,7 @@ import { formatBrazilianPhone } from '../../../utils/phone.js';
 import { bindBirthDateInput, bindCpfInput, bindExclusiveOptions, bindPostalCodeInput, bindScoreInput } from '../../shared/form-helpers.js';
 import { restoreNewLeadDraft } from './capture-form.js';
 import { bindEyeTriage } from './capture-triage.js';
+import { bindProductPaymentFields } from './product-payment.js';
 import { bindTransportFields } from './capture-transport.js';
 
 export function initializeCaptureForm(form, options) {
@@ -16,6 +17,7 @@ export function initializeCaptureForm(form, options) {
   bindPostalCodeInput(form);
   bindScoreInput(form);
   bindBirthDateInput(form);
+  bindProductPaymentFields(form);
   phoneInput.addEventListener('input', () => {
     phoneInput.value = formatBrazilianPhone(phoneInput.value);
   });

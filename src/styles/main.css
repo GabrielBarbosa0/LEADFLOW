@@ -1285,6 +1285,12 @@ svg {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(130px, 0.65fr);
 }
 
+.document-fields,
+.demographic-fields,
+.preferred-postal-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .contact-fields {
   grid-template-columns: minmax(0, 1fr) minmax(180px, 0.55fr);
 }
@@ -6567,6 +6573,24 @@ svg {
 
   .identity-fields {
     grid-template-columns: 1fr;
+  }
+
+  .document-fields {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+
+  .demographic-fields {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+  }
+
+  .preferred-postal-fields {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  }
+
+  .document-fields .field:first-child,
+  .demographic-fields .field:first-child,
+  .preferred-postal-fields .field:first-child {
+    grid-column: auto;
   }
 
   .exam-billing-fields {

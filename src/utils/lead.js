@@ -11,6 +11,8 @@ export const INTERESTS = [
   { id: 'other', label: 'Outro' }
 ];
 
+export const PRODUCT_INTEREST_IDS = Object.freeze(['complete-glasses', 'frames', 'lenses', 'other']);
+
 export const AMETROPIAS = [
   { id: 'myopia', label: 'Miopia' },
   { id: 'hyperopia', label: 'Hipermetropia' },
@@ -28,8 +30,7 @@ export const PATHOLOGIES = [
   { id: 'keratoconus', label: 'Ceratocone' },
   { id: 'retinopathy', label: 'Retinopatia' },
   { id: 'other', label: 'Outra' },
-  { id: 'none', label: 'Não possui' },
-  { id: 'unknown', label: 'Não sabe informar' }
+  { id: 'none', label: 'Não possui' }
 ];
 
 export const SEX_OPTIONS = [
@@ -315,7 +316,18 @@ export function validateLeadInput(input, options = {}) {
   if (pricing.examPaymentType === 'paid' && invalidPaymentMethod) {
     errors.examPaymentMethods = 'Selecione somente formas de pagamento válidas.';
   }
-  const usesStoreCredit = examPaymentMethods.includes('bank-slip');
+  const requestedProductPaymentMethods = Array.isArray(input.productPaymentMethods)
+    ? input.productPaymentMethods.map(String)
+    : [input.productPaymentMethods].filter(Boolean).map(String);
+  const productInterest = PRODUCT_INTEREST_IDS.includes(String(input.interestId || ''));
+  const invalidProductPaymentMethod = requestedProductPaymentMethods.some((method) => !validPaymentMethodIds.has(method));
+  const productPaymentMethods = productInterest
+    ? [...new Set(requestedProductPaymentMethods.filter((method) => validPaymentMethodIds.has(method)))]
+    : [];
+  if (productInterest && invalidProductPaymentMethod) {
+    errors.productPaymentMethods = 'Selecione somente formas de pagamento válidas.';
+  }
+  const usesStoreCredit = examPaymentMethods.includes('bank-slip') || productPaymentMethods.includes('bank-slip');
   const creditFatherName = usesStoreCredit ? String(input.creditFatherName || '').trim() : '';
   const creditMotherName = usesStoreCredit ? String(input.creditMotherName || '').trim() : '';
   const creditAuxiliaryPhoneValue = usesStoreCredit ? String(input.creditAuxiliaryPhone || '').trim() : '';
@@ -394,6 +406,7 @@ export function validateLeadInput(input, options = {}) {
     triage,
     pricing,
     examPaymentMethods,
+    productPaymentMethods,
     credit: {
       fatherName: creditFatherName,
       motherName: creditMotherName,
@@ -452,6 +465,7 @@ export function createQuickLeadDocument(input, profile, installationId, now = ne
       addressReference: '',
       interestId: 'eye-exam',
       interestLabel: 'Exame de vista',
+      productPaymentMethods: [],
       ametropiaIds: ['unknown'],
       pathologyIds: ['unknown'],
       diabetesLevel: null,
@@ -528,6 +542,7 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
       addressReference: input.addressReference?.trim() || '',
       interestId: interest.id,
       interestLabel: interest.id ? interest.label : '',
+      productPaymentMethods: validation.productPaymentMethods,
       ...ametropiaData(input),
       ...pathologyData(input),
       diabetesLevel: validation.diabetes.diabetesLevel,
@@ -604,6 +619,7 @@ export function createLeadUpdate(input) {
       addressReference: input.addressReference?.trim() || '',
       interestId: interest.id,
       interestLabel: interest.id ? interest.label : '',
+      productPaymentMethods: validation.productPaymentMethods,
       ...ametropiaData(input),
       ...pathologyData(input),
       diabetesLevel: validation.diabetes.diabetesLevel,

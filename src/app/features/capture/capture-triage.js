@@ -64,7 +64,11 @@ export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
   const selectedPaymentMethods = Array.isArray(values.examPaymentMethods)
     ? values.examPaymentMethods
     : [values.examPaymentMethod].filter(Boolean);
-  const showCreditFields = pricing.examPaymentType === 'paid' && selectedPaymentMethods.includes('bank-slip');
+  const selectedProductPaymentMethods = Array.isArray(values.productPaymentMethods)
+    ? values.productPaymentMethods
+    : [];
+  const showCreditFields = (pricing.examPaymentType === 'paid' && selectedPaymentMethods.includes('bank-slip'))
+    || selectedProductPaymentMethods.includes('bank-slip');
   const paymentMethodOptions = EXAM_PAYMENT_METHODS.map((method) => `<label class="ametropia-option checkbox-label">
     <input type="checkbox" name="examPaymentMethods" value="${method.id}" ${selectedPaymentMethods.includes(method.id) ? 'checked' : ''} ${pricing.examPaymentType === 'courtesy' ? 'disabled' : ''} />
     <span>${method.label}</span>
@@ -198,7 +202,9 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
       input.disabled = isCourtesy;
       if (isCourtesy) input.checked = false;
     });
-    const usesStoreCredit = !isCourtesy && paymentMethodInputs.some((input) => input.value === 'bank-slip' && input.checked);
+    const usesStoreCredit = (!isCourtesy && paymentMethodInputs.some((input) => input.value === 'bank-slip' && input.checked))
+      || [...form.querySelectorAll('[name="productPaymentMethods"]')]
+        .some((input) => !input.disabled && input.value === 'bank-slip' && input.checked);
     creditDetailsFields.hidden = !usesStoreCredit;
     creditInputs.forEach((input) => {
       input.disabled = !usesStoreCredit;
@@ -221,6 +227,8 @@ export function bindEyeTriage(form, settings, onChange = () => {}) {
   });
   form.elements.examPaymentType?.addEventListener('change', refresh);
   form.querySelectorAll('[name="examPaymentMethods"]').forEach((input) => input.addEventListener('change', refresh));
+  form.elements.interestId?.addEventListener('change', refresh);
+  form.querySelectorAll('[name="productPaymentMethods"]').forEach((input) => input.addEventListener('change', refresh));
   form.querySelectorAll('[name="pathologyIds"]').forEach((input) => input.addEventListener('change', refresh));
   refresh();
 }
