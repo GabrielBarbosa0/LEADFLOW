@@ -21,6 +21,9 @@ export function resetSessionState(state, {
     truncated: false,
     page: 1,
     pageSize: 20,
+    archiveOpen: false,
+    archiveSelection: [],
+    archiveSaving: false,
     filters: createDefaultManagementFilters()
   };
   state.savwin = { loading: false, error: '', result: null };

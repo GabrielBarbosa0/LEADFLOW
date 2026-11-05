@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { createLeadDocument } from '../../src/utils/lead.js';
 
 const projectId = 'demo-fascinlead-leads';
@@ -840,6 +840,76 @@ describe('appointment calendar queries', () => {
       appointmentAttendanceUpdatedAt: Timestamp.now(),
       appointmentAttendanceUpdatedByUid: 'manager-uid',
       updatedAtServer: Timestamp.now()
+    }));
+  });
+
+  it('lets an authorized manager archive a lead and preserve its history', async () => {
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'lead-test'), {
+      archived: true,
+      archivedAtServer: serverTimestamp(),
+      archivedByUid: 'manager-uid',
+      archivedByName: 'Gestor Teste',
+      updatedAtServer: serverTimestamp()
+    });
+    batch.set(doc(db, 'leads', 'lead-test', 'history', 'lead-archived'), {
+      leadId: 'lead-test',
+      storeId: 'loja-06',
+      eventType: 'lead_archived',
+      funnelStage: 'captured',
+      reasonCode: '',
+      description: 'Lead arquivado na gestão.',
+      actorUid: 'manager-uid',
+      actorName: 'Gestor Teste',
+      actorRole: 'manager',
+      occurredAtClient: '2026-11-05T12:00:00.000Z',
+      occurredAtServer: serverTimestamp(),
+      schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  it('rejects archiving without deletion permission', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {
+        roleProfileId: 'custom-no-delete',
+        permissions: ['management.view']
+      });
+    });
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertFails(updateDoc(doc(db, 'leads', 'lead-test'), {
+      archived: true,
+      archivedAtServer: serverTimestamp(),
+      archivedByUid: 'manager-uid',
+      archivedByName: 'Gestor Teste',
+      updatedAtServer: serverTimestamp()
+    }));
+  });
+
+  it('rejects archiving a lead outside the manager stores', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'leads', 'lead-test'), { storeId: 'loja-05' });
+    });
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertFails(updateDoc(doc(db, 'leads', 'lead-test'), {
+      archived: true,
+      archivedAtServer: serverTimestamp(),
+      archivedByUid: 'manager-uid',
+      archivedByName: 'Gestor Teste',
+      updatedAtServer: serverTimestamp()
+    }));
+  });
+
+  it('rejects changing lead data while archiving', async () => {
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertFails(updateDoc(doc(db, 'leads', 'lead-test'), {
+      archived: true,
+      archivedAtServer: serverTimestamp(),
+      archivedByUid: 'manager-uid',
+      archivedByName: 'Gestor Teste',
+      fullName: 'Nome alterado indevidamente',
+      updatedAtServer: serverTimestamp()
     }));
   });
 

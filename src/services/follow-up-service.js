@@ -2,6 +2,7 @@ import { collection, doc, limit, onSnapshot, query, serverTimestamp, setDoc, whe
 import { db, isFirebaseConfigured } from '../firebase/client.js';
 import { followUpAppointmentKey } from '../utils/follow-up.js';
 import { canAccessStore, profileStoreIds } from '../utils/permissions.js';
+import { activeLeads } from '../utils/lead-archive.js';
 
 export const FOLLOW_UP_QUERY_LIMIT = 500;
 
@@ -25,7 +26,7 @@ export function subscribeToTeamFollowUps(profile, onData, onError) {
   const followUpsQuery = query(collection(db, 'leads'), ...constraints);
   return onSnapshot(followUpsQuery, (snapshot) => {
     onData({
-      records: snapshot.docs.slice(0, FOLLOW_UP_QUERY_LIMIT).map((item) => ({ id: item.id, ...item.data() })),
+      records: activeLeads(snapshot.docs.slice(0, FOLLOW_UP_QUERY_LIMIT).map((item) => ({ id: item.id, ...item.data() }))),
       truncated: snapshot.size > FOLLOW_UP_QUERY_LIMIT
     });
   }, onError);

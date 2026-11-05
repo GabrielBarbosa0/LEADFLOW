@@ -389,6 +389,7 @@ exports.searchLeadAppointments = onCall({ region: 'southamerica-east1' }, async 
 
   const matches = new Map();
   snapshots.forEach((snapshot) => snapshot.docs.forEach((lead) => {
+    if (lead.data().archived === true) return;
     if (caller.role !== 'admin' && !caller.storeIds.includes(lead.data().storeId)) return;
     matches.set(lead.id, lead);
   }));
@@ -432,5 +433,5 @@ exports.checkCpfActiveAppointment = onCall({ region: 'southamerica-east1' }, asy
     .where('customerCpf', '==', customerCpf)
     .limit(20)
     .get();
-  return { hasAppointment: snapshot.docs.some((lead) => hasActiveAppointment(lead.data())) };
+  return { hasAppointment: snapshot.docs.some((lead) => lead.data().archived !== true && hasActiveAppointment(lead.data())) };
 });

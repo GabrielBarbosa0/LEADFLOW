@@ -43,6 +43,9 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       truncated: false,
       page: 1,
       pageSize: 20,
+      archiveOpen: false,
+      archiveSelection: [],
+      archiveSaving: false,
       filters: createDefaultManagementFilters()
     },
     dashboardUpcoming: {

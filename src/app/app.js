@@ -2,7 +2,7 @@ import { isFirebaseConfigured } from '../firebase/client.js';
 import { saveLead, subscribeToLeads, updateLead } from '../services/lead-service.js';
 import { markFollowUpContactStarted, subscribeToTeamFollowUps } from '../services/follow-up-service.js';
 import { loadRoleProfiles } from '../services/role-profile-service.js';
-import { deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
+import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
 import { APPOINTMENTS_QUERY_LIMIT, loadUpcomingAppointments, markAppointmentReminderDone, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
 import { createQuickWalkIn, createWalkIn, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
@@ -20,6 +20,7 @@ import { hasPermission as profileHasPermission } from '../utils/role-profile.js'
 import { formatBrazilianCpf } from '../utils/savwin-matching.js';
 import { defaultAppointmentService, servicesForStore } from '../utils/service-catalog.js';
 import { validateWalkInDraft, WALK_IN_CLOSED_STATUSES } from '../utils/walk-in.js';
+import { isCaptarImportedLead } from '../utils/lead-origin.js';
 import { currentRoute, currentRouteParam, navigate } from './router.js';
 import {
   escapeHtml,
@@ -388,7 +389,8 @@ function managementView() {
       followUps: hasAccess('followups.team'),
       kanban: canManage(),
       dashboard: hasAccess('dashboard.view'),
-      export: hasAccess('leads.export')
+      export: hasAccess('leads.export'),
+      archive: hasAccess('leads.delete')
     },
     queryLimit: MANAGEMENT_QUERY_LIMIT
   });
@@ -583,6 +585,18 @@ function handleConnectivityChange() {
 
 function bindPageEvents() {
   initializeKanbanScrollbar();
+  const managementArchiveDialog = document.querySelector('#management-archive-dialog');
+  if (managementArchiveDialog) {
+    requestAnimationFrame(() => {
+      if (!managementArchiveDialog.open) managementArchiveDialog.showModal();
+    });
+    managementArchiveDialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      state.management.archiveOpen = false;
+      state.management.archiveSelection = [];
+      render();
+    });
+  }
   const rankingDialog = document.querySelector('#dashboard-ranking-dialog');
   if (rankingDialog) {
     requestAnimationFrame(() => {
@@ -1152,6 +1166,45 @@ function bindPageEvents() {
     });
   }
 
+  const managementArchiveForm = document.querySelector('#management-archive-form');
+  if (managementArchiveForm) {
+    managementArchiveForm.querySelector('[data-archive-select-all]')?.addEventListener('change', (event) => {
+      state.management.archiveSelection = event.target.checked
+        ? filteredManagementRecords().map((lead) => lead.id)
+        : [];
+      render();
+    });
+    managementArchiveForm.querySelectorAll('input[name="leadId"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        state.management.archiveSelection = [...managementArchiveForm.querySelectorAll('input[name="leadId"]:checked')]
+          .map((item) => item.value);
+        render();
+      });
+    });
+    managementArchiveForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const selectedIds = new Set(state.management.archiveSelection);
+      const leads = filteredManagementRecords().filter((lead) => selectedIds.has(lead.id));
+      if (!leads.length || state.management.archiveSaving) return;
+      state.management.archiveSaving = true;
+      render();
+      try {
+        const archived = await archiveManagementLeads(state.profile, leads);
+        state.management.records = state.management.records.filter((lead) => !selectedIds.has(lead.id));
+        state.management.archiveOpen = false;
+        state.management.archiveSelection = [];
+        showToast(`${archived} lead(s) arquivado(s).`, 'success', 'archive');
+      } catch (error) {
+        showToast(error?.code === 'permission-denied'
+          ? 'Seu perfil não tem permissão para arquivar estes leads.'
+          : 'Não foi possível arquivar os leads. Tente novamente.', 'danger', 'circle-alert');
+      } finally {
+        state.management.archiveSaving = false;
+        render();
+      }
+    });
+  }
+
   const dashboardPeriodForm = document.querySelector('#dashboard-period');
   dashboardPeriodForm?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -1398,6 +1451,13 @@ async function loadManagementData() {
   render();
   ensureLeadDetailSchedule();
   ensureLeadDetailHistory();
+}
+
+function openManagementArchive() {
+  const records = filteredManagementRecords();
+  state.management.archiveSelection = records.filter(isCaptarImportedLead).map((lead) => lead.id);
+  state.management.archiveOpen = true;
+  render();
 }
 
 async function loadDashboardUpcomingData() {
@@ -1653,6 +1713,19 @@ async function handleAction(action) {
     if (!records.length) return;
     downloadLeadsCsv(records, state.management.filters.startDate, state.management.filters.endDate);
     showToast(`${records.length} registro(s) exportado(s).`);
+  }
+
+  if (action === 'open-management-archive') {
+    if (!hasAccess('leads.delete') || state.management.filters.archiveStatus === 'archived') return;
+    openManagementArchive();
+    return;
+  }
+
+  if (action === 'close-management-archive') {
+    state.management.archiveOpen = false;
+    state.management.archiveSelection = [];
+    render();
+    return;
   }
 
   if (action === 'reload-reports') {

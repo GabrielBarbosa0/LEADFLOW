@@ -1,15 +1,26 @@
 import { formatBrazilianPhone } from '../../../utils/phone.js';
+import { isCaptarImportedLead } from '../../../utils/lead-origin.js';
 import { escapeHtml, formatCapturedAt, storeLabel } from '../../shared/formatters.js';
 
-export function reportToolbar({ permissions, adminView, recordCount }) {
+export function reportToolbar({ permissions, adminView, recordCount, archivedView }) {
   return `<section class="management-heading management-dashboard-heading management-toolbar"><div class="management-heading-actions">
     ${permissions.appointments ? '<button class="button button-secondary" type="button" data-route="appointments"><i data-lucide="calendar-days"></i><span>Agenda de exames</span></button>' : ''}
     ${permissions.followUps ? '<button class="button button-secondary" type="button" data-route="follow-ups"><i data-lucide="bell-ring"></i><span>Retornos da equipe</span></button>' : ''}
     ${adminView ? '<button class="button button-secondary" type="button" data-route="settings"><i data-lucide="settings"></i><span>Configurações</span></button><button class="button button-secondary" type="button" data-route="access"><i data-lucide="user-round-cog"></i><span>Gerenciar acessos</span></button>' : ''}
     ${permissions.dashboard ? '<button class="button button-secondary" type="button" data-route="dashboard"><i data-lucide="bar-chart-3"></i><span>Dashboard</span></button>' : ''}
     ${permissions.kanban ? '<button class="button button-secondary" type="button" data-route="kanban"><i data-lucide="layout-dashboard"></i><span>Kanban</span></button>' : ''}
+    ${permissions.archive ? `<button class="button button-secondary" type="button" data-action="open-management-archive" ${recordCount === 0 || archivedView ? 'disabled' : ''}><i data-lucide="archive"></i><span>Arquivar leads</span></button>` : ''}
     ${permissions.export ? `<button class="button button-secondary" type="button" data-action="export-management" ${recordCount === 0 ? 'disabled' : ''}><i data-lucide="file-down"></i><span>Exportar CSV</span></button>` : ''}
   </div></section>`;
+}
+
+export function managementArchiveDialog({ open, records, selectedIds, saving }) {
+  if (!open) return '';
+  const selected = new Set(selectedIds);
+  const importedCount = records.filter(isCaptarImportedLead).length;
+  const allSelected = records.length > 0 && records.every((lead) => selected.has(lead.id));
+  const rows = records.map((lead) => `<label class="archive-lead-option"><input type="checkbox" name="leadId" value="${escapeHtml(lead.id)}" ${selected.has(lead.id) ? 'checked' : ''} ${saving ? 'disabled' : ''} /><span><strong>${escapeHtml(lead.fullName || 'Sem nome')}</strong><small>${escapeHtml(storeLabel(lead.storeId))} · ${escapeHtml(lead.capturedByName || 'Captador não informado')}${isCaptarImportedLead(lead) ? ' · Importado do Captar' : ''}</small></span></label>`).join('');
+  return `<dialog id="management-archive-dialog" class="role-details-dialog management-archive-dialog" aria-labelledby="management-archive-title"><form id="management-archive-form" method="dialog"><header><div><span class="eyebrow">GESTÃO</span><h2 id="management-archive-title"><i data-lucide="archive"></i>Arquivar leads</h2><p>Arquivados não entram em estatísticas, alertas ou retornos. O histórico é preservado.</p></div><button class="icon-button" type="button" data-action="close-management-archive" aria-label="Fechar"><i data-lucide="circle-x"></i></button></header><div class="management-archive-body"><div class="archive-selection-summary"><label class="archive-select-all"><input type="checkbox" data-archive-select-all ${allSelected ? 'checked' : ''} ${saving ? 'disabled' : ''} /><span>Selecionar todos os resultados (${records.length})</span></label><p class="archive-helper">${importedCount ? `${importedCount} lead(s) importado(s) do Captar foram pré-selecionados.` : 'Selecione os leads que deseja retirar do ciclo operacional.'}</p></div><div class="archive-lead-list">${rows}</div></div><footer><strong>${selected.size} selecionado(s)</strong><div class="role-details-actions"><button class="button button-secondary" type="button" data-action="close-management-archive" ${saving ? 'disabled' : ''}>Cancelar</button><button class="button button-primary" type="submit" ${saving || !selected.size ? 'disabled' : ''}><i data-lucide="archive"></i><span>${saving ? 'Arquivando...' : 'Arquivar selecionados'}</span></button></div></footer></form></dialog>`;
 }
 
 export function paginateReportRecords(records, page, pageSize) {

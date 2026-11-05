@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const firestoreMocks = vi.hoisted(() => ({
   batch: {
     delete: vi.fn(),
+    set: vi.fn(),
     commit: vi.fn()
   },
   doc: vi.fn((database, collectionName, documentId) => ({ collectionName, documentId })),
@@ -27,7 +28,7 @@ vi.mock('../../src/firebase/client.js', () => ({
   isFirebaseConfigured: true
 }));
 
-import { deleteManagementLead } from '../../src/services/management-service.js';
+import { archiveManagementLeads, deleteManagementLead } from '../../src/services/management-service.js';
 
 describe('deleteManagementLead', () => {
   beforeEach(() => {
@@ -85,5 +86,38 @@ describe('deleteManagementLead', () => {
       documentId: 'lead-1'
     });
     expect(firestoreMocks.batch.commit).toHaveBeenCalledOnce();
+  });
+});
+
+describe('archiveManagementLeads', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    firestoreMocks.writeBatch.mockReturnValue(firestoreMocks.batch);
+    firestoreMocks.batch.commit.mockResolvedValue();
+  });
+
+  it('archives the lead and its history in the same batch', async () => {
+    const count = await archiveManagementLeads({
+      uid: 'manager-1',
+      displayName: 'Gestor Teste',
+      role: 'manager',
+      storeId: 'loja-06',
+      permissions: ['leads.delete']
+    }, [{ id: 'lead-1', storeId: 'loja-06', funnelStage: 'scheduled' }]);
+
+    expect(count).toBe(1);
+    expect(firestoreMocks.batch.set).toHaveBeenCalledTimes(2);
+    expect(firestoreMocks.batch.set).toHaveBeenCalledWith(
+      { collectionName: 'leads', documentId: 'lead-1' },
+      expect.objectContaining({ archived: true, archivedByUid: 'manager-1', archivedByName: 'Gestor Teste' }),
+      { merge: true }
+    );
+    expect(firestoreMocks.batch.commit).toHaveBeenCalledOnce();
+  });
+
+  it('rejects archiving before creating a batch when permission is missing', async () => {
+    await expect(archiveManagementLeads({ role: 'manager', permissions: [] }, [{ id: 'lead-1' }]))
+      .rejects.toMatchObject({ code: 'permission-denied' });
+    expect(firestoreMocks.writeBatch).not.toHaveBeenCalled();
   });
 });

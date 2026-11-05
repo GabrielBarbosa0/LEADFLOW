@@ -1,4 +1,5 @@
 import { calculateAge, INTERESTS, PATHOLOGIES } from './lead.js';
+import { activeLeads } from './lead-archive.js';
 
 function percentage(count, total) {
   return total ? Math.round((count / total) * 100) : 0;
@@ -52,6 +53,8 @@ export function upcomingDateRange(today = new Date()) {
 }
 
 export function dashboardSummary(records = [], upcomingRecords = records, today = new Date()) {
+  records = activeLeads(records);
+  upcomingRecords = activeLeads(upcomingRecords);
   const total = records.length;
   const scheduled = records.filter((lead) => lead.appointmentDate && lead.appointmentTime).length;
   const ophthalmologist = records.filter((lead) => lead.careRoute === 'ophthalmologist').length;

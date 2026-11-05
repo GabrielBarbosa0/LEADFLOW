@@ -1,5 +1,6 @@
 import { DEFAULT_STORE_SCHEDULE } from './schedule.js';
 import { canAccessStore } from './permissions.js';
+import { isArchivedLead } from './lead-archive.js';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -28,6 +29,7 @@ export function followUpStage(lead, settings = DEFAULT_STORE_SCHEDULE, now = new
 export function appointmentFollowUps(leads, profile, settings = DEFAULT_STORE_SCHEDULE, now = new Date()) {
   if (!['captor', 'manager', 'admin'].includes(profile?.role)) return [];
   return leads
+    .filter((lead) => !isArchivedLead(lead))
     .filter((lead) => profile.role === 'captor'
       ? lead.capturedByUid === profile.uid
       : profile.role === 'manager' ? canAccessStore(profile, lead.storeId) : true)

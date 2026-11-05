@@ -118,3 +118,20 @@ test('renders the compact registration fields and product payment options', asyn
   await productPayment.getByLabel('Pix').check();
   await expect(productPayment.getByLabel('Pix')).toBeChecked();
 });
+
+test('opens the lead archive workflow only from active management records', async ({ page }) => {
+  await signIn(page, 'admin@leadflow.test');
+
+  await page.getByRole('button', { name: /Painel de gestão/ }).click();
+  await expect(page).toHaveURL(/#\/management$/);
+  await expect(page.getByLabel('Registros')).toHaveValue('active');
+  const archiveButton = page.getByRole('button', { name: 'Arquivar leads' });
+  await expect(archiveButton).toBeEnabled();
+  await archiveButton.click();
+
+  const dialog = page.locator('#management-archive-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Arquivar leads' })).toBeVisible();
+  await expect(dialog.getByText('O histórico é preservado.')).toBeVisible();
+  await expect(dialog.locator('input[name="leadId"]').first()).toBeVisible();
+});

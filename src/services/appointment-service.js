@@ -3,6 +3,7 @@ import { db, isFirebaseConfigured } from '../firebase/client.js';
 import { monthRange } from '../utils/calendar.js';
 import { followUpAppointmentKey } from '../utils/follow-up.js';
 import { canAccessStore, profileStoreIds } from '../utils/permissions.js';
+import { activeLeads } from '../utils/lead-archive.js';
 
 export const APPOINTMENTS_QUERY_LIMIT = 500;
 export const APPOINTMENT_ATTENDANCE = new Set(['pending', 'attended', 'missed']);
@@ -37,8 +38,8 @@ function appointmentsQuery(profile, monthKey, selectedStoreId = '') {
 
 export function subscribeToAppointments(profile, monthKey, selectedStoreId, onData, onError) {
   return onSnapshot(appointmentsQuery(profile, monthKey, selectedStoreId), (snapshot) => {
-    const records = snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT)
-      .map((item) => ({ id: item.id, ...item.data() }))
+    const records = activeLeads(snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT)
+      .map((item) => ({ id: item.id, ...item.data() })))
       .sort((a, b) => String(a.appointmentDate || '').localeCompare(String(b.appointmentDate || ''))
         || String(a.appointmentTime || '').localeCompare(String(b.appointmentTime || ''))
         || String(a.fullName || '').localeCompare(String(b.fullName || ''), 'pt-BR'));
@@ -71,7 +72,7 @@ export async function loadUpcomingAppointments(profile, startDate, endDate, sele
 
   const snapshot = await getDocs(query(collection(db, 'leads'), ...constraints));
   return {
-    records: snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT).map((item) => ({ id: item.id, ...item.data() })),
+    records: activeLeads(snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT).map((item) => ({ id: item.id, ...item.data() }))),
     truncated: snapshot.size > APPOINTMENTS_QUERY_LIMIT
   };
 }
@@ -124,8 +125,8 @@ export function subscribeToAppointmentConfirmations(profile, startDate, endDate,
     onData({ records, truncated });
   };
   const unsubscribeLeads = onSnapshot(query(collection(db, 'leads'), ...leadConstraints), (snapshot) => {
-    leads = snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT)
-      .map((item) => ({ id: item.id, ...item.data() }))
+    leads = activeLeads(snapshot.docs.slice(0, APPOINTMENTS_QUERY_LIMIT)
+      .map((item) => ({ id: item.id, ...item.data() })))
     truncated = truncated || snapshot.size > APPOINTMENTS_QUERY_LIMIT;
     emit();
   }, onError);

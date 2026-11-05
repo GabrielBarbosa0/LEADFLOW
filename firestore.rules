@@ -228,7 +228,7 @@ service cloud.firestore {
         && data.storeId is string
         && data.eventType in [
           'lead_created', 'appointment_scheduled', 'appointment_rescheduled',
-          'appointment_cancelled', 'appointment_reminder_sent',
+          'appointment_cancelled', 'appointment_reminder_sent', 'lead_archived',
           'appointment_attended', 'appointment_missed', 'follow_up_contacted',
           'birthday_benefit_planned', 'birthday_congratulated',
           'walk_in_created', 'walk_in_called', 'walk_in_in_service',
@@ -632,6 +632,27 @@ service cloud.firestore {
         );
     }
 
+    function isManagerLeadArchive() {
+      return isManager()
+        && managerHasStore(resource.data.storeId)
+        && hasPermission('leads.delete')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'archived', 'archivedAtServer', 'archivedByUid', 'archivedByName', 'updatedAtServer'
+        ])
+        && (!('archived' in resource.data) || resource.data.archived == false)
+        && request.resource.data.archived == true
+        && request.resource.data.archivedAtServer == request.time
+        && request.resource.data.archivedByUid == request.auth.uid
+        && request.resource.data.archivedByName == userProfile().displayName
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function leadArchiveFieldsAreUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'archived', 'archivedAtServer', 'archivedByUid', 'archivedByName'
+      ]);
+    }
+
     function isCaptorFollowUpContactUpdate() {
       return activeUser()
         && resource.data.capturedByUid == request.auth.uid
@@ -772,11 +793,14 @@ service cloud.firestore {
         activeUser()
         && leadIdentityIsUnchanged()
         && (
-          isManagerAttendanceUpdate()
-          || isOwnerLeadUpdate()
-          || isOwnerAppointmentUpdate()
-          || isCaptorFollowUpContactUpdate()
-          || isManagerLeadUpdate()
+          (leadArchiveFieldsAreUnchanged() && (
+            isManagerAttendanceUpdate()
+            || isOwnerLeadUpdate()
+            || isOwnerAppointmentUpdate()
+            || isCaptorFollowUpContactUpdate()
+            || isManagerLeadUpdate()
+          ))
+          || isManagerLeadArchive()
         )
       );
 

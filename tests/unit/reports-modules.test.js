@@ -8,7 +8,7 @@ const records = [
   { id: 'lead-2', fullName: 'João Santos', phoneSearch: '81988887777', capturedByUid: 'captor-1', capturedByName: 'Ana Souza', storeId: 'loja-02', interestLabel: 'Exame de vista', capturedAtClient: '2026-10-21T11:00:00-03:00' }
 ];
 
-const filters = { startDate: '2026-10-01', endDate: '2026-10-29', storeId: '', capturedByUid: '', search: '' };
+const filters = { startDate: '2026-10-01', endDate: '2026-10-29', storeId: '', capturedByUid: '', search: '', archiveStatus: 'active' };
 
 describe('reports feature modules', () => {
   it('builds a unique alphabetical captor list', () => {
@@ -40,15 +40,17 @@ describe('reports feature modules', () => {
 
   it('composes the operational report without dashboard panels', () => {
     const markup = reportsView({
-      management: { filters, loaded: true, loading: false, error: '', records, truncated: false, page: 1, pageSize: 20 },
+      management: { filters, loaded: true, loading: false, error: '', records, truncated: false, page: 1, pageSize: 20, archiveOpen: true, archiveSelection: ['lead-1'], archiveSaving: false },
       allowedStores: [{ id: 'loja-02', displayLabel: 'Loja 02' }, { id: 'loja-06', displayLabel: 'Loja 06' }],
       adminView: true,
       canOpenLead: true,
-      permissions: { appointments: true, followUps: true, dashboard: true, export: true },
+      permissions: { appointments: true, followUps: true, dashboard: true, export: true, archive: true },
       queryLimit: 500
     });
     expect(markup).toContain('Leads encontrados');
     expect(markup).toContain('Exportar CSV');
+    expect(markup).toContain('Arquivar leads');
+    expect(markup).toContain('Arquivar selecionados');
     expect(markup).not.toContain('dashboard-panel');
   });
 });
