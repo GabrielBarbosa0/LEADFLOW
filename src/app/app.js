@@ -492,7 +492,6 @@ function appointmentsView() {
     backRoute: canManage() ? 'management' : 'home',
     canCreate,
     canMarkAttendance: hasAccess('appointments.attendance'),
-    canCancel: hasAccess('appointments.cancel'),
     adminView: hasAccess('leads.edit_all'),
     createDialog: canCreate ? appointmentCreateDialog(allowedAppointmentStores()) : '',
     queryLimit: APPOINTMENTS_QUERY_LIMIT

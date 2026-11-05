@@ -41,7 +41,7 @@ describe('appointments feature modules', () => {
     expect(markup).toContain('Maria Silva');
     expect(markup).toContain('data-attendance-status="attended"');
     expect(markup).toContain('data-create-appointment');
-    expect(markup).toContain('data-cancel-appointment="lead-1"');
+    expect(markup).not.toContain('data-cancel-appointment="lead-1"');
     expect(markup).toContain('appointment-create-dialog');
   });
 

@@ -62,7 +62,9 @@ test('validates appointment cancellation reasons for a receptionist', async ({ p
   await signIn(page, 'balcao@leadflow.test');
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
-  await page.getByRole('button', { name: /Cancelar agendamento de/ }).first().click();
+  await expect(page.getByRole('button', { name: /Cancelar agendamento de/ })).toHaveCount(0);
+  await page.getByRole('button', { name: /Abrir cadastro de/ }).first().click();
+  await page.getByRole('button', { name: 'Cancelar agendamento' }).click();
 
   const dialog = page.locator('#appointment-cancellation-dialog');
   await expect(dialog).toBeVisible();
