@@ -581,21 +581,26 @@ service cloud.firestore {
         && ownerAttendanceChangeIsValid();
     }
 
+    function isManagerAttendanceUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'appointmentAttendance', 'appointmentAttendanceUpdatedAt',
+          'appointmentAttendanceUpdatedByUid', 'updatedAtServer'
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'appointmentAttendance'
+        ])
+        && isManager()
+        && managerHasStore(resource.data.storeId)
+        && hasPermission('appointments.attendance')
+        && resource.data.appointmentDate is string
+        && resource.data.appointmentDate != '';
+    }
+
     function isManagerLeadUpdate() {
       return isManager()
         && managerHasStore(resource.data.storeId)
         && (
           (hasPermission('leads.edit_all') && validLeadUpdateShape())
-          || (
-            hasPermission('appointments.attendance')
-            &&
-            resource.data.appointmentDate is string
-            && resource.data.appointmentDate != ''
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'appointmentAttendance', 'appointmentAttendanceUpdatedAt',
-              'appointmentAttendanceUpdatedByUid', 'updatedAtServer'
-            ])
-          )
           || (
             hasPermission('followups.team')
             &&
@@ -758,7 +763,8 @@ service cloud.firestore {
         activeUser()
         && leadIdentityIsUnchanged()
         && (
-          isOwnerLeadUpdate()
+          isManagerAttendanceUpdate()
+          || isOwnerLeadUpdate()
           || isOwnerAppointmentUpdate()
           || isCaptorFollowUpContactUpdate()
           || isManagerLeadUpdate()

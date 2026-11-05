@@ -835,6 +835,48 @@ describe('appointment calendar queries', () => {
     }));
   });
 
+  it('lets a receptionist register attendance on a complete lead without exhausting rule evaluation', async () => {
+    const result = createLeadDocument({
+      fullName: 'Cliente completo da agenda',
+      phone: '(81) 99999-5678',
+      birthDate: '1985-04-12',
+      sex: 'female',
+      eyeSurgeryStatus: 'no',
+      careRouteOverride: 'automatic',
+      appointmentDate: '2026-10-26',
+      appointmentTime: '08:00',
+      appointmentServiceId: 'eye-exam',
+      appointmentServiceName: 'Exame de vista',
+      appointmentDurationMinutes: 20,
+      schedulingMode: 'controlled',
+      notes: ''
+    }, {
+      uid: 'captor-uid',
+      displayName: 'Captador Teste',
+      storeId: 'loja-06'
+    }, 'installation-test', new Date('2026-10-25T12:00:00.000Z'));
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'leads', 'complete-appointment'), {
+        ...result.data,
+        createdAtServer: Timestamp.now(),
+        updatedAtServer: Timestamp.now()
+      });
+      await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {
+        roleProfileId: 'system-receptionist',
+        permissions: ['appointments.view', 'appointments.attendance', 'leads.edit_all']
+      });
+    });
+
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'complete-appointment'), {
+      appointmentAttendance: 'attended',
+      appointmentAttendanceUpdatedAt: Timestamp.now(),
+      appointmentAttendanceUpdatedByUid: 'manager-uid',
+      updatedAtServer: Timestamp.now()
+    }));
+  });
+
   it('does not let a manager edit customer data while registering attendance', async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {
