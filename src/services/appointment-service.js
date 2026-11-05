@@ -1,12 +1,82 @@
-import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase/client.js';
 import { monthRange } from '../utils/calendar.js';
 import { followUpAppointmentKey } from '../utils/follow-up.js';
 import { canAccessStore, profileStoreIds } from '../utils/permissions.js';
 import { activeLeads } from '../utils/lead-archive.js';
+import { appointmentBlockTimes, appointmentSlotId } from '../utils/schedule.js';
+import { appointmentCancellationReasonLabel, validateAppointmentCancellation } from '../utils/appointment-cancellation.js';
+import { hasPermission } from '../utils/role-profile.js';
+import { addLeadHistoryEvents } from './lead-history-service.js';
 
 export const APPOINTMENTS_QUERY_LIMIT = 500;
-export const APPOINTMENT_ATTENDANCE = new Set(['pending', 'attended', 'missed']);
+export const APPOINTMENT_ATTENDANCE = new Set(['pending', 'attended', 'missed', 'cancelled']);
+
+function reservationSlotIds(lead) {
+  if (Array.isArray(lead.appointmentSlotIds) && lead.appointmentSlotIds.length) {
+    return [...new Set(lead.appointmentSlotIds.map(String).filter(Boolean))];
+  }
+  return appointmentBlockTimes(lead.appointmentTime, lead.appointmentDurationMinutes || 20)
+    .map((blockTime) => appointmentSlotId(lead.storeId, lead.appointmentDate, blockTime));
+}
+
+export function canCancelAppointment(profile, lead) {
+  if (!profile?.uid || !lead?.id || !hasPermission(profile, 'appointments.cancel')) return false;
+  if (!lead.appointmentDate || !lead.appointmentTime
+    || lead.appointmentStatus === 'cancelled'
+    || ['attended', 'missed', 'cancelled'].includes(String(lead.appointmentAttendance || 'pending'))) return false;
+  if (profile.role === 'admin') return true;
+  if (profile.role === 'captor') return lead.capturedByUid === profile.uid && canAccessStore(profile, lead.storeId);
+  return canAccessStore(profile, lead.storeId);
+}
+
+export async function cancelAppointment(profile, lead, values) {
+  const validation = validateAppointmentCancellation(values);
+  if (!validation.isValid) return validation;
+  if (!isFirebaseConfigured || !canCancelAppointment(profile, lead)) {
+    const error = new Error('Cancelamento de agendamento não autorizado.');
+    error.code = 'permission-denied';
+    throw error;
+  }
+
+  const now = new Date();
+  const { reason, details } = validation.data;
+  const description = `Agendamento de ${lead.appointmentDate} às ${lead.appointmentTime} cancelado. Motivo: ${appointmentCancellationReasonLabel(reason)}.${details ? ` Observação: ${details}` : ''}`;
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'leads', lead.id), {
+    appointmentStatus: 'cancelled',
+    appointmentAttendance: 'cancelled',
+    appointmentCancelledAtServer: serverTimestamp(),
+    appointmentCancelledByUid: profile.uid,
+    appointmentCancelledByName: String(profile.displayName || 'Usuário'),
+    appointmentCancellationReason: reason,
+    appointmentCancellationDetails: details,
+    funnelStage: 'cancelled',
+    funnelReasonCode: reason,
+    funnelUpdatedAtClient: now.toISOString(),
+    funnelUpdatedAtServer: serverTimestamp(),
+    updatedAtServer: serverTimestamp()
+  }, { merge: true });
+
+  if (lead.appointmentSchedulingMode !== 'free') {
+    reservationSlotIds(lead).forEach((slotId) => batch.delete(doc(db, 'appointmentSlots', slotId)));
+  }
+  addLeadHistoryEvents(batch, lead.id, [{
+    leadId: lead.id,
+    storeId: lead.storeId,
+    eventType: 'appointment_cancelled',
+    funnelStage: 'cancelled',
+    reasonCode: reason,
+    description,
+    actorUid: profile.uid,
+    actorName: String(profile.displayName || 'Usuário'),
+    actorRole: String(profile.role || 'captor'),
+    occurredAtClient: now.toISOString(),
+    schemaVersion: 1
+  }]);
+  await batch.commit();
+  return validation;
+}
 
 function appointmentReminderId(lead) {
   return `${lead.id}__${lead.appointmentDate}__${lead.appointmentTime.replace(':', '-')}`;

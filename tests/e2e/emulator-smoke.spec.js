@@ -58,6 +58,25 @@ test('loads the real appointment flow for a receptionist profile', async ({ page
   await expect(page.getByRole('button', { name: 'Não compareceu' }).first()).toBeVisible();
 });
 
+test('validates appointment cancellation reasons for a receptionist', async ({ page }) => {
+  await signIn(page, 'balcao@leadflow.test');
+
+  await page.getByRole('button', { name: /Agenda de exames/ }).click();
+  await page.getByRole('button', { name: /Cancelar agendamento de/ }).first().click();
+
+  const dialog = page.locator('#appointment-cancellation-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Cancelar agendamento?' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Confirmar cancelamento' }).click();
+  await expect(dialog.getByText('Selecione o motivo do cancelamento.')).toBeVisible();
+
+  await dialog.getByLabel('Motivo do cancelamento').selectOption('other');
+  await dialog.getByRole('button', { name: 'Confirmar cancelamento' }).click();
+  await expect(dialog.getByText('Descreva o motivo do cancelamento.')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Voltar' }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
 test('shows the simplified lead history without a duplicated funnel heading', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
 

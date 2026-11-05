@@ -99,6 +99,95 @@ function authenticatedDb(uid, email) {
 }
 
 describe('lead correction rules', () => {
+  it('lets the owner cancel an appointment while releasing its slot and preserving history', async () => {
+    const slotId = 'slot-consultorio-surubim-2026-10-15-09:30';
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'appointmentSlots', slotId), {
+        storeId: 'loja-06', appointmentDate: '2026-10-15', appointmentTime: '09:30', blockTime: '09:30',
+        durationMinutes: 20, leadId: 'lead-test', capturedByUid: 'captor-uid', createdAt: Timestamp.now()
+      });
+    });
+    const db = authenticatedDb('captor-uid', 'captor@example.com');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'lead-test'), {
+      appointmentStatus: 'cancelled', appointmentAttendance: 'cancelled',
+      appointmentCancelledAtServer: serverTimestamp(), appointmentCancelledByUid: 'captor-uid',
+      appointmentCancelledByName: 'Captador Teste', appointmentCancellationReason: 'client_withdrew',
+      appointmentCancellationDetails: '', funnelStage: 'cancelled', funnelReasonCode: 'client_withdrew',
+      funnelUpdatedAtClient: '2026-11-05T12:00:00.000Z', funnelUpdatedAtServer: serverTimestamp(),
+      updatedAtServer: serverTimestamp()
+    });
+    batch.delete(doc(db, 'appointmentSlots', slotId));
+    batch.set(doc(db, 'leads', 'lead-test', 'history', 'appointment-cancelled'), {
+      leadId: 'lead-test', storeId: 'loja-06', eventType: 'appointment_cancelled', funnelStage: 'cancelled',
+      reasonCode: 'client_withdrew', description: 'Cliente desistiu.', actorUid: 'captor-uid',
+      actorName: 'Captador Teste', actorRole: 'captor', occurredAtClient: '2026-11-05T12:00:00.000Z',
+      occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const slot = await getDoc(doc(context.firestore(), 'appointmentSlots', slotId));
+      if (slot.exists()) throw new Error('O horário permaneceu bloqueado após o cancelamento.');
+    });
+  });
+
+  it('lets a receptionist cancel another captor appointment in an allowed store with stale permissions', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {
+        roleProfileId: 'system-receptionist',
+        permissions: ['management.view', 'appointments.view', 'appointments.attendance']
+      });
+    });
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'lead-test'), {
+      appointmentStatus: 'cancelled', appointmentAttendance: 'cancelled',
+      appointmentCancelledAtServer: serverTimestamp(), appointmentCancelledByUid: 'manager-uid',
+      appointmentCancelledByName: 'Gestor Teste', appointmentCancellationReason: 'schedule_conflict',
+      appointmentCancellationDetails: '', funnelStage: 'cancelled', funnelReasonCode: 'schedule_conflict',
+      funnelUpdatedAtClient: '2026-11-05T12:00:00.000Z', funnelUpdatedAtServer: serverTimestamp(),
+      updatedAtServer: serverTimestamp()
+    });
+    batch.set(doc(db, 'leads', 'lead-test', 'history', 'receptionist-cancelled'), {
+      leadId: 'lead-test', storeId: 'loja-06', eventType: 'appointment_cancelled', funnelStage: 'cancelled',
+      reasonCode: 'schedule_conflict', description: 'Horário incompatível.', actorUid: 'manager-uid',
+      actorName: 'Gestor Teste', actorRole: 'manager', occurredAtClient: '2026-11-05T12:00:00.000Z',
+      occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  it('rejects invalid cancellation data, unauthorized profiles and isolated slot deletion', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'appointmentSlots', 'slot-test'), {
+        storeId: 'loja-06', appointmentDate: '2026-10-15', appointmentTime: '09:30', blockTime: '09:30',
+        durationMinutes: 20, leadId: 'lead-test', capturedByUid: 'captor-uid', createdAt: Timestamp.now()
+      });
+      await updateDoc(doc(db, 'users', 'manager-uid'), {
+        roleProfileId: 'custom-agenda-only', permissions: ['appointments.view']
+      });
+    });
+    const captorDb = authenticatedDb('captor-uid', 'captor@example.com');
+    await assertFails(updateDoc(doc(captorDb, 'leads', 'lead-test'), {
+      appointmentStatus: 'cancelled', appointmentAttendance: 'cancelled',
+      appointmentCancelledAtServer: serverTimestamp(), appointmentCancelledByUid: 'captor-uid',
+      appointmentCancelledByName: 'Captador Teste', appointmentCancellationReason: 'other',
+      appointmentCancellationDetails: '', funnelStage: 'cancelled', funnelReasonCode: 'other',
+      funnelUpdatedAtClient: '2026-11-05T12:00:00.000Z', funnelUpdatedAtServer: serverTimestamp(),
+      updatedAtServer: serverTimestamp()
+    }));
+    await assertFails(deleteDoc(doc(captorDb, 'appointmentSlots', 'slot-test')));
+    const managerDb = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertFails(updateDoc(doc(managerDb, 'leads', 'lead-test'), {
+      appointmentStatus: 'cancelled', appointmentAttendance: 'cancelled',
+      appointmentCancelledAtServer: serverTimestamp(), appointmentCancelledByUid: 'manager-uid',
+      appointmentCancelledByName: 'Gestor Teste', appointmentCancellationReason: 'client_withdrew',
+      appointmentCancellationDetails: '', funnelStage: 'cancelled', funnelReasonCode: 'client_withdrew',
+      funnelUpdatedAtClient: '2026-11-05T12:00:00.000Z', funnelUpdatedAtServer: serverTimestamp(),
+      updatedAtServer: serverTimestamp()
+    }));
+  });
   it('lets an agenda-only manager read appointments without management access', async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {

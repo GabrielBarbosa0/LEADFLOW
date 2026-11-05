@@ -9,6 +9,8 @@ export function initializeAppointmentCreateEvents(form, handlers) {
 }
 
 export async function handleAppointmentClick(event, handlers) {
+  const cancellationButton = event.target.closest('[data-cancel-appointment]');
+  if (cancellationButton && !cancellationButton.disabled) { handlers.requestCancellation(cancellationButton.dataset.cancelAppointment); return true; }
   const leadButton = event.target.closest('[data-appointment-lead-id]');
   if (leadButton) { handlers.openLead(leadButton.dataset.appointmentLeadId); return true; }
   const attendanceButton = event.target.closest('[data-attendance-lead]');

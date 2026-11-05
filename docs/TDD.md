@@ -616,9 +616,15 @@ O identificador sera um UUID gerado no dispositivo. Isso torna a gravacao idempo
   "appointmentSchedulingMode": "controlled",
   "appointmentDate": "2026-10-02",
   "appointmentTime": "14:30",
+  "appointmentStatus": "scheduled",
   "appointmentAttendance": "pending",
   "appointmentAttendanceUpdatedAt": "Timestamp opcional",
   "appointmentAttendanceUpdatedByUid": "firebase-uid-gestor opcional",
+  "appointmentCancelledAtServer": "Timestamp opcional",
+  "appointmentCancelledByUid": "firebase-uid opcional",
+  "appointmentCancelledByName": "Nome do responsavel opcional",
+  "appointmentCancellationReason": "codigo opcional",
+  "appointmentCancellationDetails": "texto opcional",
   "notes": "Prefere contato pela manha",
   "ametropiaIds": ["myopia"],
   "pathologyIds": ["cataract"],
@@ -648,6 +654,10 @@ O identificador sera um UUID gerado no dispositivo. Isso torna a gravacao idempo
 `source` descreve o canal operacional da captacao, enquanto `recordOrigin` descreve a procedencia do documento. Os registros trazidos da agenda legada recebem `recordOrigin: "captar_import"`; esse campo e imutavel para usuarios comuns, aparece como marcador visual e sera a referencia para o arquivamento do ciclo anterior. A rotina `mark:captar-leads` reconhece registros legados pelo ID iniciado em `captar-` ou por `installationId: "captar-migration"`, executa em simulacao por padrao e somente grava quando recebe `--apply`.
 
 Para leads captados offline, `appointmentDate` e `appointmentTime` permanecem vazios. A escolha posterior de horario ocorre somente online e cria os documentos correspondentes em `appointmentSlots`.
+
+#### Cancelamento de agendamento
+
+O cancelamento preserva o lead, a data e o horario originalmente registrados. A acao online exige motivo padronizado; para `Outro motivo`, a observacao se torna obrigatoria. A operacao grava `appointmentStatus` e `appointmentAttendance` como `cancelled`, registra ator, data e justificativa, remove os blocos de horario da agenda controlada e acrescenta o evento imutavel `appointment_cancelled` em `leads/{leadId}/history` no mesmo lote atomico. Agendamentos cancelados deixam de aparecer como ativos em agenda, confirmacoes, retornos e alertas de CPF; data e horario ficam bloqueados no cadastro ate que o fluxo formal de reagendamento seja entregue.
 
 No envio do cadastro, a interface aguarda a confirmacao da gravacao online antes de limpar o formulario ou informar sucesso. Falhas de validacao preservam os valores digitados, exibem uma mensagem visivel e levam o foco ao primeiro campo invalido. Falhas do Firestore tambem preservam o formulario e mostram uma mensagem de permissao ou conexao; nenhum erro de gravacao deve terminar silenciosamente.
 
@@ -686,7 +696,7 @@ Essa colecao evita aumentar a complexidade das regras de atualizacao de `leads`.
 
 Perfis do sistema usam IDs estaveis (`system-captor`, `system-mei`, `system-manager`, `system-telemarketing`, `system-receptionist` e `system-admin`). Perfis personalizados sao documentos do Firestore. O administrador sempre recebe todas as permissoes conhecidas independentemente do vetor salvo.
 
-O esquema de permissoes atual e a versao 3. `walkins.manage` permite criar, consultar e transicionar a fila de encaixes das unidades permitidas e esta presente somente em Gestor, Atendente Balcao e Administrador. Telemarketing preserva os recursos proprios de captacao e retorno e recebe `leads.view_stores`, `appointments.view` e `followups.team` para consulta multi-loja, mas nao recebe `management.view`, `dashboard.view`, `leads.delete` nem `walkins.manage`. A interface aplica o mesmo conjunto de permissoes e as regras do Firestore limitam a colecao `appointmentWalkIns` aos perfis autorizados.
+O esquema de permissoes atual e a versao 4. `walkins.manage` permite criar, consultar e transicionar a fila de encaixes das unidades permitidas e esta presente somente em Gestor, Atendente Balcao e Administrador. A permissao `appointments.cancel` permite a Colaborador e MEI cancelar somente os proprios agendamentos abertos; Gestor e Atendente Balcao cancelam nas unidades permitidas; Administrador possui acesso total. Telemarketing preserva os recursos proprios de captacao e retorno e recebe `leads.view_stores`, `appointments.view` e `followups.team` para consulta multi-loja, mas nao recebe `management.view`, `dashboard.view`, `leads.delete`, `walkins.manage` nem `appointments.cancel`. A interface aplica o mesmo conjunto de permissoes e as regras do Firestore limitam a colecao `appointmentWalkIns` aos perfis autorizados.
 
 A acao de excluir um lead e controlada pela permissao `leads.delete`, disponivel para perfis personalizados de dados proprios e de unidades, e nao pela rota usada para abrir o cadastro. Em qualquer tela de detalhes autorizada, o botao permanece logo abaixo de `Salvar alteracoes` e usa o mesmo modal de confirmacao. O alcance do perfil continua limitando quais leads podem ser visualizados e excluidos. A exclusao definitiva remove no mesmo lote o lead e os blocos reservados em `appointmentSlots`; cadastros ainda exclusivamente locais sao removidos da fila offline.
 

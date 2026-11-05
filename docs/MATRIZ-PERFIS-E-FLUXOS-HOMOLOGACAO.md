@@ -44,6 +44,7 @@ ativo em `users/{uid}` e unidades coerentes com `storeId` e `storeIds`.
 - `leads.create`;
 - `leads.view_own`;
 - `leads.edit_own`;
+- `appointments.cancel` para agendamentos proprios;
 - `followups.own`;
 - `goals.view_own`.
 
@@ -55,7 +56,7 @@ configuracoes de dias e cotas, nao ampliacao de acesso aos dados.
 - todas as permissoes pessoais do Colaborador;
 - `leads.edit_all` e `leads.delete`;
 - `management.view` e `leads.clinical_update`;
-- `appointments.view` e `appointments.attendance`;
+- `appointments.view`, `appointments.attendance` e `appointments.cancel`;
 - `walkins.manage` e `followups.team`;
 - `goals.manage`, `dashboard.view` e `leads.export`.
 
@@ -76,7 +77,7 @@ encaixes.
 - `leads.create`, `leads.view_own` e `leads.edit_own`;
 - `followups.own` e `followups.team`;
 - `management.view`, `leads.edit_all` e `leads.clinical_update`;
-- `appointments.view` e `appointments.attendance`;
+- `appointments.view`, `appointments.attendance` e `appointments.cancel`;
 - `walkins.manage`.
 
 O perfil nao recebe por padrao exclusao de leads, dashboard, exportacao, metas
@@ -109,7 +110,7 @@ Legenda:
 | Agendar lead existente de outra pessoa | NAO | NAO | UNIDADE | NAO | UNIDADE | SIM |
 | Reagendar lead proprio | PROPRIO | PROPRIO | PROPRIO | PROPRIO | PROPRIO | SIM |
 | Reagendar lead de outra pessoa | NAO | NAO | UNIDADE | NAO | UNIDADE | SIM |
-| Cancelar agendamento regular com motivo | NAO | NAO | NAO | NAO | NAO | NAO |
+| Cancelar agendamento regular com motivo | PROPRIO | PROPRIO | UNIDADE | NAO | UNIDADE | SIM |
 | Visualizar agenda da unidade | NAO | NAO | UNIDADE | UNIDADE | UNIDADE | SIM |
 | Marcar comparecimento ou falta | NAO | NAO | UNIDADE | NAO | UNIDADE | SIM |
 | Voltar comparecimento para pendente | NAO | NAO | PARCIAL | NAO | PARCIAL | PARCIAL |
@@ -147,10 +148,12 @@ envia `pending`. Por isso o retorno ao estado neutro e classificado como
 
 ### Cancelamento de agendamento
 
-O baseline nao possui um fluxo completo de cancelamento de agendamento regular
-com motivo, historico e liberacao atomica dos blocos. Existem vocabularios de
-historico para cancelamento e encerramento da fila de encaixes, mas isso nao
-equivale ao cancelamento completo da agenda.
+O cancelamento regular exige motivo e permite observacao opcional; em `Outro
+motivo`, a observacao e obrigatoria. O lead, a data e o horario originais sao
+preservados para auditoria, um evento `appointment_cancelled` e gravado no
+historico e os blocos de `appointmentSlots` sao liberados no mesmo lote atomico.
+Colaborador e MEI cancelam apenas agendamentos proprios; Gestor e Balcao atuam
+nas unidades permitidas; Telemarketing permanece sem essa permissao.
 
 ### Encaixes
 
@@ -186,7 +189,7 @@ Ja existem testes para:
 4. Cobrir operacoes iguais em unidade permitida e unidade proibida.
 5. Automatizar o ciclo offline: salvar, recarregar, reconectar, sincronizar e
    garantir ausencia de duplicacao.
-6. Definir e implementar separadamente o contrato de cancelamento regular.
+6. Cobrir o cancelamento regular no roteiro E2E de homologacao para cada perfil.
 7. Definir e implementar separadamente o comparecimento reversivel na interface.
 8. Criar seeds idempotentes com usuarios e dados ficticios para essas personas.
 

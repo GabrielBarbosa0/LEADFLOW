@@ -11,8 +11,8 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(3);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 3)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(4);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 4)).toBe(true);
   });
 
   it('keeps the administrator profile with every permission', () => {
@@ -47,6 +47,7 @@ describe('role profiles', () => {
       'leads.clinical_update',
       'appointments.view',
       'appointments.attendance',
+      'appointments.cancel',
       'walkins.manage',
       'followups.team'
     ]);
@@ -72,6 +73,7 @@ describe('role profiles', () => {
     expect(telemarketing.permissions).not.toContain('dashboard.view');
     expect(telemarketing.permissions).not.toContain('leads.delete');
     expect(telemarketing.permissions).not.toContain('walkins.manage');
+    expect(telemarketing.permissions).not.toContain('appointments.cancel');
     expect(hasPermission({
       role: 'manager',
       roleProfileId: 'system-telemarketing',

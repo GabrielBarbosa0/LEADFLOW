@@ -14,6 +14,7 @@ export const PERMISSION_GROUPS = [
       { id: 'leads.create', label: 'Cadastrar leads', scopes: ['own', 'stores'] },
       { id: 'leads.view_own', label: 'Visualizar os próprios cadastros', scopes: ['own', 'stores'] },
       { id: 'leads.edit_own', label: 'Editar os próprios cadastros', scopes: ['own', 'stores'] },
+      { id: 'appointments.cancel', label: 'Cancelar agendamentos permitidos', scopes: ['own', 'stores'] },
       { id: 'followups.own', label: 'Realizar os próprios retornos', scopes: ['own', 'stores'] },
       { id: 'goals.view_own', label: 'Visualizar as próprias metas', scopes: ['own', 'stores'] }
     ]
@@ -81,6 +82,10 @@ export function hasPermission(profile, permission) {
   if (permission === 'walkins.manage') {
     return ['system-manager', 'system-receptionist'].includes(profile?.roleProfileId)
       || (profile?.role === 'manager' && !profile?.roleProfileId);
+  }
+  if (permission === 'appointments.cancel') {
+    return ['system-captor', 'system-mei', 'system-manager', 'system-receptionist'].includes(profile?.roleProfileId)
+      || (['captor', 'manager'].includes(profile?.role) && !profile?.roleProfileId);
   }
   return permissionsForProfile(profile).includes(permission);
 }

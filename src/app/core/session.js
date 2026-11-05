@@ -34,6 +34,8 @@ export function resetSessionState(state, {
     records: [],
     truncated: false,
     updatingId: '',
+    cancellationLeadId: '',
+    cancellationSaving: false,
     backfillingMonth: '',
     backfilledMonths: [],
     month: monthKeyFromDate(),

@@ -33,7 +33,7 @@ function sourceName(source) {
 }
 
 function attendanceLabel(attendance) {
-  return { attended: 'Sim', missed: 'Não', pending: 'Aguardando' }[attendance] || 'Aguardando';
+  return { attended: 'Sim', missed: 'Não', pending: 'Aguardando', cancelled: 'Cancelado' }[attendance] || 'Aguardando';
 }
 
 function sexLabel(sex) {

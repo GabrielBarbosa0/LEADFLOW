@@ -2,13 +2,14 @@ import { formatBrazilianPhone } from '../../../utils/phone.js';
 import { buildWhatsAppAppointmentReminderUrl, isAppointmentReminderDone } from '../../../utils/follow-up.js';
 import { escapeHtml, formatAppointmentDate, formatDateTimeValue, storeDisplayLabel, toLocalDateInput } from '../../shared/formatters.js';
 import { confirmationEndDate, MAX_CONFIRMATION_DAYS, normalizeConfirmationDays } from './confirmation-period.js';
+import { hasActiveAppointment } from '../../../utils/appointment-cancellation.js';
 
 export function confirmationsView({ allowed, source, confirmations, profileName, queryLimit, now = new Date() }) {
   if (!allowed) return '<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>Seu perfil não possui acesso às confirmações da agenda.</span></div>';
   const today = toLocalDateInput(now);
   const periodDays = normalizeConfirmationDays(confirmations.days);
   const endDate = confirmationEndDate(today, periodDays);
-  const allRecords = source.filter((lead) => lead.appointmentDate >= today && lead.appointmentDate <= endDate && lead.appointmentTime && !['attended', 'missed'].includes(lead.appointmentAttendance)).sort((a, b) => String(a.appointmentDate).localeCompare(String(b.appointmentDate)) || String(a.appointmentTime).localeCompare(String(b.appointmentTime)) || String(a.fullName || '').localeCompare(String(b.fullName || ''), 'pt-BR'));
+  const allRecords = source.filter((lead) => hasActiveAppointment(lead, today) && lead.appointmentDate <= endDate).sort((a, b) => String(a.appointmentDate).localeCompare(String(b.appointmentDate)) || String(a.appointmentTime).localeCompare(String(b.appointmentTime)) || String(a.fullName || '').localeCompare(String(b.fullName || ''), 'pt-BR'));
   const activeFilter = confirmations.filter || 'pending';
   const doneCount = allRecords.filter(isAppointmentReminderDone).length;
   const records = activeFilter === 'done' ? allRecords.filter(isAppointmentReminderDone) : activeFilter === 'all' ? allRecords : allRecords.filter((lead) => !isAppointmentReminderDone(lead));

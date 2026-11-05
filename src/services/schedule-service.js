@@ -133,7 +133,8 @@ export async function backfillAppointmentSlots(profile, records, monthKey) {
   const settingsByStore = new Map(storesSnapshot.docs.map((item) => [item.id, normalizeStoreSchedule(item.data())]));
   const missing = [];
   records.forEach((lead) => {
-    if (!lead.appointmentDate || !lead.appointmentTime || lead.appointmentSchedulingMode === 'free') return;
+    if (!lead.appointmentDate || !lead.appointmentTime || lead.appointmentSchedulingMode === 'free'
+      || lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled') return;
     const duration = Number(lead.appointmentDurationMinutes)
       || settingsByStore.get(lead.storeId)?.appointmentDurationMinutes
       || DEFAULT_STORE_SCHEDULE.appointmentDurationMinutes;

@@ -34,13 +34,14 @@ describe('appointments feature modules', () => {
     const markup = appointmentsView({
       allowed: true,
       appointments: { loading: false, error: '', truncated: false, month: '2026-10', storeId: 'loja-06', selectedDate: '2026-10-30', updatingId: '' },
-      records: [lead], allowedStores: [store], backRoute: 'management', canCreate: true, canMarkAttendance: true,
+      records: [lead], allowedStores: [store], backRoute: 'management', canCreate: true, canMarkAttendance: true, canCancel: true,
       adminView: true, createDialog: '<dialog id="appointment-create-dialog"></dialog>', queryLimit: 500,
       now: new Date('2026-10-29T12:00:00-03:00')
     });
     expect(markup).toContain('Maria Silva');
     expect(markup).toContain('data-attendance-status="attended"');
     expect(markup).toContain('data-create-appointment');
+    expect(markup).toContain('data-cancel-appointment="lead-1"');
     expect(markup).toContain('appointment-create-dialog');
   });
 
@@ -61,12 +62,24 @@ describe('appointments feature modules', () => {
   it('delegates appointment and confirmation actions', async () => {
     const selectDate = vi.fn();
     await expect(handleAppointmentClick(clickEvent('[data-appointment-date]', { appointmentDate: '2026-10-30' }), {
-      openLead: vi.fn(), markAttendance: vi.fn(), selectDate, create: vi.fn(), shiftMonth: vi.fn()
+      requestCancellation: vi.fn(), openLead: vi.fn(), markAttendance: vi.fn(), selectDate, create: vi.fn(), shiftMonth: vi.fn()
     })).resolves.toBe(true);
     expect(selectDate).toHaveBeenCalledWith('2026-10-30');
     const selectFilter = vi.fn();
     await handleConfirmationClick(clickEvent('[data-confirmation-filter]', { confirmationFilter: 'done' }), { selectFilter, markDone: vi.fn(), undo: vi.fn() });
     expect(selectFilter).toHaveBeenCalledWith('done');
+  });
+
+  it('removes cancelled appointments from the active agenda', () => {
+    const markup = appointmentsView({
+      allowed: true,
+      appointments: { loading: false, error: '', truncated: false, month: '2026-10', storeId: 'loja-06', selectedDate: '2026-10-30', updatingId: '' },
+      records: [{ ...lead, appointmentStatus: 'cancelled', appointmentAttendance: 'cancelled' }],
+      allowedStores: [store], backRoute: 'management', canCreate: true, canMarkAttendance: true, canCancel: true,
+      adminView: true, queryLimit: 500, now: new Date('2026-10-29T12:00:00-03:00')
+    });
+    expect(markup).not.toContain('Maria Silva');
+    expect(markup).toContain('Nenhum exame neste dia');
   });
 
   it('returns attendance to pending when the active option is selected again', () => {

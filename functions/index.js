@@ -417,7 +417,8 @@ function hasActiveAppointment(lead = {}, today = saoPauloDateKey()) {
     lead.appointmentDate
     && lead.appointmentTime
     && String(lead.appointmentDate) >= today
-    && !['attended', 'missed'].includes(attendance)
+    && lead.appointmentStatus !== 'cancelled'
+    && !['attended', 'missed', 'cancelled'].includes(attendance)
   );
 }
 
