@@ -145,6 +145,39 @@ nao for exatamente `leadflowtest-d32c2`.
 O Compose nao possui comando de deploy. A publicacao de regras e o build de
 producao continuam sendo etapas separadas e deliberadas.
 
+### Modo local descartavel
+
+O perfil `disposable` executa uma segunda instancia totalmente local. Ele nao
+usa o projeto `fascinlead` nem o projeto remoto `leadflowtest-d32c2`:
+
+| Servico | Endereco | Finalidade |
+| --- | --- | --- |
+| LeadFlow local | `http://localhost:5176/` | Aplicacao conectada somente aos emuladores |
+| Emulator UI | `http://localhost:4000/` | Inspecao dos usuarios e documentos ficticios |
+| Functions Emulator | `127.0.0.1:5001` | Funcoes locais usadas por acessos e pesquisas |
+| Firestore Emulator | `127.0.0.1:8180` | Banco descartavel com as regras do repositorio |
+| Authentication Emulator | `127.0.0.1:9099` | Contas locais descartaveis |
+
+Para iniciar:
+
+```powershell
+docker compose --profile disposable up --build app-emulator
+```
+
+No Windows, o mesmo comando pode ser iniciado por
+`INICIAR-LEADFLOW-EMULADORES.bat`. Para remover todos os usuarios e documentos
+locais e recriar o ambiente vazio, use `RESETAR-LEADFLOW-EMULADORES.bat`.
+
+O script `verify:emulator` exige o projeto ficticio `demo-leadflow`, exige os
+emuladores ativados e bloqueia IDs conhecidos dos projetos remotos. O arquivo
+`.firebaserc` nao e utilizado pelo comando dos emuladores, que sempre informa o
+projeto local explicitamente.
+
+O modo descartavel e complementar ao ambiente remoto de homologacao. O proximo
+passo e criar um seed repetivel com perfis, lojas, leads e agendamentos
+ficticios; depois, os testes de fluxo completo poderao usar sempre essa mesma
+base conhecida.
+
 ## Controle das regras do Firestore
 
 O arquivo `firestore.rules` do repositorio deve ser a unica fonte oficial das regras.

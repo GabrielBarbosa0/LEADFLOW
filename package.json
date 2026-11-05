@@ -7,6 +7,7 @@
     "start": "vite --host 127.0.0.1 --open",
     "dev": "vite",
     "dev:staging": "npm run verify:staging && vite --mode staging --host 0.0.0.0 --port 5175 --strictPort",
+    "dev:emulator": "npm run verify:emulator && vite --mode emulator --host 0.0.0.0 --port 5176 --strictPort",
     "build": "vite build",
     "build:staging": "npm run verify:staging && vite build --mode staging",
     "build:pages": "vite build --base=/LEADFLOW/",
@@ -15,6 +16,7 @@
     "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.js\"",
     "verify:firebase": "npm run test:rules && node --check functions/index.js",
     "verify:staging": "node scripts/verify-staging-env.js",
+    "verify:emulator": "node scripts/verify-emulator-env.js",
     "verify:docker": "npm run test && npm run test:rules && npm run build:staging",
     "deploy:firebase": "npm run verify:firebase && firebase deploy --only firestore:rules",
     "deploy:firebase:full": "npm run verify:firebase && firebase deploy --only firestore:rules,functions",
@@ -27,6 +29,7 @@
     "sync:captar-team": "node scripts/sync-captar-team.js",
     "reset:team-passwords": "node scripts/reset-team-default-password.js",
     "emulators": "firebase emulators:start",
+    "emulators:docker": "firebase emulators:start --only auth,firestore,functions --project demo-leadflow --config firebase.emulators.docker.json",
     "deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
