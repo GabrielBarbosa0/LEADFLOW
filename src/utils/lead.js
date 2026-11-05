@@ -38,6 +38,15 @@ export const SEX_OPTIONS = [
   { id: 'male', label: 'Masculino' }
 ];
 
+export function normalizePostalCode(value = '') {
+  return String(value).replace(/\D/g, '').slice(0, 8);
+}
+
+export function formatBrazilianPostalCode(value = '') {
+  const digits = normalizePostalCode(value);
+  return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+}
+
 export const EYE_SURGERY_STATUS_OPTIONS = [
   { id: '', label: 'Selecione' },
   { id: 'yes', label: 'Sim' },
@@ -235,6 +244,10 @@ export function validateLeadInput(input, options = {}) {
   const phone = normalizeBrazilianPhone(input.phone);
   const customerCpf = normalizeCpf(input.customerCpf);
   const customerRg = normalizeRg(input.customerRg);
+  const postalCode = normalizePostalCode(input.postalCode);
+  const savwinCode = String(input.savwinCode || '').trim();
+  const rawScore = String(input.score ?? '').trim();
+  const score = rawScore === '' ? null : Number(rawScore);
   const birthDate = String(input.birthDate || '').trim();
   const sex = String(input.sex || '').trim();
   const needsTransport = booleanValue(input.needsTransport);
@@ -253,6 +266,9 @@ export function validateLeadInput(input, options = {}) {
   if (!phone) errors.phone = 'Informe um telefone com DDD.';
   if (customerCpf && !isValidCpf(customerCpf)) errors.customerCpf = 'Informe um CPF válido.';
   if (customerRg.length > 20) errors.customerRg = 'Use no máximo 20 caracteres.';
+  if (String(input.postalCode || '').trim() && postalCode.length !== 8) errors.postalCode = 'Informe um CEP com 8 dígitos.';
+  if (savwinCode.length > 40) errors.savwinCode = 'Use no máximo 40 caracteres.';
+  if (rawScore !== '' && (!Number.isInteger(score) || score < 0 || score > 1000)) errors.score = 'Informe um score entre 0 e 1000.';
   if (diabetes.hasDiabetes && diabetes.diabetesLevel !== null && (diabetes.diabetesLevel < 20 || diabetes.diabetesLevel > 600)) {
     errors.diabetesLevel = 'Informe um nivel entre 20 e 600 mg/dL.';
   }
@@ -365,6 +381,9 @@ export function validateLeadInput(input, options = {}) {
     phone,
     customerCpf,
     customerRg,
+    postalCode,
+    savwinCode,
+    score,
     birthDate,
     sex,
     needsTransport,
@@ -419,9 +438,12 @@ export function createQuickLeadDocument(input, profile, installationId, now = ne
       phoneSearch: validation.phone.search,
       customerCpf: validation.customerCpf,
       customerRg: '',
+      savwinCode: '',
+      score: null,
       birthDate: '',
       birthMonthDay: '',
       sex: '',
+      postalCode: '',
       street: '',
       streetNumber: '',
       neighborhood: '',
@@ -492,9 +514,12 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
       phoneSearch: validation.phone.search,
       customerCpf: validation.customerCpf,
       customerRg: validation.customerRg,
+      savwinCode: validation.savwinCode,
+      score: validation.score,
       birthDate: validation.birthDate,
       birthMonthDay: birthMonthDay(validation.birthDate),
       sex: validation.sex,
+      postalCode: validation.postalCode,
       street: input.street?.trim() || '',
       streetNumber: normalizeStreetNumber(input.streetNumber),
       neighborhood: input.neighborhood?.trim() || '',
@@ -565,9 +590,12 @@ export function createLeadUpdate(input) {
       phoneSearch: validation.phone.search,
       customerCpf: validation.customerCpf,
       customerRg: validation.customerRg,
+      savwinCode: validation.savwinCode,
+      score: validation.score,
       birthDate: validation.birthDate,
       birthMonthDay: birthMonthDay(validation.birthDate),
       sex: validation.sex,
+      postalCode: validation.postalCode,
       street: input.street?.trim() || '',
       streetNumber: normalizeStreetNumber(input.streetNumber),
       neighborhood: input.neighborhood?.trim() || '',

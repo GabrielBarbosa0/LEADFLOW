@@ -7,6 +7,8 @@ describe('createLeadsCsv', () => {
       id: 'lead-001',
       capturedAtClient: '2026-09-28T12:00:00.000Z',
       fullName: 'Cliente Exemplo',
+      savwinCode: 'CLI-1234',
+      score: 850,
       preferredName: 'Cliente',
       birthDate: '1985-04-12',
       sex: 'female',
@@ -16,6 +18,7 @@ describe('createLeadsCsv', () => {
       interestLabel: 'Armação',
       ametropiaLabels: ['Miopia', 'Astigmatismo'],
       pathologyLabels: ['Glaucoma', 'Pressao alta'],
+      postalCode: '50000123',
       street: 'Rua das Flores',
       streetNumber: 'S/N',
       neighborhood: 'Centro',
@@ -38,7 +41,8 @@ describe('createLeadsCsv', () => {
 
     expect(csv.startsWith('\uFEFF')).toBe(true);
     expect(csv).toContain('"ID do lead";"Nome do cliente"');
-    expect(csv).toContain('"lead-001";"Cliente Exemplo";"Cliente";"(81) 99999-1234"');
+    expect(csv).toContain('"lead-001";"Cliente Exemplo";"CLI-1234";"850";"Cliente";"(81) 99999-1234"');
+    expect(csv).toContain('"Cod. SavWin";"Score"');
     expect(csv).toContain('"Data de nascimento";"Idade atual"');
     expect(csv).toContain('"Telefone";"RG"');
     expect(csv).toContain('"12.345.678-X"');
@@ -56,6 +60,8 @@ describe('createLeadsCsv', () => {
     expect(csv).toContain('"Miopia, Astigmatismo"');
     expect(csv).toContain('"Patologias e condições de saúde"');
     expect(csv).toContain('"Glaucoma, Pressao alta"');
+    expect(csv).toContain('"CEP"');
+    expect(csv).toContain('"50000-123"');
     expect(csv).toContain('"Rua"');
     expect(csv).toContain('"Rua das Flores"');
     expect(csv).toContain('"Número"');

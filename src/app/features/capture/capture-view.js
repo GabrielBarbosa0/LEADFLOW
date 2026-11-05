@@ -49,7 +49,11 @@ export function captureView({
       ${triageConfigFields(scheduleState.settings)}
       <input name="appointmentServiceName" type="hidden" value="${escapeHtml(selectedService.name)}" />
       <input name="appointmentDurationMinutes" type="hidden" value="${selectedService.durationMinutes}" />
-      <div class="field" data-field="fullName"><label for="fullName">Nome <span aria-hidden="true">*</span></label><input id="fullName" name="fullName" autocomplete="name" maxlength="120" placeholder="Nome do cliente" required /><small class="field-error"></small></div>
+      <div class="field-row lead-identification-fields">
+        <div class="field" data-field="fullName"><label for="fullName">Nome <span aria-hidden="true">*</span></label><input id="fullName" name="fullName" autocomplete="name" maxlength="120" placeholder="Nome do cliente" required /><small class="field-error"></small></div>
+        <div class="field" data-field="savwinCode"><label for="savwinCode">Cod. SavWin</label><input id="savwinCode" name="savwinCode" maxlength="40" autocomplete="off" placeholder="Código do cliente" /><small class="field-error"></small></div>
+        <div class="field" data-field="score"><label for="score">Score</label><input id="score" name="score" type="number" inputmode="numeric" min="0" max="1000" step="1" placeholder="0 a 1000" /><small class="field-error"></small></div>
+      </div>
       <div class="field-row contact-fields">
         <div class="field" data-field="phone"><label for="phone">Telefone ou WhatsApp <span aria-hidden="true">*</span></label><input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="(00) 00000-0000" required /><small class="field-error"></small></div>
         <div class="field" data-field="customerRg"><label for="customerRg">RG</label><input id="customerRg" name="customerRg" maxlength="20" autocomplete="off" placeholder="0.000.000" /><small class="field-error"></small></div>
@@ -60,6 +64,7 @@ export function captureView({
         <div class="field" data-field="sex"><label for="sex">Sexo</label><select id="sex" name="sex">${sexOptions()}</select><small class="field-error"></small></div>
       </div>
       <div class="field"><label for="preferredName">Como prefere ser chamado</label><input id="preferredName" name="preferredName" maxlength="60" placeholder="Apelido ou nome preferido" /></div>
+      <div class="field" data-field="postalCode"><label for="postalCode">CEP</label><input id="postalCode" name="postalCode" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" /><small class="field-error"></small></div>
       <div class="field-row address-fields">
         <div class="field address-street" data-field="street"><label for="street">Rua</label><input id="street" name="street" maxlength="120" autocomplete="address-line1" /><small class="field-error"></small></div>
         <div class="field address-number" data-field="streetNumber"><label for="streetNumber">Número</label><input id="streetNumber" name="streetNumber" maxlength="12" autocomplete="address-line2" placeholder="S/N" /><small class="field-error"></small></div>

@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { birthMonthDay, calculateAge, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPricing, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
+import { birthMonthDay, calculateAge, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPricing, formatBrazilianPostalCode, normalizePostalCode, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
 
 const validInput = {
   fullName: 'Cliente Exemplo',
+  savwinCode: 'CLI-1234',
+  score: '850',
   phone: '(81) 99999-1234',
   customerRg: '12.345.678-x',
   customerCpf: '529.982.247-25',
   birthDate: '1985-04-12',
   sex: 'female',
   preferredName: '',
+  postalCode: '50000-123',
   street: 'Rua das Flores',
   streetNumber: 'SN',
   neighborhood: '',
@@ -52,6 +55,14 @@ describe('lead validation', () => {
   it('rejects notes longer than 500 characters', () => {
     const result = validateLeadInput({ ...validInput, notes: 'a'.repeat(501) });
     expect(result.errors.notes).toBeDefined();
+  });
+
+  it('normalizes CEP and validates the common score fields', () => {
+    expect(normalizePostalCode('50000-123')).toBe('50000123');
+    expect(formatBrazilianPostalCode('50000123')).toBe('50000-123');
+    expect(validateLeadInput({ ...validInput, postalCode: '1234' }).errors.postalCode).toBeDefined();
+    expect(validateLeadInput({ ...validInput, score: '1001' }).errors.score).toBeDefined();
+    expect(validateLeadInput({ ...validInput, savwinCode: 'A'.repeat(41) }).errors.savwinCode).toBeDefined();
   });
 
   it('accepts an empty CPF and rejects an invalid one', () => {
@@ -171,12 +182,15 @@ describe('lead validation', () => {
     expect(result.isValid).toBe(true);
     expect(result.data).toMatchObject({
       fullName: 'Cliente Exemplo',
+      savwinCode: 'CLI-1234',
+      score: 850,
       phone: '+5581999991234',
       phoneSearch: '81999991234',
       customerCpf: '52998224725',
       customerRg: '12.345.678-X',
       birthDate: '1985-04-12',
       sex: 'female',
+      postalCode: '50000123',
       street: 'Rua das Flores',
       streetNumber: 'S/N',
       addressReference: 'Em frente à praça',

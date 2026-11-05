@@ -1289,6 +1289,10 @@ svg {
   grid-template-columns: minmax(0, 1fr) minmax(180px, 0.55fr);
 }
 
+.lead-identification-fields {
+  grid-template-columns: minmax(0, 1.5fr) minmax(150px, 0.5fr) minmax(110px, 0.3fr);
+}
+
 .appointment-fields {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
@@ -6599,6 +6603,10 @@ svg {
 
   .contact-fields {
     grid-template-columns: 1fr;
+  }
+
+  .lead-identification-fields {
+    grid-template-columns: minmax(0, 1fr) 110px;
   }
 
   .eye-surgery-fields {

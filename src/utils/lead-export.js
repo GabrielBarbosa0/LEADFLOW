@@ -1,6 +1,6 @@
 import { formatBrazilianPhone } from './phone.js';
 import { STORES } from './stores.js';
-import { calculateAge, examPaymentMethodsLabel, examPricing } from './lead.js';
+import { calculateAge, examPaymentMethodsLabel, examPricing, formatBrazilianPostalCode } from './lead.js';
 
 function datePart(value) {
   if (!value) return '';
@@ -43,6 +43,8 @@ function sexLabel(sex) {
 const CSV_COLUMNS = [
   ['ID do lead', (lead) => lead.id],
   ['Nome do cliente', (lead) => lead.fullName],
+  ['Cod. SavWin', (lead) => lead.savwinCode || ''],
+  ['Score', (lead) => lead.score ?? ''],
   ['Nome preferido', (lead) => lead.preferredName],
   ['Telefone', (lead) => formatBrazilianPhone(lead.phoneSearch || lead.phone)],
   ['RG', (lead) => lead.customerRg],
@@ -72,6 +74,7 @@ const CSV_COLUMNS = [
   ['Interesse principal', (lead) => lead.interestLabel],
   ['Ametropias', (lead) => Array.isArray(lead.ametropiaLabels) ? lead.ametropiaLabels.join(', ') : ''],
   ['Patologias e condições de saúde', (lead) => Array.isArray(lead.pathologyLabels) ? lead.pathologyLabels.join(', ') : ''],
+  ['CEP', (lead) => formatBrazilianPostalCode(lead.postalCode || '')],
   ['Rua', (lead) => lead.street],
   ['Número', (lead) => lead.streetNumber],
   ['Bairro', (lead) => lead.neighborhood],

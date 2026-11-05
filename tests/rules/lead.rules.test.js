@@ -835,6 +835,16 @@ describe('appointment calendar queries', () => {
     }));
   });
 
+  it('lets the captor update CEP, Cod. SavWin and score as common lead fields', async () => {
+    const db = authenticatedDb('captor-uid', 'captor@example.com');
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {
+      postalCode: '50000123',
+      savwinCode: 'CLI-1234',
+      score: 850,
+      updatedAtServer: Timestamp.now()
+    }));
+  });
+
   it('lets a receptionist register attendance on a complete lead without exhausting rule evaluation', async () => {
     const result = createLeadDocument({
       fullName: 'Cliente completo da agenda',

@@ -1,5 +1,5 @@
 import { formatBrazilianPhone } from '../../../utils/phone.js';
-import { bindBirthDateInput, bindCpfInput, bindExclusiveOptions } from '../../shared/form-helpers.js';
+import { bindBirthDateInput, bindCpfInput, bindExclusiveOptions, bindPostalCodeInput } from '../../shared/form-helpers.js';
 import { leadFormValues } from '../capture/capture-form.js';
 import { bindEyeTriage, enrichLeadTriage } from '../capture/capture-triage.js';
 import { bindTransportFields } from '../capture/capture-transport.js';
@@ -9,6 +9,7 @@ export function initializeLeadDetailForm(form, options) {
   const notesInput = form.elements.notes;
   const notesCount = form.querySelector('#edit-notes-count');
   bindCpfInput(form);
+  bindPostalCodeInput(form);
   bindBirthDateInput(form);
   phoneInput.addEventListener('input', () => {
     phoneInput.value = formatBrazilianPhone(phoneInput.value);

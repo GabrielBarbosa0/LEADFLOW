@@ -1,5 +1,5 @@
 import { formatBrazilianPhone } from '../../../utils/phone.js';
-import { bindBirthDateInput, bindCpfInput, bindExclusiveOptions } from '../../shared/form-helpers.js';
+import { bindBirthDateInput, bindCpfInput, bindExclusiveOptions, bindPostalCodeInput } from '../../shared/form-helpers.js';
 import { restoreNewLeadDraft } from './capture-form.js';
 import { bindEyeTriage } from './capture-triage.js';
 import { bindTransportFields } from './capture-transport.js';
@@ -13,6 +13,7 @@ export function initializeCaptureForm(form, options) {
   const notesCount = form.querySelector('#notes-count');
   if (notesCount) notesCount.textContent = notesInput.value.length;
   bindCpfInput(form);
+  bindPostalCodeInput(form);
   bindBirthDateInput(form);
   phoneInput.addEventListener('input', () => {
     phoneInput.value = formatBrazilianPhone(phoneInput.value);

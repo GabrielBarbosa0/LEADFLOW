@@ -20,6 +20,9 @@ function sampleLead(overrides = {}) {
     birthDate: '1985-04-12',
     sex: 'female',
     preferredName: 'Maria',
+    savwinCode: 'CLI-1234',
+    score: 850,
+    postalCode: '50000123',
     street: '',
     streetNumber: '',
     neighborhood: '',
@@ -94,6 +97,9 @@ describe('leads feature modules', () => {
     });
     expect(markup).toContain('id="edit-lead-form"');
     expect(markup).toContain('Maria Silva');
+    expect(markup).toContain('CLI-1234');
+    expect(markup).toContain('value="850"');
+    expect(markup).toContain('value="50000-123"');
     expect(markup).toContain('Excluir lead');
     expect(markup).toContain('edit-appointment-time-field');
   });

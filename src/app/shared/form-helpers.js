@@ -1,4 +1,4 @@
-import { calculateAge } from '../../utils/lead.js';
+import { calculateAge, formatBrazilianPostalCode } from '../../utils/lead.js';
 import { formatBrazilianCpf } from '../../utils/savwin-matching.js';
 
 const EXCLUSIVE_OPTION_VALUES = Object.freeze(['none', 'unknown']);
@@ -20,6 +20,13 @@ export function bindCpfInput(form) {
   const input = form.elements.customerCpf || form.elements.cpf;
   input?.addEventListener('input', () => {
     input.value = formatBrazilianCpf(input.value);
+  });
+}
+
+export function bindPostalCodeInput(form) {
+  const input = form.elements.postalCode;
+  input?.addEventListener('input', () => {
+    input.value = formatBrazilianPostalCode(input.value);
   });
 }
 
