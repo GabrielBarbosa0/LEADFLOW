@@ -169,7 +169,14 @@ publicar regras na producao
 publicar o frontend correspondente
 ```
 
-## Matriz minima de permissoes
+## Matriz alvo de permissoes
+
+Esta tabela representa a direcao funcional a ser refinada, nao uma afirmacao de
+que todos os fluxos ja existem no baseline. O comportamento implementado e as
+lacunas atuais estao registrados em
+[`MATRIZ-PERFIS-E-FLUXOS-HOMOLOGACAO.md`](MATRIZ-PERFIS-E-FLUXOS-HOMOLOGACAO.md).
+Cancelamento regular, arquivamento e outras funcoes ausentes devem ser
+implementados e aprovados antes de passarem a constar como comportamento atual.
 
 Cada operacao deve ser testada com unidade permitida e unidade proibida.
 
