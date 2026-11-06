@@ -82,7 +82,8 @@ describe('lead validation', () => {
     expect(createLeadDocument(validInput, profile, 'installation-test').data.strategyType).toBe('external');
     expect(createLeadUpdate({ ...validInput, strategyType: 'after-sales' }).data.strategyType).toBe('after-sales');
     expect(validateLeadInput({ ...validInput, strategyType: 'invalid' }).errors.strategyType).toBeDefined();
-    expect(createLeadUpdate({ ...validInput, strategyType: '' }).data.strategyType).toBe('');
+    expect(validateLeadInput({ ...validInput, strategyType: '' }).errors.strategyType).toBe('Selecione o tipo de estratégia.');
+    expect(createLeadUpdate({ ...validInput, strategyType: '' }).data).toBeNull();
   });
 
   it('stores a different purchase holder without replacing the customer', () => {

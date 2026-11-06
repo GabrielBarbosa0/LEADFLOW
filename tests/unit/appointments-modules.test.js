@@ -56,7 +56,7 @@ describe('appointments feature modules', () => {
     expect(markup).toContain('name="score"');
     expect(markup).toContain('name="score" type="text" inputmode="numeric" pattern="[0-9]*"');
     expect(markup).toContain('name="postalCode"');
-    expect(markup).toContain('name="strategyType"');
+    expect(markup).toContain('name="strategyType" required');
     expect(markup).toContain('value="social-media"');
     expect(markup).toContain('Exame de vista - 20 min');
   });

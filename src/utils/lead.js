@@ -316,7 +316,7 @@ export function validateLeadInput(input, options = {}) {
     errors.birthDate = 'Informe uma data de nascimento válida.';
   }
   if (!SEX_OPTIONS.some((option) => option.id === sex)) errors.sex = 'Selecione uma opção válida.';
-  if (!STRATEGY_TYPES.some((option) => option.id === strategyType)) errors.strategyType = 'Selecione um tipo de estratégia válido.';
+  if (!strategyType || !STRATEGY_TYPES.some((option) => option.id === strategyType)) errors.strategyType = 'Selecione o tipo de estratégia.';
   if ((input.street?.trim().length || 0) > 120) errors.street = 'Use no máximo 120 caracteres.';
   if (normalizeStreetNumber(input.streetNumber).length > 12) errors.streetNumber = 'Use no máximo 12 caracteres.';
   if ((input.addressReference?.trim().length || 0) > 160) errors.addressReference = 'Use no máximo 160 caracteres.';

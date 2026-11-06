@@ -218,7 +218,8 @@ describe('capture feature modules', () => {
     expect(markup).toContain('name="score"');
     expect(markup).toContain('name="score" type="text" inputmode="numeric" pattern="[0-9]*"');
     expect(markup).toContain('name="postalCode"');
-    expect(markup).toContain('name="strategyType"');
+    expect(markup).toContain('name="strategyType" required');
+    expect(markup).toContain('Tipo de estratégia <span aria-hidden="true">*</span>');
     expect(markup).toContain('value="external">Externa</option>');
     expect(markup).toContain('value="after-sales">Pós-venda</option>');
     expect(markup).toContain('value="spontaneous-visit">Visita espontânea</option>');

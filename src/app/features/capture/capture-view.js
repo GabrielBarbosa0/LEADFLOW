@@ -25,7 +25,7 @@ export function captureView({
       <div class="empty-state"><i data-lucide="wifi-off"></i><strong>Cadastro offline desativado</strong><p>Conecte-se à internet para iniciar um novo cadastro. Esta proteção evita registros incompletos enquanto o modo offline está em refinamento.</p></div>`;
   }
   const interests = INTERESTS.map((item) => `<option value="${item.id}">${item.label}</option>`).join('');
-  const strategyTypes = STRATEGY_TYPES.map((item) => `<option value="${item.id}">${item.label}</option>`).join('');
+  const strategyTypes = STRATEGY_TYPES.map((item) => `<option value="${item.id}">${item.id ? item.label : 'Selecione'}</option>`).join('');
   const storeOptions = STORES.filter((store) => allowedStoreIds.includes(store.id))
     .map((store) => `<option value="${store.id}" ${store.id === selectedStoreId ? 'selected' : ''}>${store.displayLabel}</option>`)
     .join('');
@@ -76,7 +76,7 @@ export function captureView({
       </div>
       <div class="field address-reference-field" data-field="addressReference"><label for="addressReference">Referência do endereço</label><input id="addressReference" name="addressReference" maxlength="160" autocomplete="off" placeholder="Ex.: próximo à praça, em frente à escola" /><small class="field-error"></small></div>
       <div class="field-row interest-service-fields">
-        <div class="field" data-field="strategyType"><label for="strategyType">Tipo de estratégia</label><select id="strategyType" name="strategyType">${strategyTypes}</select><small class="field-error"></small></div>
+        <div class="field" data-field="strategyType"><label for="strategyType">Tipo de estratégia <span aria-hidden="true">*</span></label><select id="strategyType" name="strategyType" required>${strategyTypes}</select><small class="field-error"></small></div>
         <div class="field"><label for="interestId">Interesse principal</label><select id="interestId" name="interestId">${interests}</select></div>
         <div class="field" data-field="appointmentServiceId"><label for="appointmentServiceId">Serviço do agendamento</label><select id="appointmentServiceId" name="appointmentServiceId" ${selectedStoreId ? '' : 'disabled'}><option value="">${selectedStoreId ? 'Selecione o serviço' : 'Escolha primeiro a loja'}</option>${serviceOptions}</select><small class="field-error"></small></div>
       </div>
