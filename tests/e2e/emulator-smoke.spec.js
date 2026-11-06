@@ -47,6 +47,10 @@ test('loads store-scoped logistics for an external leader', async ({ page }) => 
   await expect(page.getByLabel('Transporte')).toBeVisible();
   await expect(page.getByLabel('Acompanhante')).toBeVisible();
   await expect(page.getByText('Dona Lucia').first()).toBeVisible();
+  const transportWidths = await page.locator('.external-operation-tag-transport').evaluateAll((tags) => tags.map((tag) => tag.getBoundingClientRect().width));
+  const companionWidths = await page.locator('.external-operation-tag-companion').evaluateAll((tags) => tags.map((tag) => tag.getBoundingClientRect().width));
+  expect(new Set(transportWidths).size).toBe(1);
+  expect(new Set(companionWidths).size).toBe(1);
   await expect(page.getByText(/Portao azul/).first()).toBeVisible();
   await expect(page.getByText('Seu Jose').first()).toBeVisible();
   await expect(page.locator('body')).not.toContainText('CPF');

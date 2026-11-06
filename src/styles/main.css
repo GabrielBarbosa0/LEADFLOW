@@ -7903,6 +7903,7 @@ svg {
 .external-operation-tag {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   padding: 6px 8px;
   border-radius: 5px;
@@ -7910,6 +7911,15 @@ svg {
   background: #f1f5f9;
   font-size: 0.72rem;
   font-weight: 800;
+  white-space: nowrap;
+}
+
+.external-operation-tag-transport {
+  width: 120px;
+}
+
+.external-operation-tag-companion {
+  width: 150px;
 }
 
 .external-operation-tag.is-transport {

@@ -72,6 +72,8 @@ describe('external operations', () => {
     expect(markup).toContain('Voltar ao início');
     expect(markup).toContain('Transporte');
     expect(markup).toContain('Acompanhante');
+    expect(markup).toContain('external-operation-tag-transport');
+    expect(markup).toContain('external-operation-tag-companion');
     expect(markup).toContain('Dona Maria');
     expect(markup).toContain('Rua das Flores');
     expect(markup).toContain('Referência: Perto da praça');
