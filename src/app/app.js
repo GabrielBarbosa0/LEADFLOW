@@ -42,6 +42,7 @@ import {
   bindCpfInput,
   bindExclusiveOptions,
   bindPostalCodeInput,
+  bindPostalCodeLookup,
   bindScoreInput,
   revealFirstFormError,
   setFieldErrors
@@ -1474,6 +1475,7 @@ function bindPageEvents() {
   if (appointmentCreateForm) {
     bindCpfInput(appointmentCreateForm);
     bindPostalCodeInput(appointmentCreateForm);
+    bindPostalCodeLookup(appointmentCreateForm);
     bindScoreInput(appointmentCreateForm);
     const cpfAppointmentCheck = bindCpfAppointmentWarning(appointmentCreateForm, { lookup: lookupCpfAppointment });
     bindBirthDateInput(appointmentCreateForm);

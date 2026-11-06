@@ -115,6 +115,8 @@ Novos cadastros exigem data de nascimento tanto na interface quanto nas regras d
 
 Ao trocar a loja de destino durante um novo cadastro, o formulario preserva os dados pessoais, endereco, interesse, triagem, transporte e observacoes. Data e horario sao limpos porque dependem da agenda da nova unidade; o servico permanece selecionado somente quando tambem estiver disponivel nela.
 
+Quando houver conexao, informar um CEP completo consulta o ViaCEP e preenche rua, bairro, cidade e UF nos formularios de cadastro, edicao e novo agendamento. Os campos permanecem editaveis, o numero do imovel nunca e alterado pela consulta e falhas externas nao bloqueiam o preenchimento manual nem o salvamento offline.
+
 O valor do exame nao e digitado nem persistido como uma segunda fonte de verdade. A interface e as exportacoes o calculam a partir de `examPaymentType` e do encaminhamento efetivo: optometrista pago custa R$ 150, oftalmologista pago custa R$ 200 e cortesia custa R$ 0. Alterar o encaminhamento recalcula o valor imediatamente.
 
 Quando um CPF valido e informado em um novo cadastro online, o sistema consulta se existe um agendamento ativo vinculado ao documento. Um aviso em texto aparece junto ao CPF assim que a consulta encontra uma data atual ou futura ainda nao encerrada. No salvamento, a consulta e repetida e uma confirmacao explicita pergunta se o usuario deseja criar outro cadastro/agendamento. A ocorrencia nao bloqueia a operacao: continuar permanece uma decisao explicita do usuario. A verificacao nao e executada no modo offline e nao devolve dados pessoais do cadastro encontrado.

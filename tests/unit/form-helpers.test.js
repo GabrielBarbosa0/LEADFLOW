@@ -3,6 +3,7 @@ import {
   bindBirthDateInput,
   bindCpfInput,
   bindExclusiveOptions,
+  bindPostalCodeLookup,
   bindScoreInput,
   birthAgeText,
   revealFirstFormError,
@@ -52,6 +53,53 @@ describe('shared form helpers', () => {
     bindScoreInput({ elements: { score: input } });
     input.dispatch('input');
     expect(input.value).toBe('8572');
+  });
+
+  it('fills the editable address fields after a complete online CEP', async () => {
+    const postalCode = eventInput('50000-123');
+    const status = { textContent: '' };
+    const elements = {
+      postalCode,
+      street: eventInput(''),
+      neighborhood: eventInput(''),
+      city: eventInput(''),
+      state: eventInput('PE'),
+      streetNumber: eventInput('42')
+    };
+    const lookup = vi.fn().mockResolvedValue({
+      street: 'Rua Nova', neighborhood: 'Centro', city: 'Recife', state: 'PE'
+    });
+    const form = {
+      elements,
+      querySelector: () => status
+    };
+
+    bindPostalCodeLookup(form, { lookup, online: () => true });
+    postalCode.dispatch('input');
+    await Promise.resolve();
+
+    expect(lookup).toHaveBeenCalledWith('50000123', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(elements.street.value).toBe('Rua Nova');
+    expect(elements.neighborhood.value).toBe('Centro');
+    expect(elements.city.value).toBe('Recife');
+    expect(elements.state.value).toBe('PE');
+    expect(elements.streetNumber.value).toBe('42');
+    expect(status.textContent).toContain('preenchido automaticamente');
+  });
+
+  it('keeps manual address entry available while offline', () => {
+    const postalCode = eventInput('50000-123');
+    const status = { textContent: '' };
+    const lookup = vi.fn();
+    bindPostalCodeLookup({
+      elements: { postalCode },
+      querySelector: () => status
+    }, { lookup, online: () => false });
+
+    postalCode.dispatch('input');
+
+    expect(lookup).not.toHaveBeenCalled();
+    expect(status.textContent).toContain('Preencha o endereço manualmente');
   });
 
   it('updates the birth age hint', () => {

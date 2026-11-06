@@ -1,5 +1,5 @@
 import { formatBrazilianPhone } from '../../../utils/phone.js';
-import { bindBirthDateInput, bindCpfInput, bindExclusiveOptions, bindPostalCodeInput, bindScoreInput } from '../../shared/form-helpers.js';
+import { bindBirthDateInput, bindCpfInput, bindExclusiveOptions, bindPostalCodeInput, bindPostalCodeLookup, bindScoreInput } from '../../shared/form-helpers.js';
 import { leadFormValues } from '../capture/capture-form.js';
 import { bindEyeTriage, enrichLeadTriage } from '../capture/capture-triage.js';
 import { bindProductPaymentFields } from '../capture/product-payment.js';
@@ -11,6 +11,7 @@ export function initializeLeadDetailForm(form, options) {
   const notesCount = form.querySelector('#edit-notes-count');
   bindCpfInput(form);
   bindPostalCodeInput(form);
+  bindPostalCodeLookup(form);
   bindScoreInput(form);
   bindBirthDateInput(form);
   bindProductPaymentFields(form);

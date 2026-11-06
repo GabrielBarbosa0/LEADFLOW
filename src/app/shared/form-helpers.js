@@ -1,4 +1,5 @@
-import { calculateAge, formatBrazilianPostalCode } from '../../utils/lead.js';
+import { lookupPostalCode } from '../../services/postal-code-service.js';
+import { calculateAge, formatBrazilianPostalCode, normalizePostalCode } from '../../utils/lead.js';
 import { formatBrazilianCpf } from '../../utils/savwin-matching.js';
 
 const EXCLUSIVE_OPTION_VALUES = Object.freeze(['none', 'unknown']);
@@ -28,6 +29,69 @@ export function bindPostalCodeInput(form) {
   input?.addEventListener('input', () => {
     input.value = formatBrazilianPostalCode(input.value);
   });
+}
+
+export function bindPostalCodeLookup(form, {
+  lookup = lookupPostalCode,
+  online = () => navigator.onLine
+} = {}) {
+  const input = form.elements.postalCode;
+  const status = form.querySelector('[data-postal-code-status]');
+  if (!input) return () => {};
+
+  let requestSequence = 0;
+  let controller = null;
+
+  const setStatus = (message = '') => {
+    if (status) status.textContent = message;
+  };
+  const cancelCurrentLookup = () => {
+    requestSequence += 1;
+    controller?.abort();
+    controller = null;
+  };
+
+  input.addEventListener('input', () => {
+    const postalCode = normalizePostalCode(input.value);
+    cancelCurrentLookup();
+    if (postalCode.length !== 8) {
+      setStatus('');
+      return;
+    }
+    if (!online()) {
+      setStatus('Sem internet. Preencha o endereço manualmente.');
+      return;
+    }
+
+    const sequence = requestSequence;
+    const initialValues = Object.fromEntries(
+      ['street', 'neighborhood', 'city', 'state'].map((name) => [name, form.elements[name]?.value || ''])
+    );
+    controller = new AbortController();
+    setStatus('Consultando CEP...');
+
+    Promise.resolve(lookup(postalCode, { signal: controller.signal }))
+      .then((address) => {
+        if (sequence !== requestSequence || normalizePostalCode(input.value) !== postalCode) return;
+        controller = null;
+        if (!address) {
+          setStatus('CEP não encontrado. Preencha o endereço manualmente.');
+          return;
+        }
+        ['street', 'neighborhood', 'city', 'state'].forEach((name) => {
+          const field = form.elements[name];
+          if (field && field.value === initialValues[name]) field.value = address[name] || '';
+        });
+        setStatus('Endereço preenchido automaticamente.');
+      })
+      .catch((error) => {
+        if (error?.name === 'AbortError' || sequence !== requestSequence) return;
+        controller = null;
+        setStatus('Não foi possível consultar o CEP. Preencha o endereço manualmente.');
+      });
+  });
+
+  return cancelCurrentLookup;
 }
 
 export function bindScoreInput(form) {

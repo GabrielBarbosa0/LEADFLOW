@@ -38,6 +38,36 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   }
 });
 
+test('fills the address from a complete CEP without changing the street number', async ({ page }) => {
+  await page.route('https://viacep.com.br/ws/50000123/json/', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        cep: '50000-123',
+        logradouro: 'Rua do Teste',
+        bairro: 'Centro',
+        localidade: 'Recife',
+        uf: 'PE'
+      })
+    });
+  });
+  await signIn(page, 'admin@leadflow.test');
+  await page.getByRole('button', { name: /Nova abordagem/ }).click();
+  await page.getByLabel('Loja de destino').selectOption('loja-02');
+  await expect(page.getByLabel('Número')).toBeEnabled({ timeout: 10000 });
+
+  await page.getByLabel('Número').fill('42');
+  await page.getByLabel('CEP').fill('50000123');
+
+  await expect(page.getByLabel('CEP')).toHaveValue('50000-123');
+  await expect(page.getByLabel('Rua')).toHaveValue('Rua do Teste');
+  await expect(page.getByLabel('Bairro')).toHaveValue('Centro');
+  await expect(page.getByLabel('Cidade')).toHaveValue('Recife');
+  await expect(page.getByLabel('UF')).toHaveValue('PE');
+  await expect(page.getByLabel('Número')).toHaveValue('42');
+  await expect(page.getByText('Endereço preenchido automaticamente.')).toBeVisible();
+});
+
 test('loads store-scoped logistics for an external leader', async ({ page }) => {
   await signIn(page, 'externa@leadflow.test');
 
