@@ -36,11 +36,10 @@ export function leadsView({ leads, filters = {}, allowedStores = [], dataError =
 
   return `
     <section class="lead-list-filters" data-lead-filters role="search" aria-label="Filtrar cadastros">
-      <div class="search-box lead-list-search"><i data-lucide="search"></i><input id="lead-search" type="search" value="${escapeHtml(filters.query || '')}" placeholder="Buscar por nome ou telefone" aria-label="Buscar cadastros" autocomplete="off" /></div>
+      <div class="lead-filter-toolbar"><div class="search-box lead-list-search"><i data-lucide="search"></i><input id="lead-search" type="search" value="${escapeHtml(filters.query || '')}" placeholder="Buscar por nome ou telefone" aria-label="Buscar cadastros" autocomplete="off" /><span class="lead-filter-count" data-lead-filter-count>${filtered.length} de ${leads.length}</span><button class="icon-button lead-filter-clear" type="button" data-lead-filters-clear aria-label="Limpar filtros" title="Limpar filtros" ${filtersActive ? '' : 'disabled'}><i data-lucide="x"></i></button></div></div>
       <div class="field"><label for="lead-store-filter">Loja</label><select id="lead-store-filter"><option value="">Todas as lojas permitidas</option>${storeOptions}</select></div>
       <div class="field"><label for="lead-start-date">Data inicial</label><input id="lead-start-date" type="date" value="${escapeHtml(filters.startDate || '')}" /></div>
       <div class="field"><label for="lead-end-date">Data final</label><input id="lead-end-date" type="date" value="${escapeHtml(filters.endDate || '')}" /></div>
-      <footer class="lead-filter-footer"><span class="lead-filter-count" data-lead-filter-count>${filtered.length} de ${leads.length}</span><button class="icon-button lead-filter-clear" type="button" data-lead-filters-clear aria-label="Limpar filtros" title="Limpar filtros" ${filtersActive ? '' : 'disabled'}><i data-lucide="x"></i></button></footer>
     </section>
     ${dataError ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(dataError)}</span></div>` : ''}
     <section class="lead-list">${rows}${empty}</section>`;

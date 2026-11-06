@@ -1854,32 +1854,33 @@ svg {
   background: var(--surface);
 }
 
-.lead-list-search {
+.lead-filter-toolbar {
   grid-column: 1 / -1;
+}
+
+.lead-list-search {
   margin: 0;
 }
 
 .lead-filter-clear {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
+
+#lead-search::-webkit-search-cancel-button {
+  display: none;
 }
 
 .lead-filter-clear:disabled {
   display: none;
 }
 
-.lead-filter-footer {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .lead-filter-count {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 750;
+  white-space: nowrap;
 }
 
 .lead-search-page {
