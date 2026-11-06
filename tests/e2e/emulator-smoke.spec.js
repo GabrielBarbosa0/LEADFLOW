@@ -35,6 +35,20 @@ test('lists active store captors when creating a quick walk-in', async ({ page }
   await expect(page.locator('.walk-in-more summary')).toHaveCount(2);
   await expect(page.locator('.walk-in-more summary svg.lucide-ellipsis')).toHaveCount(2);
   await expect(page.locator('[data-walk-in-transition="called"] svg.lucide-megaphone')).toBeVisible();
+
+  const startBox = await page.locator('[data-walk-in-transition="in_service"]').boundingBox();
+  const callBox = await page.locator('[data-walk-in-transition="called"]').boundingBox();
+  const gaveUpBox = await page.locator('[data-walk-in-transition="gave_up"]').boundingBox();
+  const menuBoxes = await page.locator('.walk-in-more summary').evaluateAll((elements) => (
+    elements.map((element) => element.getBoundingClientRect().toJSON())
+  ));
+
+  expect(startBox).not.toBeNull();
+  expect(callBox).not.toBeNull();
+  expect(gaveUpBox).not.toBeNull();
+  expect(Math.abs(startBox.x - callBox.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs((startBox.x + startBox.width) - (gaveUpBox.x + gaveUpBox.width))).toBeLessThanOrEqual(1);
+  expect(Math.abs(menuBoxes[0].x - menuBoxes[1].x)).toBeLessThanOrEqual(1);
 });
 
 test('keeps the same account authenticated on multiple devices', async ({ browser }) => {

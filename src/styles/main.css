@@ -8052,11 +8052,33 @@ svg {
   font-weight: 800;
 }
 
-.walk-in-person-heading,
-.walk-in-actions {
+.walk-in-person-heading {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.walk-in-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 44px;
+  align-items: center;
+  gap: 8px;
+  width: 304px;
+  max-width: 100%;
+}
+
+.walk-in-actions.is-called > .button,
+.walk-in-actions.is-in-service > .button {
+  grid-column: 1 / 3;
+}
+
+.walk-in-actions .button {
+  min-width: 0;
+  width: 100%;
+}
+
+.walk-in-actions .walk-in-more {
+  grid-column: 3;
 }
 
 .walk-in-person > span,
@@ -8159,6 +8181,7 @@ svg {
   .walk-in-actions {
     grid-column: 1 / -1;
     justify-content: flex-end;
+    justify-self: end;
   }
 }
 
@@ -8201,12 +8224,8 @@ svg {
   }
 
   .walk-in-actions {
-    display: grid;
-    grid-template-columns: 1fr auto;
-  }
-
-  .walk-in-actions .button {
-    min-width: 0;
+    justify-self: stretch;
+    width: 100%;
   }
 }
 

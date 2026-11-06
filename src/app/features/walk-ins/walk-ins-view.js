@@ -16,13 +16,13 @@ function searchResult(result, selectedLeadId, allowedStoreIds) {
 
 function queueActions(item, updating) {
   const closeMenu = `<details class="walk-in-more"><summary class="icon-button" title="Outras formas de encerrar" aria-label="Outras formas de encerrar"><i data-lucide="ellipsis"></i></summary><div><button type="button" data-walk-in-transition="not_accommodated" data-walk-in-id="${escapeHtml(item.id)}"><i data-lucide="calendar-x"></i><span>Não foi possível encaixar</span></button><button type="button" data-walk-in-transition="cancelled" data-walk-in-id="${escapeHtml(item.id)}"><i data-lucide="circle-x"></i><span>Cancelar registro</span></button></div></details>`;
-  if (item.status === 'waiting') return `<div class="walk-in-actions">
+  if (item.status === 'waiting') return `<div class="walk-in-actions is-waiting">
     <button class="button button-primary" type="button" data-walk-in-transition="called" data-walk-in-id="${escapeHtml(item.id)}" ${updating ? 'disabled' : ''}><i data-lucide="megaphone"></i><span>Chamar</span></button>
     <button class="button button-secondary" type="button" data-walk-in-transition="gave_up" data-walk-in-id="${escapeHtml(item.id)}" ${updating ? 'disabled' : ''}><i data-lucide="user-round-x"></i><span>Desistiu</span></button>
     ${updating ? '' : closeMenu}
   </div>`;
-  if (item.status === 'called') return `<div class="walk-in-actions"><button class="button button-primary" type="button" data-walk-in-transition="in_service" data-walk-in-id="${escapeHtml(item.id)}" ${updating ? 'disabled' : ''}><i data-lucide="stethoscope"></i><span>Iniciar atendimento</span></button>${updating ? '' : closeMenu}</div>`;
-  if (item.status === 'in_service') return `<div class="walk-in-actions"><button class="button button-success" type="button" data-walk-in-transition="completed" data-walk-in-id="${escapeHtml(item.id)}" ${updating ? 'disabled' : ''}><i data-lucide="circle-check"></i><span>Concluir atendimento</span></button></div>`;
+  if (item.status === 'called') return `<div class="walk-in-actions is-called"><button class="button button-primary" type="button" data-walk-in-transition="in_service" data-walk-in-id="${escapeHtml(item.id)}" ${updating ? 'disabled' : ''}><i data-lucide="stethoscope"></i><span>Iniciar atendimento</span></button>${updating ? '' : closeMenu}</div>`;
+  if (item.status === 'in_service') return `<div class="walk-in-actions is-in-service"><button class="button button-success" type="button" data-walk-in-transition="completed" data-walk-in-id="${escapeHtml(item.id)}" ${updating ? 'disabled' : ''}><i data-lucide="circle-check"></i><span>Concluir atendimento</span></button></div>`;
   return '';
 }
 
