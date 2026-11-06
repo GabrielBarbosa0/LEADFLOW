@@ -87,6 +87,9 @@ export function syncLabel(lead) {
   if (lead.syncState === 'error') return ['Não sincronizado', 'danger'];
   if (lead.syncState === 'syncing') return ['Sincronizando', 'warning'];
   if (lead.syncState === 'pending') return ['Pendente de sincronização', 'warning'];
+  if (lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled') {
+    return ['Cancelado', 'warning'];
+  }
   if (!lead.appointmentDate || !lead.appointmentTime) return ['Aguardando agendamento', 'warning'];
   return ['Agendado', 'success'];
 }

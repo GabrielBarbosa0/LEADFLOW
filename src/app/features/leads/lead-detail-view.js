@@ -47,7 +47,7 @@ export function leadDetailView({
   const offlineEdit = !navigator.onLine;
   const locked = managerReschedule || offlineEdit || readOnly ? 'disabled' : '';
   const appointmentCancelled = lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled';
-  const scheduleLocked = readOnly || appointmentCancelled;
+  const scheduleLocked = readOnly;
   const renderedAppointmentTimeMarkup = scheduleLocked
     ? appointmentTimeMarkup.replace(/<select\b(?![^>]*\bdisabled\b)/g, '<select disabled').replace(/<input\b(?![^>]*\bdisabled\b)/g, '<input disabled')
     : appointmentTimeMarkup;
@@ -102,7 +102,7 @@ export function leadDetailView({
       <fieldset class="field ametropia-field" ${locked}><legend>Patologias e condições de saúde</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${pathologyOptions(lead.pathologyIds || [])}</div></fieldset>
       ${eyeTriageFields(lead, scheduleState.settings, 'edit-lead-eye')}
       ${transportFields(lead, scheduleState.settings, 'edit-lead-transport', Boolean(locked))}
-      ${appointmentCancelled ? `<div class="notice notice-warning lead-cancelled-notice"><i data-lucide="calendar-x"></i><div><strong>Este agendamento foi cancelado.</strong><span>Data, horário e responsável permanecem preservados no histórico.</span>${canClaimLead ? `<button class="button button-primary" type="button" data-claim-lead="${escapeHtml(lead.id)}"><i data-lucide="handshake"></i><span>Assumir este lead</span></button>` : ''}</div></div>` : ''}
+      ${appointmentCancelled ? `<div class="notice notice-warning lead-cancelled-notice"><i data-lucide="calendar-x"></i><div><strong>Este agendamento foi cancelado.</strong><span>${readOnly ? 'Assuma o lead ou solicite a transferência para poder reagendar.' : 'Escolha uma nova data ou horário e salve para reagendar. O atendimento anterior permanece no histórico.'}</span>${canClaimLead ? `<button class="button button-primary" type="button" data-claim-lead="${escapeHtml(lead.id)}"><i data-lucide="handshake"></i><span>Assumir este lead</span></button>` : ''}</div></div>` : ''}
       <div class="field-row appointment-fields">
         <div class="field" data-field="appointmentDate"><label for="edit-appointmentDate">Data do pré-agendamento</label><input id="edit-appointmentDate" name="appointmentDate" type="date" min="${toLocalDateInput(new Date())}" value="${escapeHtml(scheduleState.appointmentDate || lead.appointmentDate)}" ${offlineEdit || scheduleLocked ? 'disabled' : ''} /><small class="schedule-date-status">${offlineEdit ? 'Conecte-se para escolher uma data.' : ''}</small><small class="field-error"></small></div>
         ${renderedAppointmentTimeMarkup}

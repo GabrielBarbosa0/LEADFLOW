@@ -100,8 +100,7 @@ export async function cancelAppointment(profile, lead, values) {
 
 export function canRescheduleAppointment(profile, lead) {
   if (!profile?.uid || !lead?.id || !lead.appointmentDate || !lead.appointmentTime) return false;
-  if (lead.appointmentStatus === 'cancelled'
-    || ['attended', 'cancelled'].includes(String(lead.appointmentAttendance || 'pending'))) return false;
+  if (lead.appointmentAttendance === 'attended') return false;
   if (profile.role === 'admin') return true;
   if (profile.role === 'captor') {
     return lead.capturedByUid === profile.uid

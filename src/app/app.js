@@ -911,8 +911,7 @@ function bindPageEvents() {
       const appointmentChanged = existingLead?.appointmentDate && existingLead?.appointmentTime
         && hasAppointmentScheduleChanged(existingLead, values);
       if (appointmentChanged
-        && existingLead.appointmentStatus !== 'cancelled'
-        && !['attended', 'cancelled'].includes(existingLead.appointmentAttendance || 'pending')) {
+        && existingLead.appointmentAttendance !== 'attended') {
         const scheduleValidation = validateRescheduleSchedule(values);
         if (!scheduleValidation.isValid) {
           const field = setFieldErrors(editLeadForm, scheduleValidation.errors);

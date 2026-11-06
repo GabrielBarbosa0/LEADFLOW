@@ -139,6 +139,24 @@ describe('leads feature modules', () => {
     expect(markup).not.toContain('type="submit"');
   });
 
+  it('lets the current owner choose a new schedule for a cancelled lead', () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const markup = leadDetailView({
+      lead: sampleLead({ appointmentStatus: 'cancelled', appointmentAttendance: 'cancelled' }),
+      managementMode: false,
+      canManage: false,
+      profileRole: 'captor',
+      scheduleState: scheduleState(),
+      appointmentTimeMarkup: '<select id="edit-appointment-time-field"></select>',
+      canDelete: false,
+      readOnly: false
+    });
+    expect(markup).toContain('Escolha uma nova data ou horário e salve para reagendar');
+    expect(markup).not.toMatch(/id="edit-appointmentDate"[^>]*disabled/);
+    expect(markup).not.toMatch(/id="edit-appointment-time-field"[^>]*disabled/);
+    expect(markup).toContain('type="submit"');
+  });
+
   it('preserves original data when a manager only reschedules', () => {
     class FormDataStub {
       constructor(form) {

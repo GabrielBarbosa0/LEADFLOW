@@ -57,6 +57,12 @@ describe('shared formatters', () => {
     expect(syncLabel({ syncState: 'pending' })).toEqual(['Pendente de sincronização', 'warning']);
     expect(syncLabel({ appointmentDate: '', appointmentTime: '' })).toEqual(['Aguardando agendamento', 'warning']);
     expect(syncLabel({ appointmentDate: '2026-10-29', appointmentTime: '08:00' })).toEqual(['Agendado', 'success']);
+    expect(syncLabel({
+      appointmentDate: '2026-10-29', appointmentTime: '08:00', appointmentStatus: 'cancelled'
+    })).toEqual(['Cancelado', 'warning']);
+    expect(syncLabel({
+      appointmentDate: '2026-10-29', appointmentTime: '08:00', appointmentAttendance: 'cancelled'
+    })).toEqual(['Cancelado', 'warning']);
     expect(offlineSyncDetail({ syncState: 'error' })).toContain('continua salvo');
     expect(offlineSyncDetail({ syncState: 'synced' })).toBe('');
   });
