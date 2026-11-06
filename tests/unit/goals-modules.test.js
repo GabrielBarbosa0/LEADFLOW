@@ -42,7 +42,8 @@ describe('goals feature modules', () => {
       goals: { records, members: [{ uid: 'ana', displayName: 'Ana', storeId: 'loja-06' }], loading: false, saving: false, error: '', truncated: false, draft: { storeId: 'loja-06', assigneeUids: ['ana'] }, editorOpen: false, editingGroupId: '', duplicatingGroupId: '', pendingDeleteGroupId: '' }
     };
     const markup = goalsView({ state, isAdmin: () => true, canManageGoals: () => true });
-    expect(markup).toContain('Metas da equipe');
+    expect(markup).not.toContain('Metas da equipe');
+    expect(markup).not.toContain('Defina objetivos de captação');
     expect(markup).toContain('Meta de outubro');
     expect(markup).toContain('data-goal-new');
     expect(markup).toContain('10 de 20 leads');

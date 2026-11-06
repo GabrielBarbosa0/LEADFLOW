@@ -6484,6 +6484,15 @@ svg {
   gap: 10px;
 }
 
+.goals-heading.goals-heading-compact {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .goal-metrics > div {
   min-height: 92px;
   display: flex;
