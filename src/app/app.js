@@ -5,7 +5,7 @@ import { loadRoleProfiles } from '../services/role-profile-service.js';
 import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
 import { APPOINTMENTS_QUERY_LIMIT, canCancelAppointment, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, rescheduleAppointment, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
 import { canClaimCancelledLead, canTransferLead, claimCancelledLead, loadAssignableLeadOwners, transferLead } from '../services/lead-assignment-service.js';
-import { createQuickWalkIn, createWalkIn, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
+import { createQuickWalkIn, createWalkIn, loadWalkInCaptors, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
 import { ensureDefaultAppointmentServices, loadAppointmentServices } from '../services/service-catalog-service.js';
 import { consultLocalSavwinSales, isLocalSavwinEnabled } from '../services/savwin-service.js';
@@ -1233,11 +1233,15 @@ function bindPageEvents() {
     walkInCreateForm.querySelector('#walk-in-store:not(:disabled)')?.addEventListener('change', (event) => {
       state.walkIns.storeId = event.target.value;
       state.walkIns.serviceId = servicesForStore(state.walkIns.services, event.target.value)[0]?.id || '';
+      state.walkIns.broughtByUid = '';
       if (walkInQuickClientForm) state.walkIns.quickDraft = Object.fromEntries(new FormData(walkInQuickClientForm));
       render();
     });
     walkInCreateForm.elements.serviceId?.addEventListener('change', (event) => {
       state.walkIns.serviceId = event.target.value;
+    });
+    walkInCreateForm.elements.broughtByUid?.addEventListener('change', (event) => {
+      state.walkIns.broughtByUid = event.target.value;
     });
     walkInCreateForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -1266,6 +1270,8 @@ function bindPageEvents() {
       values.storeId = selectedLead?.storeId || values.storeId;
       values.queueDate = toLocalDateInput(new Date());
       values.serviceName = service?.name || '';
+      const broughtBy = state.walkIns.captors.find((captor) => captor.uid === values.broughtByUid);
+      values.broughtByName = broughtBy?.displayName || '';
       if ((!selectedLead && !quickCreate) || !profileStoreIds(state.profile).includes(values.storeId)) {
         showToast('Selecione um cliente de uma unidade permitida.', 'danger', 'circle-alert');
         return;
@@ -1315,6 +1321,7 @@ function bindPageEvents() {
           searchSearched: false,
           searchResults: [],
           serviceId: '',
+          broughtByUid: '',
           quickCreate: false,
           quickDraft: {}
         };
@@ -1739,7 +1746,12 @@ async function startWalkInsSubscription() {
   state.walkIns.error = '';
   render();
   try {
-    state.walkIns.services = await loadAppointmentServices(state.profile);
+    const [services, captors] = await Promise.all([
+      loadAppointmentServices(state.profile),
+      loadWalkInCaptors(state.profile)
+    ]);
+    state.walkIns.services = services;
+    state.walkIns.captors = captors;
     state.unsubscribeWalkIns = subscribeToWalkIns(
       state.profile,
       toLocalDateInput(new Date()),
@@ -1979,6 +1991,7 @@ export async function startApp() {
       state.walkIns.selectedLeadId = '';
       state.walkIns.storeId = storeId;
       state.walkIns.serviceId = servicesForStore(state.walkIns.services, storeId)[0]?.id || '';
+      state.walkIns.broughtByUid = '';
       render();
       document.querySelector('#walk-in-quick-name')?.focus();
       return;
@@ -1999,6 +2012,7 @@ export async function startApp() {
       state.walkIns.quickDraft = {};
       state.walkIns.storeId = lead.storeId;
       state.walkIns.serviceId = servicesForStore(state.walkIns.services, lead.storeId)[0]?.id || '';
+      state.walkIns.broughtByUid = '';
       render();
       return;
     }

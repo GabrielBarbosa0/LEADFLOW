@@ -1,4 +1,5 @@
 import {
+  Armchair,
   Archive,
   ArrowLeft,
   BarChart3,
@@ -23,6 +24,7 @@ import {
   CloudCheck,
   Copy,
   Download,
+  Ellipsis,
   Eye,
   FileDown,
   Filter,
@@ -35,6 +37,8 @@ import {
   LogIn,
   LogOut,
   LoaderCircle,
+  ListPlus,
+  Megaphone,
   MessageCircle,
   Minus,
   Pencil,
@@ -53,6 +57,7 @@ import {
   UserPlus,
   UserRound,
   UserRoundCog,
+  UserRoundSearch,
   UserRoundX,
   Users,
   Wifi,
@@ -64,6 +69,7 @@ import {
 import { escapeHtml } from './formatters.js';
 
 const appIcons = {
+  Armchair,
   Archive,
   ArrowLeft,
   BarChart3,
@@ -88,6 +94,7 @@ const appIcons = {
   CloudCheck,
   Copy,
   Download,
+  Ellipsis,
   Eye,
   FileDown,
   Filter,
@@ -100,6 +107,8 @@ const appIcons = {
   LogIn,
   LogOut,
   LoaderCircle,
+  ListPlus,
+  Megaphone,
   MessageCircle,
   Minus,
   Pencil,
@@ -118,6 +127,7 @@ const appIcons = {
   UserPlus,
   UserRound,
   UserRoundCog,
+  UserRoundSearch,
   UserRoundX,
   Users,
   Wifi,

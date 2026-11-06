@@ -19,6 +19,24 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   await expect(page.getByRole('button', { name: /Configurações/ })).toBeVisible();
 });
 
+test('lists active store captors when creating a quick walk-in', async ({ page }) => {
+  await signIn(page, 'admin@leadflow.test');
+  await page.goto('/#/walk-ins');
+
+  const captorSelect = page.getByLabel('Quem trouxe o cliente');
+  await expect(captorSelect).toBeVisible();
+  await expect(captorSelect.locator('option')).toContainText([
+    'Atendimento espontâneo / sem indicação',
+    'Colaborador Teste',
+    'MEI Teste'
+  ]);
+  await expect(captorSelect).not.toContainText('Usuario Bloqueado');
+  await expect(page.getByText('não altera o captador original do cadastro')).toBeVisible();
+  await expect(page.locator('.walk-in-more summary')).toHaveCount(2);
+  await expect(page.locator('.walk-in-more summary svg.lucide-ellipsis')).toHaveCount(2);
+  await expect(page.locator('[data-walk-in-transition="called"] svg.lucide-megaphone')).toBeVisible();
+});
+
 test('keeps the same account authenticated on multiple devices', async ({ browser }) => {
   const mobileContext = await browser.newContext({
     viewport: { width: 412, height: 915 },

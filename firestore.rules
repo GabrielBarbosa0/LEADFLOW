@@ -397,7 +397,8 @@ service cloud.firestore {
     function validWalkIn(data) {
       return data.keys().hasOnly([
           'leadId', 'storeId', 'queueDate', 'serviceId', 'serviceName',
-          'professionalType', 'reason', 'notes', 'status', 'priority',
+          'professionalType', 'broughtByUid', 'broughtByName',
+          'reason', 'notes', 'status', 'priority',
           'priorityReason', 'arrivedAt', 'calledAt', 'startedAt', 'completedAt',
           'closedReason', 'convertedAppointmentLeadId', 'createdAt',
           'createdByUid', 'createdByName', 'updatedAt', 'updatedByUid',
@@ -416,6 +417,24 @@ service cloud.firestore {
         && data.serviceName.size() >= 2
         && data.serviceName.size() <= 80
         && data.professionalType in ['optometrist', 'ophthalmologist']
+        && (
+          (!('broughtByUid' in data) && !('broughtByName' in data))
+          || (
+            data.broughtByUid is string
+            && data.broughtByUid.size() <= 128
+            && data.broughtByName is string
+            && data.broughtByName.size() <= 120
+            && (
+              (data.broughtByUid == '' && data.broughtByName == '')
+              || (
+                data.broughtByUid != ''
+                && targetLeadOwnerIsActive(data.broughtByUid, data.storeId)
+                && data.broughtByName
+                  == get(/databases/$(database)/documents/users/$(data.broughtByUid)).data.displayName
+              )
+            )
+          )
+        )
         && data.reason is string
         && data.reason.size() >= 5
         && data.reason.size() <= 240

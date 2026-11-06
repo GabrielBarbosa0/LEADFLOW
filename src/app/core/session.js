@@ -52,8 +52,8 @@ export function resetSessionState(state, {
     updatingId: ''
   };
   state.walkIns = {
-    loading: false, loaded: false, saving: false, error: '', records: [], services: [],
-    serviceId: '', storeId: '', storeFilter: '', selectedLeadId: '', searchQuery: '',
+    loading: false, loaded: false, saving: false, error: '', records: [], services: [], captors: [],
+    serviceId: '', broughtByUid: '', storeId: '', storeFilter: '', selectedLeadId: '', searchQuery: '',
     searchLoading: false, searchSearched: false, searchError: '', searchResults: [],
     quickCreate: false, quickDraft: {}, updatingId: ''
   };

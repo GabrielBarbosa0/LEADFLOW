@@ -41,6 +41,8 @@ export function validateWalkInDraft(values = {}) {
     serviceId: String(values.serviceId || '').trim(),
     serviceName: String(values.serviceName || '').trim(),
     professionalType: String(values.professionalType || '').trim(),
+    broughtByUid: String(values.broughtByUid || '').trim(),
+    broughtByName: String(values.broughtByName || '').trim(),
     reason: String(values.reason || '').trim(),
     notes: String(values.notes || '').trim()
   };
@@ -51,6 +53,10 @@ export function validateWalkInDraft(values = {}) {
   if (!data.serviceId || data.serviceId.length > 120) errors.serviceId = 'Selecione o serviço.';
   if (data.serviceName.length < 2 || data.serviceName.length > 80) errors.serviceName = 'Selecione um serviço válido.';
   if (!['optometrist', 'ophthalmologist'].includes(data.professionalType)) errors.professionalType = 'Selecione o profissional.';
+  if ((data.broughtByUid && !data.broughtByName) || (!data.broughtByUid && data.broughtByName)) {
+    errors.broughtByUid = 'Selecione um captador valido.';
+  }
+  if (data.broughtByUid.length > 128 || data.broughtByName.length > 120) errors.broughtByUid = 'Selecione um captador valido.';
   if (data.reason.length < 5 || data.reason.length > 240) errors.reason = 'Informe o motivo do encaixe.';
   if (data.notes.length > 500) errors.notes = 'A observação deve ter no máximo 500 caracteres.';
   return { data, errors, isValid: Object.keys(errors).length === 0 };

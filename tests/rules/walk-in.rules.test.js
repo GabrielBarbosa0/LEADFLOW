@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 
@@ -28,6 +28,10 @@ beforeEach(async () => {
       }),
       setDoc(doc(db, 'users', 'captor-uid'), {
         displayName: 'Captador Teste', email: 'captor@example.com', role: 'captor',
+        permissions: ['appointments.view'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
+      }),
+      setDoc(doc(db, 'users', 'walk-in-captor-uid'), {
+        displayName: 'Captador do Encaixe', email: 'walkin-captor@example.com', role: 'captor',
         permissions: ['appointments.view'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
       }),
       setDoc(doc(db, 'users', 'telemarketing-uid'), {
@@ -59,6 +63,7 @@ function validWalkIn() {
   return {
     leadId: 'lead-1', storeId: 'loja-06', queueDate: '2026-10-30',
     serviceId: 'eye-exam', serviceName: 'Exame de vista', professionalType: 'optometrist',
+    broughtByUid: 'walk-in-captor-uid', broughtByName: 'Captador do Encaixe',
     reason: 'Cliente presencial solicitou exame imediato', notes: '', status: 'waiting',
     priority: 0, priorityReason: '', arrivedAt: serverTimestamp(), calledAt: null,
     startedAt: null, completedAt: null, closedReason: '', convertedAppointmentLeadId: '',
@@ -72,6 +77,8 @@ describe('walk-in queue rules', () => {
     const db = authenticatedDb('manager-uid', 'manager@example.com');
     const reference = doc(db, 'appointmentWalkIns', '2026-10-30__lead-1');
     await assertSucceeds(setDoc(reference, validWalkIn()));
+    const leadSnapshot = await getDoc(doc(db, 'leads', 'lead-1'));
+    expect(leadSnapshot.data().capturedByUid).toBe('captor-uid');
     await assertSucceeds(getDocs(query(
       collection(db, 'appointmentWalkIns'),
       where('storeId', '==', 'loja-06'),
@@ -80,6 +87,18 @@ describe('walk-in queue rules', () => {
     await assertSucceeds(updateDoc(reference, {
       status: 'called', calledAt: serverTimestamp(), updatedAt: serverTimestamp(), updatedByUid: 'manager-uid'
     }));
+  });
+
+  it('rejects an invalid or spoofed walk-in captor without changing the lead owner', async () => {
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertFails(setDoc(doc(db, 'appointmentWalkIns', 'spoofed-captor'), {
+      ...validWalkIn(), broughtByName: 'Nome Falso'
+    }));
+    await assertFails(setDoc(doc(db, 'appointmentWalkIns', 'manager-as-captor'), {
+      ...validWalkIn(), broughtByUid: 'manager-uid', broughtByName: 'Gestor Teste'
+    }));
+    const leadSnapshot = await getDoc(doc(db, 'leads', 'lead-1'));
+    expect(leadSnapshot.data().capturedByUid).toBe('captor-uid');
   });
 
   it('creates a quick incomplete lead and its walk-in atomically', async () => {

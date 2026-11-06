@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   runTransaction,
@@ -72,6 +73,22 @@ function leadCreatedHistoryEvent(profile, leadId, storeId) {
 
 function walkInDocumentId(queueDate, leadId) {
   return `${queueDate}__${leadId}`;
+}
+
+export async function loadWalkInCaptors(profile) {
+  if (!isFirebaseConfigured || !profile?.uid || !['manager', 'admin'].includes(profile.role)) return [];
+  const storeIds = profileStoreIds(profile);
+  const usersQuery = profile.role === 'admin'
+    ? collection(db, 'users')
+    : query(
+      collection(db, 'users'),
+      where('storeId', storeIds.length === 1 ? '==' : 'in', storeIds.length === 1 ? storeIds[0] : storeIds)
+    );
+  const snapshot = await getDocs(usersQuery);
+  return snapshot.docs
+    .map((item) => ({ uid: item.id, ...item.data() }))
+    .filter((member) => member.active === true && member.role === 'captor')
+    .sort((left, right) => String(left.displayName || '').localeCompare(String(right.displayName || ''), 'pt-BR'));
 }
 
 export function subscribeToWalkIns(profile, queueDate, onData, onError) {
@@ -149,7 +166,7 @@ export async function createWalkIn(profile, values) {
       profile,
       { ...walkIn, id },
       'walk_in_created',
-      `Encaixe criado. Motivo: ${data.reason}${data.notes ? `. Observacao: ${data.notes}` : ''}`
+      `Encaixe criado.${data.broughtByName ? ` Cliente trazido por: ${data.broughtByName}.` : ''} Motivo: ${data.reason}${data.notes ? `. Observacao: ${data.notes}` : ''}`
     ));
   });
   return { ...validation, id };
@@ -211,7 +228,7 @@ export async function createQuickWalkIn(profile, leadValues, walkInValues) {
       profile,
       { ...walkIn, id },
       'walk_in_created',
-      `Encaixe criado. Motivo: ${data.reason}${data.notes ? `. Observacao: ${data.notes}` : ''}`
+      `Encaixe criado.${data.broughtByName ? ` Cliente trazido por: ${data.broughtByName}.` : ''} Motivo: ${data.reason}${data.notes ? `. Observacao: ${data.notes}` : ''}`
     ));
   });
 

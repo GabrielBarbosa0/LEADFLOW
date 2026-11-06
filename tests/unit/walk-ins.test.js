@@ -10,6 +10,7 @@ import {
 const store = { id: 'loja-06', label: 'Loja 06', displayLabel: 'Loja 06 - Surubim' };
 const service = { id: 'eye-exam', name: 'Exame de vista', durationMinutes: 20, storeIds: ['loja-06'], active: true };
 const lead = { id: 'lead-1', fullName: 'Maria Silva', customerCpf: '12345678901', phoneSearch: '81999991234', storeId: 'loja-06' };
+const captor = { uid: 'captor-1', displayName: 'Ana Captadora', role: 'captor', active: true, storeId: 'loja-06', storeIds: ['loja-06'] };
 
 function state(overrides = {}) {
   return {
@@ -19,7 +20,9 @@ function state(overrides = {}) {
     error: '',
     records: [],
     services: [service],
+    captors: [captor],
     serviceId: 'eye-exam',
+    broughtByUid: captor.uid,
     storeId: 'loja-06',
     storeFilter: '',
     selectedLeadId: lead.id,
@@ -44,10 +47,14 @@ describe('walk-in queue', () => {
       serviceId: service.id,
       serviceName: service.name,
       professionalType: 'optometrist',
+      broughtByUid: captor.uid,
+      broughtByName: captor.displayName,
       reason: 'Cliente presencial solicitou exame imediato',
       notes: ''
     });
     expect(valid.isValid).toBe(true);
+    expect(valid.data).toMatchObject({ broughtByUid: captor.uid, broughtByName: captor.displayName });
+    expect(validateWalkInDraft({ ...valid.data, broughtByName: '' }).errors.broughtByUid).toBeTruthy();
     expect(validateWalkInDraft({}).isValid).toBe(false);
     expect(canTransitionWalkIn('waiting', 'called')).toBe(true);
     expect(canTransitionWalkIn('waiting', 'completed')).toBe(false);
@@ -70,6 +77,8 @@ describe('walk-in queue', () => {
           storeId: store.id,
           serviceName: service.name,
           professionalType: 'optometrist',
+          broughtByUid: captor.uid,
+          broughtByName: captor.displayName,
           reason: 'Cliente presencial solicitou exame imediato',
           status: 'waiting',
           arrivedAt: new Date('2026-10-30T10:00:00-03:00')
@@ -85,6 +94,9 @@ describe('walk-in queue', () => {
     expect(markup).toContain('20</strong><span>min');
     expect(markup).toContain('data-walk-in-transition="called"');
     expect(markup).toContain('Adicionar a fila de encaixes');
+    expect(markup).toContain('Quem trouxe:');
+    expect(markup).toContain('Ana Captadora');
+    expect(markup).toContain('não altera o captador original');
   });
 
   it('renders the inline quick registration after an unsuccessful search', () => {
