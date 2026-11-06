@@ -6805,6 +6805,10 @@ svg {
     grid-template-columns: minmax(0, 1fr) 140px;
   }
 
+  .purchase-holder-details .field:last-child {
+    grid-column: 1 / -1;
+  }
+
   .transport-fields {
     grid-template-columns: minmax(0, 1fr);
   }

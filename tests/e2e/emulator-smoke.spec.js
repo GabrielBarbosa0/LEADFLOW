@@ -365,11 +365,16 @@ test('renders the compact registration fields and product payment options', asyn
   const holderNameBox = await purchaseHolder.getByLabel('Nome do titular').boundingBox();
   const holderCpfBox = await purchaseHolder.getByLabel('CPF do titular').boundingBox();
   const holderRelationshipBox = await purchaseHolder.getByLabel('Vínculo').boundingBox();
+  const holderPhoneBox = await purchaseHolder.getByLabel('Telefone do titular').boundingBox();
   expect(holderNameBox).not.toBeNull();
   expect(holderCpfBox).not.toBeNull();
   expect(holderRelationshipBox).not.toBeNull();
+  expect(holderPhoneBox).not.toBeNull();
   expect(holderCpfBox.width).toBeLessThan(holderNameBox.width);
   expect(holderRelationshipBox.width).toBeGreaterThanOrEqual(135);
+  if (test.info().project.name === 'mobile-chrome') {
+    expect(Math.abs(holderPhoneBox.width - holderNameBox.width)).toBeLessThan(2);
+  }
 });
 
 test('opens the lead archive workflow only from active management records', async ({ page }) => {
