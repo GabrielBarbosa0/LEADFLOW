@@ -6,18 +6,18 @@ describe('dashboardSummary', () => {
     const records = [
       {
         appointmentDate: '2026-10-29', appointmentTime: '08:00', careRoute: 'ophthalmologist',
-        examPaymentType: 'paid', needsTransport: true, transportSeats: 2, hasCompanion: true,
+        examPaymentType: 'paid', examPaymentMethods: ['pix', 'cash'], productPaymentMethods: ['pix', 'credit-card'], needsTransport: true, transportSeats: 2, hasCompanion: true,
         birthDate: '1960-10-20', sex: 'female', pathologyIds: ['cataract', 'retinopathy'], interestId: 'complete-glasses',
         appointmentCancellationReason: 'client_withdrew'
       },
       {
         appointmentDate: '', appointmentTime: '', careRoute: 'optometrist',
-        examPaymentType: 'courtesy', needsTransport: false, birthDate: '1980-01-01',
+        examPaymentType: 'courtesy', productPaymentMethods: ['cash'], needsTransport: false, birthDate: '1980-01-01',
         sex: 'male', pathologyIds: ['glaucoma'], interestId: 'frames', appointmentRescheduleReason: 'client_request'
       },
       {
         appointmentDate: '2026-11-10', appointmentTime: '09:00', careRoute: 'ophthalmologist',
-        needsTransport: true, hasCompanion: false, birthDate: '2000-01-01',
+        examPaymentMethod: 'debit-card', needsTransport: true, hasCompanion: false, birthDate: '2000-01-01',
         sex: 'female', pathologyIds: ['retinopathy'], interestId: 'complete-glasses', appointmentRescheduleReason: 'transport_issue'
       }
     ];
@@ -68,6 +68,16 @@ describe('dashboardSummary', () => {
       ['Problema de transporte', 1],
       ['Solicitação do cliente', 1]
     ]);
+    expect(summary.examPaymentMethods.map(({ id, count, percentage }) => [id, count, percentage])).toEqual(expect.arrayContaining([
+      ['cash', 1, 33],
+      ['pix', 1, 33],
+      ['debit-card', 1, 33]
+    ]));
+    expect(summary.productPaymentMethods.map(({ id, count, percentage }) => [id, count, percentage])).toEqual(expect.arrayContaining([
+      ['cash', 1, 33],
+      ['pix', 1, 33],
+      ['credit-card', 1, 33]
+    ]));
     expect(summary.interests.map(({ label, count }) => [label, count])).toEqual([
       ['Óculos completo', 2],
       ['Armação', 1]

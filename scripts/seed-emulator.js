@@ -104,6 +104,8 @@ function leadRecord({
   pathologyLabels = ['Não possui'],
   careRoute = 'optometrist',
   examPaymentType = 'paid',
+  examPaymentMethods,
+  productPaymentMethods,
   appointmentCancellationReason = '',
   appointmentRescheduleReason = ''
 }) {
@@ -144,7 +146,8 @@ function leadRecord({
     careRouteOverride: 'automatic',
     careRouteReasons: [],
     examPaymentType,
-    examPaymentMethods: examPaymentType === 'courtesy' ? [] : ['pix'],
+    examPaymentMethods: examPaymentType === 'courtesy' ? [] : (examPaymentMethods || ['pix']),
+    productPaymentMethods: productPaymentMethods || (interestId !== 'eye-exam' ? ['pix'] : []),
     creditFatherName: '',
     creditMotherName: '',
     creditAuxiliaryPhone: '',
@@ -271,9 +274,9 @@ async function writeSeed(db, roleConfig, users) {
   });
 
   const dashboardDemoLeads = [
-    { id: 'lead-demo-01', fullName: 'Ana Martins', phoneSearch: '81990000101', birthDate: '1952-02-18', sex: 'female', careRoute: 'ophthalmologist', pathologyIds: ['cataract'], pathologyLabels: ['Catarata'], examPaymentType: 'courtesy', interestId: 'complete-glasses', interestLabel: 'Óculos completo', appointmentDate: dateInSaoPaulo(-1), appointmentTime: '13:00', appointmentAttendance: 'attended' },
-    { id: 'lead-demo-02', fullName: 'Bruno Ferreira', phoneSearch: '81990000102', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1970-06-09', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['glaucoma'], pathologyLabels: ['Glaucoma'], interestId: 'frames', interestLabel: 'Armação', appointmentDate: dateInSaoPaulo(0), appointmentTime: '10:00' },
-    { id: 'lead-demo-03', fullName: 'Carla Souza', phoneSearch: '81990000103', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste', birthDate: '1998-09-23', sex: 'female', pathologyIds: ['diabetes'], pathologyLabels: ['Diabetes'], examPaymentType: 'courtesy', interestId: 'lenses', interestLabel: 'Lentes' },
+    { id: 'lead-demo-01', fullName: 'Ana Martins', phoneSearch: '81990000101', birthDate: '1952-02-18', sex: 'female', careRoute: 'ophthalmologist', pathologyIds: ['cataract'], pathologyLabels: ['Catarata'], examPaymentType: 'courtesy', interestId: 'complete-glasses', interestLabel: 'Óculos completo', productPaymentMethods: ['credit-card'], appointmentDate: dateInSaoPaulo(-1), appointmentTime: '13:00', appointmentAttendance: 'attended' },
+    { id: 'lead-demo-02', fullName: 'Bruno Ferreira', phoneSearch: '81990000102', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1970-06-09', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['glaucoma'], pathologyLabels: ['Glaucoma'], interestId: 'frames', interestLabel: 'Armação', examPaymentMethods: ['debit-card'], productPaymentMethods: ['debit-card'], appointmentDate: dateInSaoPaulo(0), appointmentTime: '10:00' },
+    { id: 'lead-demo-03', fullName: 'Carla Souza', phoneSearch: '81990000103', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste', birthDate: '1998-09-23', sex: 'female', pathologyIds: ['diabetes'], pathologyLabels: ['Diabetes'], examPaymentType: 'courtesy', interestId: 'lenses', interestLabel: 'Lentes', productPaymentMethods: ['cash'] },
     { id: 'lead-demo-04', fullName: 'Daniel Lima', phoneSearch: '81990000104', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', birthDate: '1982-01-30', sex: 'male', pathologyIds: ['hypertension'], pathologyLabels: ['Pressão alta'], interestId: 'complete-glasses', interestLabel: 'Óculos completo', appointmentDate: dateInSaoPaulo(1), appointmentTime: '11:00', needsTransport: true, companionCount: 1 },
     { id: 'lead-demo-05', fullName: 'Elisa Ribeiro', phoneSearch: '81990000105', birthDate: '1964-12-04', sex: 'female', careRoute: 'ophthalmologist', pathologyIds: ['keratoconus'], pathologyLabels: ['Ceratocone'], interestId: 'eye-exam', interestLabel: 'Exame de vista', appointmentDate: dateInSaoPaulo(-2), appointmentTime: '14:00', appointmentAttendance: 'missed' },
     { id: 'lead-demo-06', fullName: 'Fabio Rocha', phoneSearch: '81990000106', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1955-05-16', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['retinopathy'], pathologyLabels: ['Retinopatia'], examPaymentType: 'courtesy', appointmentDate: dateInSaoPaulo(1), appointmentTime: '14:00' },
@@ -290,7 +293,7 @@ async function writeSeed(db, roleConfig, users) {
     { id: 'lead-demo-17', fullName: 'Quezia Santos', phoneSearch: '81990000117', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', birthDate: '1973-06-13', sex: 'female', needsTransport: true, companionCount: 2, appointmentDate: dateInSaoPaulo(2), appointmentTime: '08:00', appointmentRescheduleReason: 'transport_issue', funnelReasonCode: 'transport_issue' },
     { id: 'lead-demo-18', fullName: 'Rafael Duarte', phoneSearch: '81990000118', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1968-02-27', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['retinopathy'], pathologyLabels: ['Retinopatia'], appointmentDate: dateInSaoPaulo(2), appointmentTime: '08:00', appointmentRescheduleReason: 'schedule_conflict', funnelReasonCode: 'schedule_conflict' },
     { id: 'lead-demo-19', fullName: 'Sonia Araujo', phoneSearch: '81990000119', birthDate: '2000-12-15', sex: 'female', pathologyIds: ['keratoconus'], pathologyLabels: ['Ceratocone'], interestId: 'other', interestLabel: 'Outro', examPaymentType: 'courtesy' },
-    { id: 'lead-demo-20', fullName: 'Tiago Monteiro', phoneSearch: '81990000120', birthDate: '1958-07-24', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['diabetes', 'retinopathy'], pathologyLabels: ['Diabetes', 'Retinopatia'], interestId: 'complete-glasses', interestLabel: 'Óculos completo', appointmentDate: dateInSaoPaulo(3), appointmentTime: '09:00', needsTransport: true }
+    { id: 'lead-demo-20', fullName: 'Tiago Monteiro', phoneSearch: '81990000120', birthDate: '1958-07-24', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['diabetes', 'retinopathy'], pathologyLabels: ['Diabetes', 'Retinopatia'], interestId: 'complete-glasses', interestLabel: 'Óculos completo', examPaymentMethods: ['pix', 'cash'], productPaymentMethods: ['pix', 'credit-card'], appointmentDate: dateInSaoPaulo(3), appointmentTime: '09:00', needsTransport: true }
   ].map(leadRecord);
 
   const leads = [

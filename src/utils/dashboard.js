@@ -1,4 +1,4 @@
-import { calculateAge, INTERESTS, PATHOLOGIES } from './lead.js';
+import { calculateAge, EXAM_PAYMENT_METHODS, INTERESTS, PATHOLOGIES } from './lead.js';
 import { activeLeads } from './lead-archive.js';
 import { APPOINTMENT_CANCELLATION_REASONS, hasActiveAppointment } from './appointment-cancellation.js';
 import { APPOINTMENT_RESCHEDULE_REASONS } from './appointment-reschedule.js';
@@ -46,6 +46,18 @@ function reasonDistribution(records, field, options) {
     informed.filter((lead) => lead[field] === option.id).length,
     informed.length
   )).filter((item) => item.count)
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'pt-BR'));
+}
+
+export function paymentMethodDistribution(records, field, legacyField = '') {
+  const validMethods = new Set(EXAM_PAYMENT_METHODS.map((method) => method.id));
+  const informedMethods = records.flatMap((lead) => {
+    const configured = Array.isArray(lead[field]) ? lead[field] : [lead[field] || (legacyField ? lead[legacyField] : '')].filter(Boolean);
+    return [...new Set(configured.map((method) => String(method)).filter((method) => validMethods.has(method)))];
+  });
+  return EXAM_PAYMENT_METHODS
+    .map((method) => distributionItem(method.id, method.label, informedMethods.filter((value) => value === method.id).length, informedMethods.length))
+    .filter((item) => item.count)
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'pt-BR'));
 }
 
@@ -130,6 +142,8 @@ export function dashboardSummary(records = [], upcomingRecords = records, today 
   ));
   const cancellationReasons = reasonDistribution(records, 'appointmentCancellationReason', APPOINTMENT_CANCELLATION_REASONS);
   const rescheduleReasons = reasonDistribution(records, 'appointmentRescheduleReason', APPOINTMENT_RESCHEDULE_REASONS);
+  const examPaymentMethods = paymentMethodDistribution(records, 'examPaymentMethods', 'examPaymentMethod');
+  const productPaymentMethods = paymentMethodDistribution(records, 'productPaymentMethods');
   const interests = INTERESTS.map((item) => distributionItem(
     item.id || 'not-informed',
     item.label,
@@ -171,6 +185,8 @@ export function dashboardSummary(records = [], upcomingRecords = records, today 
     sexes,
     cancellationReasons,
     rescheduleReasons,
+    examPaymentMethods,
+    productPaymentMethods,
     interests,
     transportByDay,
     upcomingStartDate: startDate,

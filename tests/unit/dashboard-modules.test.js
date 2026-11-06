@@ -81,6 +81,9 @@ describe('dashboard feature modules', () => {
     expect(markup).toContain('Sexo dos clientes');
     expect(markup).toContain('Cancelamentos');
     expect(markup).toContain('Reagendamentos');
+    expect(markup).toContain('Pagamento do exame');
+    expect(markup).toContain('Pagamento do produto');
+    expect(markup).toContain('Formas mais usadas');
     expect(markup).toContain('aria-label="Voltar para gestão"');
     expect(markup).not.toContain('<span>Voltar para gestão</span>');
     expect(markup).toContain('data-dashboard-ranking-open');
