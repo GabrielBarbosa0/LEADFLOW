@@ -156,6 +156,7 @@ describe('lead validation', () => {
       customerCpf: '52998224725',
       birthDate: '',
       sex: '',
+      strategyType: 'spontaneous-visit',
       registrationMode: 'quick_walk_in',
       registrationCompleted: false,
       appointmentDate: '',

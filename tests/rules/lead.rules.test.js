@@ -16,7 +16,7 @@ beforeAll(async () => {
     projectId,
     firestore: {
       host: '127.0.0.1',
-      port: 8180,
+      port: 8280,
       rules: readFileSync('firestore.rules', 'utf8')
     }
   });
@@ -434,6 +434,7 @@ describe('lead correction rules', () => {
       customerRg: '12.345.678-X',
       birthDate: '1985-04-12',
       sex: 'female',
+      strategyType: 'external',
       street: 'Rua das Flores',
       streetNumber: 'S/N',
       notes: '',
@@ -459,6 +460,7 @@ describe('lead correction rules', () => {
       phone: '+5581999995678',
       phoneSearch: '81999995678',
       birthDate: '1985-04-12',
+      strategyType: 'external',
       notes: '',
       source: 'street',
       schemaVersion: 1,
@@ -483,6 +485,7 @@ describe('lead correction rules', () => {
       birthDate: '1985-04-12',
       sex: '',
       preferredName: '',
+      strategyType: 'external',
       street: '',
       streetNumber: '',
       neighborhood: '',
@@ -538,6 +541,7 @@ describe('lead correction rules', () => {
       birthDate: '1985-04-12',
       sex: '',
       eyeSurgeryStatus: 'no',
+      strategyType: 'external',
       eyeSurgeryType: '',
       eyeSurgeryDetails: '',
       careRouteOverride: 'automatic',
@@ -590,6 +594,7 @@ describe('lead correction rules', () => {
       birthDate: '1960-10-27',
       sex: 'male',
       preferredName: '',
+      strategyType: 'external',
       street: 'Rua José Ferreira Souto Maior',
       streetNumber: '171',
       neighborhood: 'Diogo',
@@ -660,6 +665,7 @@ describe('lead correction rules', () => {
       notes: '',
       appointmentDate: '2026-10-20',
       appointmentTime: '10:00',
+      strategyType: 'external',
       appointmentSchedulingMode: 'controlled',
       appointmentDurationMinutes: 20,
       source: 'street',
@@ -872,6 +878,7 @@ describe('lead correction rules', () => {
       birthDate: '1985-04-12',
       sex: '',
       careRouteOverride: 'optometrist',
+      strategyType: 'external',
       examPaymentType: 'paid',
       notes: ''
     }, {
@@ -1112,6 +1119,31 @@ describe('appointment calendar queries', () => {
     }));
   });
 
+  it('rejects a new lead without a valid strategy type', async () => {
+    const db = authenticatedDb('captor-uid', 'captor@example.com');
+    const lead = {
+      fullName: 'Cliente sem estrategia',
+      phone: '+5581999995678',
+      phoneSearch: '81999995678',
+      birthDate: '1985-04-12',
+      notes: '',
+      source: 'street',
+      schemaVersion: 1,
+      capturedByUid: 'captor-uid',
+      capturedByName: 'Captador Teste',
+      storeId: 'loja-06',
+      capturedAtClient: '2026-11-06T12:00:00.000Z',
+      createdAtServer: Timestamp.now(),
+      updatedAtServer: Timestamp.now()
+    };
+
+    await assertFails(setDoc(doc(db, 'leads', 'lead-without-strategy'), lead));
+    await assertFails(setDoc(doc(db, 'leads', 'lead-invalid-strategy'), {
+      ...lead,
+      strategyType: 'invalid'
+    }));
+  });
+
   it('lets an authorized manager archive a lead and preserve its history', async () => {
     const db = authenticatedDb('manager-uid', 'manager@example.com');
     const batch = writeBatch(db);
@@ -1199,6 +1231,7 @@ describe('appointment calendar queries', () => {
       birthDate: '1985-04-12',
       sex: 'female',
       eyeSurgeryStatus: 'no',
+      strategyType: 'external',
       careRouteOverride: 'automatic',
       appointmentDate: '2026-10-26',
       appointmentTime: '08:00',
@@ -1495,6 +1528,7 @@ describe('appointment slot reservations', () => {
     phone: '+5581999991234',
     phoneSearch: '81999991234',
     birthDate: '1985-04-12',
+    strategyType: 'external',
     notes: '',
     appointmentDate: '2026-10-20',
     appointmentTime: '08:00',

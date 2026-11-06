@@ -140,11 +140,9 @@ service cloud.firestore {
         && data.fullName.size() >= 2
         && data.fullName.size() <= 120
         && data.phone is string
-        && data.phone.size() >= 12
-        && data.phone.size() <= 14
+        && data.phone.matches('^\\+\\d{11,13}$')
         && data.phoneSearch is string
-        && data.phoneSearch.size() >= 10
-        && data.phoneSearch.size() <= 11
+        && data.phoneSearch.matches('^\\d{10,11}$')
         && (!('customerCpf' in data) || (
           data.customerCpf is string
           && (data.customerCpf == '' || data.customerCpf.matches('^\\d{11}$'))
@@ -214,6 +212,9 @@ service cloud.firestore {
         && (!('productPaymentMethods' in data) || (data.productPaymentMethods is list
           && data.productPaymentMethods.size() <= 6
           && data.productPaymentMethods.hasOnly(['cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'])))
+        && data.strategyType in [
+          'external', 'after-sales', 'telemarketing', 'social-media', 'spontaneous-visit'
+        ]
         && data.source == 'street'
         && data.schemaVersion == 1;
     }

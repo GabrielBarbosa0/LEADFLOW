@@ -25,7 +25,7 @@ beforeAll(async () => {
     projectId,
     firestore: {
       host: '127.0.0.1',
-      port: 8180,
+      port: 8280,
       rules: readFileSync('firestore.rules', 'utf8')
     }
   });

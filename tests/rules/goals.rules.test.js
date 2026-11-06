@@ -9,7 +9,7 @@ let testEnvironment;
 beforeAll(async () => {
   testEnvironment = await initializeTestEnvironment({
     projectId,
-    firestore: { host: '127.0.0.1', port: 8180, rules: readFileSync('firestore.rules', 'utf8') }
+    firestore: { host: '127.0.0.1', port: 8280, rules: readFileSync('firestore.rules', 'utf8') }
   });
 });
 

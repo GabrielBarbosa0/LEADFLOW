@@ -4,9 +4,9 @@
 | --- | --- |
 | Documento | Technical Design Document (TDD) |
 | Projeto | FascinLead |
-| Versao | 3.1 |
+| Versao | 3.2 |
 | Status | Em implementacao |
-| Data | 02/11/2026 |
+| Data | 06/11/2026 |
 | Responsavel | Oticas Fascinante |
 
 ### Manutencao deste documento
@@ -88,6 +88,7 @@ Campos minimos propostos:
 | Bairro | Nao | Ate 80 caracteres |
 | Cidade | Nao | Ate 80 caracteres |
 | UF | Nao | Duas letras; padrao configuravel por loja |
+| Tipo de estrategia | Sim | `external`, `after-sales`, `telemarketing`, `social-media` ou `spontaneous-visit` |
 | Interesse principal | Nao | Opcao de uma lista administrada pelo sistema |
 | Servico | Nao | Servico ativo e disponivel na unidade, com duracao propria |
 | Ametropias | Nao | Exibicao configuravel por loja |
@@ -111,6 +112,8 @@ O sistema preenchera automaticamente:
 Receita, fotos e geolocalizacao exata nao fazem parte do MVP. CPF, RG e os dados clinicos estritamente necessarios a triagem foram incorporados e devem receber o mesmo tratamento de seguranca e minimizacao dos demais dados pessoais.
 
 Novos cadastros exigem data de nascimento tanto na interface quanto nas regras do Firestore. Registros legados sem essa informacao continuam consultaveis e podem ser corrigidos ou reagendados; quando a data for informada, ela tambem sera validada nas edicoes.
+
+Novos cadastros tambem exigem o tipo de estrategia. Registros legados sem essa informacao continuam consultaveis e aparecem como `Nao informado` nos indicadores; ao serem editados, exigem a selecao de uma estrategia valida antes do salvamento.
 
 Ao trocar a loja de destino durante um novo cadastro, o formulario preserva os dados pessoais, endereco, interesse, triagem, transporte e observacoes. Data e horario sao limpos porque dependem da agenda da nova unidade; o servico permanece selecionado somente quando tambem estiver disponivel nela.
 
@@ -266,6 +269,7 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 - Perfis autorizados consultam indicadores por periodo, unidade e captador.
 - Os relatorios exibem cadastros, agendamentos, comparecimentos, faltas e taxa de comparecimento.
 - A analise inclui distribuicao de agendamentos por dia da semana e periodo do dia.
+- O dashboard exibe a distribuicao dos cadastros por tipo de estrategia, incluindo `Nao informado` para registros legados.
 - O seletor de periodo usa data inicial, data final e aplicacao explicita do intervalo.
 
 ### RF-15 - Perfis e permissoes
@@ -611,6 +615,7 @@ O identificador sera um UUID gerado no dispositivo. Isso torna a gravacao idempo
   "neighborhood": "Centro",
   "city": "Recife",
   "state": "PE",
+  "strategyType": "external",
   "interestId": "oculos-completo",
   "interestLabel": "Oculos completo",
   "appointmentServiceId": "service-id",

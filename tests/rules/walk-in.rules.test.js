@@ -11,7 +11,7 @@ beforeAll(async () => {
     projectId,
     firestore: {
       host: '127.0.0.1',
-      port: 8180,
+      port: 8280,
       rules: readFileSync('firestore.rules', 'utf8')
     }
   });
@@ -107,6 +107,7 @@ describe('walk-in queue rules', () => {
     batch.set(doc(db, 'leads', 'quick-lead'), {
       fullName: 'Cliente de Encaixe', phone: '+5581999994321', phoneSearch: '81999994321',
       customerCpf: '52998224725', birthDate: '', notes: '', source: 'street', schemaVersion: 1,
+      strategyType: 'spontaneous-visit',
       registrationMode: 'quick_walk_in', registrationCompleted: false,
       capturedByUid: 'manager-uid', capturedByName: 'Gestor Teste', storeId: 'loja-06'
     });

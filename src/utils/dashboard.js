@@ -7,18 +7,21 @@ function percentage(count, total) {
   return total ? Math.round((count / total) * 100) : 0;
 }
 
-function localDateKey(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function brazilDateKey(date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
-function addLocalDays(date, days) {
-  const result = new Date(date);
-  result.setHours(12, 0, 0, 0);
-  result.setDate(result.getDate() + days);
-  return result;
+function addDateKeyDays(dateKey, days) {
+  const result = new Date(`${dateKey}T12:00:00.000Z`);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
 }
 
 function transportSeatsFor(lead) {
@@ -71,9 +74,10 @@ function ageRangeFor(birthDate, referenceDate) {
 }
 
 export function upcomingDateRange(today = new Date()) {
+  const startDate = brazilDateKey(today);
   return {
-    startDate: localDateKey(today),
-    endDate: localDateKey(addLocalDays(today, 6))
+    startDate,
+    endDate: addDateKeyDays(startDate, 6)
   };
 }
 

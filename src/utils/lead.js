@@ -511,6 +511,7 @@ export function createQuickLeadDocument(input, profile, installationId, now = ne
       city: '',
       state: 'PE',
       addressReference: '',
+      strategyType: 'spontaneous-visit',
       interestId: 'eye-exam',
       interestLabel: 'Exame de vista',
       productPaymentMethods: [],
