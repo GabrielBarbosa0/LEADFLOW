@@ -15,6 +15,7 @@ import { ametropiaOptions, eyeTriageFields, pathologyOptions, sexOptions, triage
 import { transportFields } from '../capture/capture-transport.js';
 import { cpfAppointmentConfirmationDialog, cpfAppointmentStatusMarkup } from '../capture/cpf-appointment-warning.js';
 import { productPaymentFields } from '../capture/product-payment.js';
+import { purchaseHolderFields } from '../capture/purchase-holder.js';
 
 export function appointmentCreateSchedule(appointmentCreate) {
   return appointmentCreate.schedules.find((item) => item.id === appointmentCreate.storeId)
@@ -66,6 +67,7 @@ export function appointmentCreateDialog({ allowedStores, appointmentCreate, sele
     <div class="field" data-field="storeId"><label for="agenda-lead-store">Loja</label><select id="agenda-lead-store" name="storeId" ${loading ? 'disabled' : ''}>${storeOptions}</select><small class="field-error"></small></div>
     <div class="field-row interest-service-fields"><div class="field"><label for="agenda-lead-interest">Interesse principal</label><select id="agenda-lead-interest" name="interestId">${interests}</select></div><div class="field" data-field="appointmentServiceId"><label for="agenda-lead-service">Serviço do agendamento</label><select id="agenda-lead-service" name="appointmentServiceId" ${loading ? 'disabled' : ''}>${serviceOptions}</select><small class="field-error"></small></div></div>
     ${productPaymentFields(draft, 'agenda-lead-product-payment')}
+    ${purchaseHolderFields(draft, 'agenda-lead-purchase-holder')}
     ${schedule.showAmetropiaFields ? `<fieldset class="field ametropia-field"><legend>Ametropias</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${ametropiaOptions(draft.ametropiaIds || [])}</div></fieldset>` : ''}<fieldset class="field ametropia-field"><legend>Patologias e condições de saúde</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${pathologyOptions(draft.pathologyIds || [])}</div></fieldset>${eyeTriageFields(draft, schedule, 'agenda-lead-eye')}${schedule.transportEnabled ? transportFields({ ...draft, appointmentDate: selectedDate }, schedule, 'agenda-lead-transport') : ''}
     <div class="field-row appointment-fields"><div class="field" data-field="appointmentDate"><label for="agenda-lead-date">Data do pré-agendamento</label><input id="agenda-lead-date" type="date" value="${escapeHtml(selectedDate)}" disabled /><input name="appointmentDate" type="hidden" value="${escapeHtml(selectedDate)}" /><small class="field-error"></small></div>${timeField}</div>
     <div class="field" data-field="notes"><label for="agenda-lead-notes">Observação rápida</label><textarea id="agenda-lead-notes" name="notes" maxlength="500" rows="3" placeholder="Ex.: prefere contato pela manhã">${escapeHtml(draft.notes || '')}</textarea><small class="field-hint"><span id="agenda-notes-count">${String(draft.notes || '').length}</span>/500</small><small class="field-error"></small></div>

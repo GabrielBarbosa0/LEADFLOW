@@ -13,6 +13,7 @@ import { birthAgeText } from '../../shared/form-helpers.js';
 import { ametropiaOptions, eyeTriageFields, pathologyOptions, sexOptions, triageConfigFields } from '../capture/capture-triage.js';
 import { transportFields } from '../capture/capture-transport.js';
 import { productPaymentFields } from '../capture/product-payment.js';
+import { purchaseHolderFields } from '../capture/purchase-holder.js';
 import { selectedLeadDetailService } from './lead-appointment.js';
 
 export function leadDetailView({
@@ -96,6 +97,7 @@ export function leadDetailView({
         <div class="field" data-field="appointmentServiceId"><label for="edit-appointmentServiceId">Serviço do agendamento</label><select id="edit-appointmentServiceId" name="appointmentServiceId" ${locked}><option value="">Selecione o serviço</option>${serviceOptions}</select><small class="field-error"></small></div>
       </div>
       ${productPaymentFields(lead, 'edit-lead-product-payment', Boolean(locked))}
+      ${purchaseHolderFields(lead, 'edit-lead-purchase-holder', Boolean(locked))}
       ${showAmetropiaFields ? `<fieldset class="field ametropia-field" ${locked}><legend>Ametropias</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${ametropiaOptions(lead.ametropiaIds || [])}</div></fieldset>` : ''}
       <fieldset class="field ametropia-field" ${locked}><legend>Patologias e condições de saúde</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${pathologyOptions(lead.pathologyIds || [])}</div></fieldset>
       ${eyeTriageFields(lead, scheduleState.settings, 'edit-lead-eye')}

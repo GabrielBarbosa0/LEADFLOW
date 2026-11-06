@@ -352,6 +352,15 @@ test('renders the compact registration fields and product payment options', asyn
   await expect(productPayment).toBeVisible();
   await productPayment.getByLabel('Pix').check();
   await expect(productPayment.getByLabel('Pix')).toBeChecked();
+
+  const purchaseHolder = page.locator('[data-purchase-holder]');
+  await expect(purchaseHolder.getByLabel('Titular da compra')).toHaveValue('customer');
+  await expect(purchaseHolder.locator('[data-purchase-holder-details]')).toBeHidden();
+  await purchaseHolder.getByLabel('Titular da compra').selectOption('other');
+  await expect(purchaseHolder.locator('[data-purchase-holder-details]')).toBeVisible();
+  await purchaseHolder.getByLabel('Nome do titular').fill('Responsável Exemplo');
+  await purchaseHolder.getByLabel('CPF do titular').fill('52998224725');
+  await expect(purchaseHolder.getByLabel('CPF do titular')).toHaveValue('529.982.247-25');
 });
 
 test('opens the lead archive workflow only from active management records', async ({ page }) => {

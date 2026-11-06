@@ -1,6 +1,7 @@
 import { formatBrazilianPhone } from './phone.js';
 import { STORES } from './stores.js';
 import { calculateAge, examPaymentMethodsLabel, examPricing, formatBrazilianPostalCode } from './lead.js';
+import { formatBrazilianCpf } from './savwin-matching.js';
 
 function datePart(value) {
   if (!value) return '';
@@ -75,6 +76,11 @@ const CSV_COLUMNS = [
   ['Forma de pagamento do produto', (lead) => Array.isArray(lead.productPaymentMethods) && lead.productPaymentMethods.length
     ? examPaymentMethodsLabel(lead.productPaymentMethods)
     : ''],
+  ['Titular da compra', (lead) => lead.purchaseHolder?.type === 'other' ? 'Outra pessoa' : 'Próprio cliente'],
+  ['Nome do titular da compra', (lead) => lead.purchaseHolder?.name || ''],
+  ['CPF do titular da compra', (lead) => formatBrazilianCpf(lead.purchaseHolder?.cpf || '')],
+  ['Vínculo do titular da compra', (lead) => ({ parent: 'Pai ou mãe', 'legal-guardian': 'Responsável legal', spouse: 'Cônjuge', relative: 'Outro familiar', other: 'Outra pessoa' }[lead.purchaseHolder?.relationship] || '')],
+  ['Telefone do titular da compra', (lead) => formatBrazilianPhone(lead.purchaseHolder?.phoneSearch || lead.purchaseHolder?.phone || '')],
   ['Ametropias', (lead) => Array.isArray(lead.ametropiaLabels) ? lead.ametropiaLabels.join(', ') : ''],
   ['Patologias e condições de saúde', (lead) => Array.isArray(lead.pathologyLabels) ? lead.pathologyLabels.join(', ') : ''],
   ['CEP', (lead) => formatBrazilianPostalCode(lead.postalCode || '')],

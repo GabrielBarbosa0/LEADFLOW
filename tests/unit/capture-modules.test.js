@@ -4,6 +4,7 @@ import { captureAppointmentTimeField, careRouteAppointmentSchedule } from '../..
 import { enrichLeadTriage, eyeTriageFields, triageConfigFields } from '../../src/app/features/capture/capture-triage.js';
 import { transportFields } from '../../src/app/features/capture/capture-transport.js';
 import { productPaymentFields } from '../../src/app/features/capture/product-payment.js';
+import { purchaseHolderFields } from '../../src/app/features/capture/purchase-holder.js';
 import { captureView } from '../../src/app/features/capture/capture-view.js';
 import { DEFAULT_STORE_SCHEDULE } from '../../src/utils/schedule.js';
 import { leadDetailAppointmentTimeField } from '../../src/app/features/leads/lead-appointment.js';
@@ -119,6 +120,21 @@ describe('capture feature modules', () => {
     expect(productMarkup).toContain('value="pix" checked');
     expect(productMarkup).not.toContain('data-product-payment data-field="productPaymentMethods" hidden');
     expect(examMarkup).toContain('data-product-payment data-field="productPaymentMethods" hidden');
+  });
+
+  it('shows purchase holder details only for another person', () => {
+    const customerMarkup = purchaseHolderFields({ purchaseHolderType: 'customer' });
+    const otherMarkup = purchaseHolderFields({
+      purchaseHolderType: 'other',
+      purchaseHolderName: 'Maria Responsável',
+      purchaseHolderCpf: '52998224725'
+    });
+
+    expect(customerMarkup).toContain('data-purchase-holder-details hidden');
+    expect(customerMarkup).toContain('value="customer" selected');
+    expect(otherMarkup).not.toContain('data-purchase-holder-details hidden');
+    expect(otherMarkup).toContain('name="purchaseHolderName"');
+    expect(otherMarkup).toContain('529.982.247-25');
   });
 
   it('renders transport limits and availability from store settings', () => {

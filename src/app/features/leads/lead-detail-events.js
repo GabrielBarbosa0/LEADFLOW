@@ -3,6 +3,7 @@ import { bindBirthDateInput, bindCpfInput, bindExclusiveOptions, bindPostalCodeI
 import { leadFormValues } from '../capture/capture-form.js';
 import { bindEyeTriage, enrichLeadTriage } from '../capture/capture-triage.js';
 import { bindProductPaymentFields } from '../capture/product-payment.js';
+import { bindPurchaseHolderFields } from '../capture/purchase-holder.js';
 import { bindTransportFields } from '../capture/capture-transport.js';
 
 export function initializeLeadDetailForm(form, options) {
@@ -15,6 +16,7 @@ export function initializeLeadDetailForm(form, options) {
   bindScoreInput(form);
   bindBirthDateInput(form);
   bindProductPaymentFields(form);
+  bindPurchaseHolderFields(form);
   phoneInput.addEventListener('input', () => {
     phoneInput.value = formatBrazilianPhone(phoneInput.value);
   });

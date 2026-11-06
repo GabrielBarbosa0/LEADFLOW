@@ -3,6 +3,7 @@ const NEW_LEAD_DRAFT_FIELDS = Object.freeze([
   'postalCode', 'street', 'streetNumber', 'neighborhood', 'city', 'state', 'addressReference', 'interestId', 'productPaymentMethods', 'appointmentServiceId',
   'ametropiaIds', 'pathologyIds', 'diabetesLevel', 'eyeSurgeryStatus', 'eyeSurgeryType', 'eyeSurgeryDetails',
   'careRouteOverride', 'examPaymentType', 'examPrice', 'examPaymentMethods', 'creditFatherName', 'creditMotherName', 'creditAuxiliaryPhone',
+  'purchaseHolderType', 'purchaseHolderName', 'purchaseHolderCpf', 'purchaseHolderRelationship', 'purchaseHolderPhone',
   'needsTransport', 'companionCount', 'notes'
 ]);
 

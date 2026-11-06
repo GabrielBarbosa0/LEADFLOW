@@ -12,6 +12,7 @@ export const INTERESTS = [
 ];
 
 export const PRODUCT_INTEREST_IDS = Object.freeze(['complete-glasses', 'frames', 'lenses', 'other']);
+export const PURCHASE_HOLDER_RELATIONSHIPS = Object.freeze(['', 'parent', 'legal-guardian', 'spouse', 'relative', 'other']);
 
 export const AMETROPIAS = [
   { id: 'myopia', label: 'Miopia' },
@@ -267,6 +268,21 @@ export function validateLeadInput(input, options = {}) {
     : 0;
   const hasCompanion = companionCount > 0;
   const diabetes = diabetesData(input, normalizePathologies(input.pathologyIds));
+  const storedPurchaseHolder = input.purchaseHolder || {};
+  const purchaseHolderType = (input.purchaseHolderType || storedPurchaseHolder.type) === 'other' ? 'other' : 'customer';
+  const purchaseHolderName = purchaseHolderType === 'other'
+    ? String(input.purchaseHolderName ?? storedPurchaseHolder.name ?? '').trim()
+    : '';
+  const purchaseHolderCpf = purchaseHolderType === 'other'
+    ? normalizeCpf(input.purchaseHolderCpf ?? storedPurchaseHolder.cpf)
+    : '';
+  const purchaseHolderRelationship = purchaseHolderType === 'other'
+    ? String(input.purchaseHolderRelationship ?? storedPurchaseHolder.relationship ?? '')
+    : '';
+  const purchaseHolderPhoneValue = purchaseHolderType === 'other'
+    ? String(input.purchaseHolderPhone ?? storedPurchaseHolder.phone ?? '').trim()
+    : '';
+  const purchaseHolderPhone = purchaseHolderPhoneValue ? normalizeBrazilianPhone(purchaseHolderPhoneValue) : null;
 
   if (fullName.length < 2) errors.fullName = 'Informe o nome do cliente.';
   if (fullName.length > 120) errors.fullName = 'Use no máximo 120 caracteres.';
@@ -276,6 +292,11 @@ export function validateLeadInput(input, options = {}) {
   if (String(input.postalCode || '').trim() && postalCode.length !== 8) errors.postalCode = 'Informe um CEP com 8 dígitos.';
   if (savwinCode.length > 40) errors.savwinCode = 'Use no máximo 40 caracteres.';
   if (rawScore !== '' && (!Number.isInteger(score) || score < 0 || score > 1000)) errors.score = 'Informe um score entre 0 e 1000.';
+  if (purchaseHolderType === 'other' && purchaseHolderName.length < 2) errors.purchaseHolderName = 'Informe o nome do titular.';
+  if (purchaseHolderName.length > 120) errors.purchaseHolderName = 'Use no máximo 120 caracteres.';
+  if (purchaseHolderType === 'other' && !isValidCpf(purchaseHolderCpf)) errors.purchaseHolderCpf = 'Informe um CPF válido para o titular.';
+  if (!PURCHASE_HOLDER_RELATIONSHIPS.includes(purchaseHolderRelationship)) errors.purchaseHolderRelationship = 'Selecione um vínculo válido.';
+  if (purchaseHolderPhoneValue && !purchaseHolderPhone) errors.purchaseHolderPhone = 'Informe um telefone válido com DDD.';
   if (diabetes.hasDiabetes && diabetes.diabetesLevel !== null && (diabetes.diabetesLevel < 20 || diabetes.diabetesLevel > 600)) {
     errors.diabetesLevel = 'Informe um nivel entre 20 e 600 mg/dL.';
   }
@@ -414,6 +435,14 @@ export function validateLeadInput(input, options = {}) {
     pricing,
     examPaymentMethods,
     productPaymentMethods,
+    purchaseHolder: {
+      type: purchaseHolderType,
+      name: purchaseHolderName,
+      cpf: purchaseHolderCpf,
+      relationship: purchaseHolderRelationship,
+      phone: purchaseHolderPhone?.e164 || '',
+      phoneSearch: purchaseHolderPhone?.search || ''
+    },
     credit: {
       fatherName: creditFatherName,
       motherName: creditMotherName,
@@ -473,6 +502,9 @@ export function createQuickLeadDocument(input, profile, installationId, now = ne
       interestId: 'eye-exam',
       interestLabel: 'Exame de vista',
       productPaymentMethods: [],
+      purchaseHolder: {
+        type: 'customer', name: '', cpf: '', relationship: '', phone: '', phoneSearch: ''
+      },
       ametropiaIds: ['unknown'],
       pathologyIds: ['unknown'],
       diabetesLevel: null,
@@ -550,6 +582,7 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
       interestId: interest.id,
       interestLabel: interest.id ? interest.label : '',
       productPaymentMethods: validation.productPaymentMethods,
+      purchaseHolder: validation.purchaseHolder,
       ...ametropiaData(input),
       ...pathologyData(input),
       diabetesLevel: validation.diabetes.diabetesLevel,
@@ -627,6 +660,7 @@ export function createLeadUpdate(input) {
       interestId: interest.id,
       interestLabel: interest.id ? interest.label : '',
       productPaymentMethods: validation.productPaymentMethods,
+      purchaseHolder: validation.purchaseHolder,
       ...ametropiaData(input),
       ...pathologyData(input),
       diabetesLevel: validation.diabetes.diabetesLevel,

@@ -17,6 +17,14 @@ describe('createLeadsCsv', () => {
       customerRg: '12.345.678-X',
       interestLabel: 'Armação',
       productPaymentMethods: ['pix', 'credit-card'],
+      purchaseHolder: {
+        type: 'other',
+        name: 'Responsável Exemplo',
+        cpf: '52998224725',
+        relationship: 'legal-guardian',
+        phone: '+5581988887777',
+        phoneSearch: '81988887777'
+      },
       ametropiaLabels: ['Miopia', 'Astigmatismo'],
       pathologyLabels: ['Glaucoma', 'Pressao alta'],
       postalCode: '50000123',
@@ -46,6 +54,8 @@ describe('createLeadsCsv', () => {
     expect(csv).toContain('"Cod. SavWin";"Score"');
     expect(csv).toContain('"Forma de pagamento do produto"');
     expect(csv).toContain('Pix + Cartão de crédito');
+    expect(csv).toContain('"Titular da compra"');
+    expect(csv).toContain('"Outra pessoa";"Responsável Exemplo";"529.982.247-25";"Responsável legal";"(81) 98888-7777"');
     expect(csv).toContain('"Data de nascimento";"Idade atual"');
     expect(csv).toContain('"Telefone";"RG"');
     expect(csv).toContain('"12.345.678-X"');

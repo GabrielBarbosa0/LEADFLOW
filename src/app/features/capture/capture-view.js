@@ -6,6 +6,7 @@ import { ametropiaOptions, eyeTriageFields, pathologyOptions, sexOptions, triage
 import { transportFields } from './capture-transport.js';
 import { cpfAppointmentConfirmationDialog, cpfAppointmentStatusMarkup } from './cpf-appointment-warning.js';
 import { productPaymentFields } from './product-payment.js';
+import { purchaseHolderFields } from './purchase-holder.js';
 
 export function captureView({
   scheduleState,
@@ -78,6 +79,7 @@ export function captureView({
         <div class="field" data-field="appointmentServiceId"><label for="appointmentServiceId">Serviço do agendamento</label><select id="appointmentServiceId" name="appointmentServiceId" ${selectedStoreId ? '' : 'disabled'}><option value="">${selectedStoreId ? 'Selecione o serviço' : 'Escolha primeiro a loja'}</option>${serviceOptions}</select><small class="field-error"></small></div>
       </div>
       ${productPaymentFields({}, 'new-lead-product-payment')}
+      ${purchaseHolderFields({}, 'new-lead-purchase-holder')}
       ${scheduleState.settings.showAmetropiaFields ? `<fieldset id="new-lead-ametropias" class="field ametropia-field"><legend>Ametropias</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${ametropiaOptions()}</div></fieldset>` : ''}
       <fieldset id="new-lead-pathologies" class="field ametropia-field"><legend>Patologias e condições de saúde</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${pathologyOptions()}</div></fieldset>
       ${eyeTriageFields({}, scheduleState.settings, 'new-lead-eye')}

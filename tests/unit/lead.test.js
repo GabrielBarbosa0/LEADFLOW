@@ -77,6 +77,45 @@ describe('lead validation', () => {
     expect(validateLeadInput({ ...validInput, customerRg: '1'.repeat(21) }).errors.customerRg).toBeDefined();
   });
 
+  it('stores a different purchase holder without replacing the customer', () => {
+    const input = {
+      ...validInput,
+      purchaseHolderType: 'other',
+      purchaseHolderName: 'Responsável Exemplo',
+      purchaseHolderCpf: '529.982.247-25',
+      purchaseHolderRelationship: 'legal-guardian',
+      purchaseHolderPhone: '(81) 98888-7777'
+    };
+    const result = createLeadDocument(input, profile, 'installation-test');
+
+    expect(result.isValid).toBe(true);
+    expect(result.data).toMatchObject({
+      fullName: 'Cliente Exemplo',
+      purchaseHolder: {
+        type: 'other',
+        name: 'Responsável Exemplo',
+        cpf: '52998224725',
+        relationship: 'legal-guardian',
+        phone: '+5581988887777',
+        phoneSearch: '81988887777'
+      }
+    });
+  });
+
+  it('requires a valid name and CPF only for a different purchase holder', () => {
+    const invalid = validateLeadInput({
+      ...validInput,
+      purchaseHolderType: 'other',
+      purchaseHolderName: '',
+      purchaseHolderCpf: '111.111.111-11'
+    });
+    expect(invalid.errors).toMatchObject({
+      purchaseHolderName: expect.any(String),
+      purchaseHolderCpf: expect.any(String)
+    });
+    expect(validateLeadInput({ ...validInput, purchaseHolderType: 'customer' }).isValid).toBe(true);
+  });
+
   it('stores valid product payment methods only for product interests', () => {
     expect(createLeadDocument(validInput, profile, 'installation-test').data.productPaymentMethods)
       .toEqual(['credit-card', 'pix']);
