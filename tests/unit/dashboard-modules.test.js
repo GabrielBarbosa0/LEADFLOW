@@ -88,6 +88,13 @@ describe('dashboard feature modules', () => {
     expect(markup).not.toContain('data-lucide="list-ordered"');
     expect(markup).toContain('id="dashboard-ranking-dialog"');
     expect(markup).toContain('data-dashboard-ranking-store');
+    expect(markup).toContain('data-dashboard-ranking-sort="total"');
+    expect(markup).toContain('data-dashboard-ranking-sort="attendanceRate"');
+    expect(markup).toContain('aria-pressed="true" class="is-active">Cadastros</button>');
+    expect(markup).toContain('dashboard-ranking-progress');
+    expect(markup).toContain('dashboard-ranking-preview-total');
+    expect(markup).toContain('dashboard-ranking-close');
+    expect(markup).not.toContain('data-dashboard-ranking-close>Fechar</button>');
     expect(markup).toContain('<dt>Cadastros</dt><dd>1</dd>');
     expect(markup).toContain('Loja 06 - Surubim');
   });

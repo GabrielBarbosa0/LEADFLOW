@@ -694,6 +694,12 @@ function bindPageEvents() {
       state.dashboardRanking.storeId = event.target.value;
       render();
     });
+    rankingDialog.querySelectorAll('[data-dashboard-ranking-sort]').forEach((button) => {
+      button.addEventListener('click', () => {
+        state.dashboardRanking.sortBy = button.dataset.dashboardRankingSort;
+        render();
+      });
+    });
   }
   const leadDetailDialog = document.querySelector('#lead-detail-dialog');
   if (leadDetailDialog) {

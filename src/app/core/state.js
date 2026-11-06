@@ -66,7 +66,8 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
     },
     dashboardRanking: {
       open: false,
-      storeId: ''
+      storeId: '',
+      sortBy: 'total'
     },
     appointments: {
       loading: false,

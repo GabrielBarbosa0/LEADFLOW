@@ -23,32 +23,49 @@ export function dashboardView({ allowed, records, metrics, management, allowedSt
   }).join('') : '<div class="dashboard-panel-empty">Nenhum transporte agendado nos próximos 7 dias</div>';
   const periodSummary = appointmentDistribution.predominantPeriod ? `Predomínio: ${appointmentDistribution.predominantPeriod}` : summary.scheduled ? 'Sem predomínio no período' : 'Nenhum agendamento no período';
   const appointmentAnalysis = `${reportDistributionPanel('Agendamentos por dia da semana', `${summary.scheduled} agendamento(s) distribuído(s) por dia`, 'calendar-days', appointmentDistribution.weekdays, summary.scheduled)}${reportDistributionPanel('Agendamentos por horário', periodSummary, 'clock-3', appointmentDistribution.periods, summary.scheduled, appointmentDistribution.predominantPeriod)}`;
-  const rankingPreview = captors.slice(0, 5).map((captor, index) => `<button class="dashboard-ranking-row dashboard-ranking-preview-row" type="button" data-dashboard-ranking-open aria-label="Abrir ranking completo"><span>${index + 1}</span><div><strong>${escapeHtml(captor.label)}</strong><small>${captor.scheduled} agendado(s) · ${captor.attended} comparecimento(s)</small></div><strong>${captor.total}</strong></button>`).join('');
+  const rankingLeaderTotal = Math.max(1, captors[0]?.total || 0);
+  const rankingPreview = captors.slice(0, 5).map((captor, index) => `<button class="dashboard-ranking-row dashboard-ranking-preview-row is-rank-${index + 1}" type="button" data-dashboard-ranking-open aria-label="Abrir ranking completo de captadores">
+    <span class="dashboard-ranking-badge">${index + 1}</span>
+    <div class="dashboard-ranking-preview-person">
+      <strong>${escapeHtml(captor.label)}</strong>
+      <small><span>${captor.scheduled} agendado(s)</span><span>${captor.attended} comparecimento(s)</span><span>${captor.attendanceRate}% presença</span></small>
+      <span class="dashboard-ranking-progress" aria-hidden="true"><i style="width:${Math.round((captor.total / rankingLeaderTotal) * 100)}%"></i></span>
+    </div>
+    <div class="dashboard-ranking-preview-total"><strong>${captor.total}</strong><small>cadastros</small></div>
+  </button>`).join('');
   const rankingStoreOptions = (ranking.stores || []).map((store) => `<option value="${escapeHtml(store.id)}" ${ranking.storeId === store.id ? 'selected' : ''}>${escapeHtml(store.displayLabel || store.label)}</option>`).join('');
-  const rankingRows = (ranking.captors || []).map((captor, index) => `<article class="dashboard-ranking-dialog-row">
+  const rankingSortBy = ['total', 'scheduled', 'attended', 'attendanceRate'].includes(ranking.sortBy) ? ranking.sortBy : 'total';
+  const rankingSortOptions = [
+    ['total', 'Cadastros'],
+    ['scheduled', 'Agendamentos'],
+    ['attended', 'Comparecimentos'],
+    ['attendanceRate', 'Taxa']
+  ];
+  const sortedRankingCaptors = [...(ranking.captors || [])].sort((a, b) => b[rankingSortBy] - a[rankingSortBy] || b.total - a.total || b.attendanceRate - a.attendanceRate || a.label.localeCompare(b.label, 'pt-BR'));
+  const rankingRows = sortedRankingCaptors.map((captor, index) => `<article class="dashboard-ranking-dialog-row is-rank-${index + 1}">
     <span class="dashboard-ranking-position">${index + 1}</span>
-    <div class="dashboard-ranking-person"><strong>${escapeHtml(captor.label)}</strong><small>Desempenho no período</small></div>
+    <div class="dashboard-ranking-person"><strong>${escapeHtml(captor.label)}</strong><small>${captor.total} cadastro(s) no período</small></div>
     <dl>
-      <div><dt>Cadastros</dt><dd>${captor.total}</dd></div>
-      <div><dt>Agendados</dt><dd>${captor.scheduled}</dd></div>
-      <div><dt>Compareceram</dt><dd>${captor.attended}</dd></div>
+      <div class="${rankingSortBy === 'total' ? 'is-active' : ''}"><dt>Cadastros</dt><dd>${captor.total}</dd></div>
+      <div class="${rankingSortBy === 'scheduled' ? 'is-active' : ''}"><dt>Agendados</dt><dd>${captor.scheduled}</dd></div>
+      <div class="${rankingSortBy === 'attended' ? 'is-active' : ''}"><dt>Compareceram</dt><dd>${captor.attended}</dd></div>
       <div><dt>Faltaram</dt><dd>${captor.missed}</dd></div>
-      <div><dt>Taxa</dt><dd>${captor.attendanceRate}%</dd></div>
+      <div class="${rankingSortBy === 'attendanceRate' ? 'is-active' : ''}"><dt>Taxa</dt><dd>${captor.attendanceRate}%</dd></div>
     </dl>
   </article>`).join('');
   const rankingDialog = ranking.open ? `<dialog id="dashboard-ranking-dialog" class="appointment-create-dialog dashboard-ranking-dialog" aria-labelledby="dashboard-ranking-title">
     <div class="appointment-create-header">
-      <div><span>EQUIPE</span><h2 id="dashboard-ranking-title">Ranking completo</h2><p>Desempenho de todos os captadores no período analisado.</p></div>
-      <button class="icon-button" type="button" data-dashboard-ranking-close aria-label="Fechar ranking"><i data-lucide="x"></i></button>
+      <div><span>EQUIPE</span><h2 id="dashboard-ranking-title">Ranking completo</h2><p>${summary.total} cadastro(s) no período analisado</p></div>
+      <button class="icon-button dashboard-ranking-close" type="button" data-dashboard-ranking-close aria-label="Fechar ranking" title="Fechar"><i data-lucide="x"></i></button>
     </div>
     <div class="dashboard-ranking-dialog-toolbar">
       <div class="field"><label for="dashboard-ranking-store">Loja</label><select id="dashboard-ranking-store" data-dashboard-ranking-store><option value="">Todas as lojas permitidas</option>${rankingStoreOptions}</select></div>
-      <div class="dashboard-ranking-dialog-total"><span>Captadores</span><strong>${(ranking.captors || []).length}</strong></div>
+      <div class="dashboard-ranking-sort"><span>Ordenar por</span><div role="group" aria-label="Critério de ordenação">${rankingSortOptions.map(([value, label]) => `<button type="button" data-dashboard-ranking-sort="${value}" aria-pressed="${rankingSortBy === value}" class="${rankingSortBy === value ? 'is-active' : ''}">${label}</button>`).join('')}</div></div>
+      <div class="dashboard-ranking-dialog-total"><span>Captadores</span><strong>${sortedRankingCaptors.length}</strong></div>
     </div>
     <div class="dashboard-ranking-dialog-content">
       ${rankingRows || '<div class="empty-state"><i data-lucide="users"></i><strong>Nenhum captador encontrado</strong><p>Não há cadastros para esta loja no período selecionado.</p></div>'}
     </div>
-    <div class="appointment-create-actions"><button class="button button-secondary" type="button" data-dashboard-ranking-close>Fechar</button></div>
   </dialog>` : '';
   const captorRanking = `${rankingPreview}<button class="dashboard-ranking-view-all" type="button" data-dashboard-ranking-open><i data-lucide="trophy"></i><span>Ver ranking completo</span><i data-lucide="chevron-right"></i></button>${rankingDialog}`;
   const upcomingValue = upcoming.loading && !upcoming.loaded ? '...' : summary.upcomingAppointments;

@@ -3420,30 +3420,36 @@ svg {
 
 .dashboard-ranking-row {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .dashboard-ranking-preview-row {
   width: 100%;
+  min-height: 68px;
+  padding: 10px 8px;
   border-top: 0;
   border-right: 0;
   border-left: 0;
+  border-radius: 6px;
   color: inherit;
   background: transparent;
   text-align: left;
+  transition: background 140ms ease, transform 140ms ease;
   cursor: pointer;
 }
 
 .dashboard-ranking-preview-row:hover,
 .dashboard-ranking-preview-row:focus-visible {
   background: var(--surface-subtle);
+  transform: translateX(2px);
 }
 
-.dashboard-ranking-row > span {
-  width: 28px;
-  height: 28px;
+.dashboard-ranking-badge,
+.dashboard-ranking-position {
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -3453,9 +3459,85 @@ svg {
   font-weight: 900;
 }
 
-.dashboard-ranking-row div strong,
-.dashboard-ranking-row div small {
+.dashboard-ranking-preview-person,
+.dashboard-ranking-preview-total {
+  min-width: 0;
+}
+
+.dashboard-ranking-preview-person > strong,
+.dashboard-ranking-preview-person > small,
+.dashboard-ranking-preview-total strong,
+.dashboard-ranking-preview-total small {
   display: block;
+}
+
+.dashboard-ranking-preview-person > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-ranking-preview-person > small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  margin-top: 3px;
+}
+
+.dashboard-ranking-preview-person > small span {
+  white-space: nowrap;
+}
+
+.dashboard-ranking-progress {
+  height: 4px;
+  display: block;
+  overflow: hidden;
+  margin-top: 8px;
+  border-radius: 4px;
+  background: #e5ebf2;
+}
+
+.dashboard-ranking-progress i {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+.dashboard-ranking-preview-total {
+  text-align: right;
+}
+
+.dashboard-ranking-preview-total strong {
+  color: var(--brand);
+  font-size: 1rem;
+}
+
+.dashboard-ranking-preview-total small {
+  margin-top: 1px;
+  font-size: 0.62rem;
+}
+
+.dashboard-ranking-preview-row.is-rank-1 .dashboard-ranking-badge,
+.dashboard-ranking-dialog-row.is-rank-1 .dashboard-ranking-position {
+  color: #725000;
+  background: #f8e7aa;
+}
+
+.dashboard-ranking-preview-row.is-rank-2 .dashboard-ranking-badge,
+.dashboard-ranking-dialog-row.is-rank-2 .dashboard-ranking-position {
+  color: #4f5d6c;
+  background: #e4e9ee;
+}
+
+.dashboard-ranking-preview-row.is-rank-3 .dashboard-ranking-badge,
+.dashboard-ranking-dialog-row.is-rank-3 .dashboard-ranking-position {
+  color: #764526;
+  background: #efd5c2;
+}
+
+.dashboard-ranking-preview-row.is-rank-1 .dashboard-ranking-progress i {
+  background: #b48208;
 }
 
 .dashboard-ranking-view-all {
@@ -3487,14 +3569,27 @@ svg {
 
 .appointment-create-dialog.dashboard-ranking-dialog {
   width: min(calc(100% - 32px), 1080px);
-  height: min(88vh, 648px);
+  height: min(88vh, 680px);
+}
+
+.dashboard-ranking-close {
+  width: 40px;
+  height: 40px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.dashboard-ranking-close:hover,
+.dashboard-ranking-close:focus-visible {
+  border-color: transparent;
+  color: var(--brand);
+  background: var(--brand-soft);
 }
 
 .dashboard-ranking-dialog-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 360px) auto;
+  grid-template-columns: minmax(210px, 300px) minmax(390px, 1fr) auto;
   align-items: end;
-  justify-content: space-between;
   gap: 16px;
   padding: 16px 22px;
   border-bottom: 1px solid var(--line);
@@ -3505,9 +3600,53 @@ svg {
   margin: 0;
 }
 
+.dashboard-ranking-sort > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.dashboard-ranking-sort > div {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.dashboard-ranking-sort button {
+  min-width: 0;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dashboard-ranking-sort button:hover,
+.dashboard-ranking-sort button:focus-visible {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.dashboard-ranking-sort button.is-active {
+  color: #fff;
+  background: var(--brand);
+  box-shadow: 0 2px 6px rgb(7 56 113 / 18%);
+}
+
 .dashboard-ranking-dialog-total {
   min-width: 96px;
-  padding: 9px 14px;
+  padding: 6px 14px 5px;
   border-left: 3px solid var(--brand);
 }
 
@@ -3542,8 +3681,9 @@ svg {
   grid-template-columns: 38px minmax(200px, 1fr) minmax(520px, 2fr);
   align-items: center;
   gap: 14px;
-  padding: 16px 0;
+  padding: 13px 8px;
   border-bottom: 1px solid var(--line);
+  border-radius: 6px;
 }
 
 .dashboard-ranking-dialog-row:last-child {
@@ -3593,6 +3733,14 @@ svg {
 
 .dashboard-ranking-dialog-row dl > div {
   min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.dashboard-ranking-dialog-row dl > div.is-active {
+  border-color: #c5d6e9;
+  background: var(--brand-soft);
 }
 
 .dashboard-ranking-dialog-row dt {
@@ -3606,6 +3754,11 @@ svg {
   color: var(--ink);
   font-size: 0.86rem;
   font-weight: 850;
+}
+
+.dashboard-ranking-dialog-row dl > div.is-active dt,
+.dashboard-ranking-dialog-row dl > div.is-active dd {
+  color: var(--brand);
 }
 
 .dashboard-empty {
@@ -3624,6 +3777,15 @@ svg {
 }
 
 @media (max-width: 900px) {
+  .dashboard-ranking-dialog-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .dashboard-ranking-sort {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
   .dashboard-ranking-dialog-row {
     grid-template-columns: 36px minmax(0, 1fr);
     gap: 10px;
@@ -3644,6 +3806,15 @@ svg {
   .dashboard-ranking-dialog-toolbar {
     grid-template-columns: minmax(0, 1fr) auto;
     padding: 14px 16px;
+  }
+
+  .dashboard-ranking-sort > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .dashboard-ranking-sort button {
+    min-height: 34px;
   }
 
   .dashboard-ranking-dialog-content {
@@ -3668,6 +3839,10 @@ svg {
   }
 
   .dashboard-ranking-dialog-total {
+    display: none;
+  }
+
+  .dashboard-ranking-preview-person > small span:last-child {
     display: none;
   }
 }
