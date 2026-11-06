@@ -17,6 +17,25 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   await expect(page.getByText('Administrador Teste')).toBeVisible();
   await expect(page.getByRole('button', { name: /Acessos da equipe/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Configurações/ })).toBeVisible();
+
+  const walkInCard = page.locator('.action-card-walk-in');
+  const externalCard = page.locator('.action-card-external');
+  await expect(walkInCard).toBeVisible();
+  await expect(externalCard).toBeVisible();
+  const { walkInBox, externalBox } = await page.locator('.action-grid').evaluate((grid) => {
+    const walkInRect = grid.querySelector('.action-card-walk-in').getBoundingClientRect();
+    const externalRect = grid.querySelector('.action-card-external').getBoundingClientRect();
+    return {
+      walkInBox: { y: walkInRect.y, width: walkInRect.width },
+      externalBox: { y: externalRect.y, width: externalRect.width }
+    };
+  });
+  if (page.viewportSize().width >= 720) {
+    expect(Math.abs(walkInBox.y - externalBox.y)).toBeLessThan(2);
+    expect(Math.abs(walkInBox.width - externalBox.width)).toBeLessThan(2);
+  } else {
+    expect(externalBox.y).toBeGreaterThan(walkInBox.y);
+  }
 });
 
 test('loads store-scoped logistics for an external leader', async ({ page }) => {

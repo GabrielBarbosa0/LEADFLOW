@@ -6732,7 +6732,7 @@ svg {
     grid-column: 1 / -1;
   }
 
-  .action-card-walk-in {
+  .action-card-walk-in:not(:has(~ .action-card-external)) {
     grid-column: 1 / -1;
   }
 

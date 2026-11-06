@@ -66,6 +66,7 @@ describe('application shell modules', () => {
     });
 
     expect(leaderMarkup).toContain('Operação externa');
+    expect(leaderMarkup).toContain('action-card-external');
     expect(collaboratorMarkup).not.toContain('Operação externa');
     expect(currentPageTitle({ route: 'external-operations' }, () => false)).toBe('Operação externa');
   });
