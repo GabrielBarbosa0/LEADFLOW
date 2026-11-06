@@ -101,6 +101,7 @@ describe('leads feature modules', () => {
     expect(markup).toContain('value="850"');
     expect(markup).toContain('name="score" type="text" inputmode="numeric" pattern="[0-9]*"');
     expect(markup).toContain('value="50000-123"');
+    expect(markup).toContain('name="strategyType"');
     expect(markup).toContain('Excluir lead');
     expect(markup).toContain('edit-appointment-time-field');
   });

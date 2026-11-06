@@ -11,6 +11,15 @@ export const INTERESTS = [
   { id: 'other', label: 'Outro' }
 ];
 
+export const STRATEGY_TYPES = [
+  { id: '', label: 'Não informado' },
+  { id: 'external', label: 'Externa' },
+  { id: 'after-sales', label: 'Pós-venda' },
+  { id: 'telemarketing', label: 'Telemarketing' },
+  { id: 'social-media', label: 'Rede social' },
+  { id: 'spontaneous-visit', label: 'Visita espontânea' }
+];
+
 export const PRODUCT_INTEREST_IDS = Object.freeze(['complete-glasses', 'frames', 'lenses', 'other']);
 export const PURCHASE_HOLDER_RELATIONSHIPS = Object.freeze(['', 'parent', 'legal-guardian', 'spouse', 'relative', 'other']);
 
@@ -258,6 +267,7 @@ export function validateLeadInput(input, options = {}) {
   const score = rawScore === '' ? null : Number(rawScore);
   const birthDate = String(input.birthDate || '').trim();
   const sex = String(input.sex || '').trim();
+  const strategyType = String(input.strategyType || '').trim();
   const needsTransport = booleanValue(input.needsTransport);
   const maxCompanions = Number(input.maxCompanions ?? 1);
   const requestedCompanionCount = input.companionCount === undefined || input.companionCount === ''
@@ -306,6 +316,7 @@ export function validateLeadInput(input, options = {}) {
     errors.birthDate = 'Informe uma data de nascimento válida.';
   }
   if (!SEX_OPTIONS.some((option) => option.id === sex)) errors.sex = 'Selecione uma opção válida.';
+  if (!STRATEGY_TYPES.some((option) => option.id === strategyType)) errors.strategyType = 'Selecione um tipo de estratégia válido.';
   if ((input.street?.trim().length || 0) > 120) errors.street = 'Use no máximo 120 caracteres.';
   if (normalizeStreetNumber(input.streetNumber).length > 12) errors.streetNumber = 'Use no máximo 12 caracteres.';
   if ((input.addressReference?.trim().length || 0) > 160) errors.addressReference = 'Use no máximo 160 caracteres.';
@@ -426,6 +437,7 @@ export function validateLeadInput(input, options = {}) {
     score,
     birthDate,
     sex,
+    strategyType,
     needsTransport,
     hasCompanion,
     companionCount,
@@ -579,6 +591,7 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
       city: input.city?.trim() || '',
       state: (input.state?.trim() || 'PE').toUpperCase().slice(0, 2),
       addressReference: input.addressReference?.trim() || '',
+      strategyType: validation.strategyType,
       interestId: interest.id,
       interestLabel: interest.id ? interest.label : '',
       productPaymentMethods: validation.productPaymentMethods,
@@ -657,6 +670,7 @@ export function createLeadUpdate(input) {
       city: input.city?.trim() || '',
       state: (input.state?.trim() || 'PE').toUpperCase().slice(0, 2),
       addressReference: input.addressReference?.trim() || '',
+      strategyType: validation.strategyType,
       interestId: interest.id,
       interestLabel: interest.id ? interest.label : '',
       productPaymentMethods: validation.productPaymentMethods,

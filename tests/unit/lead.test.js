@@ -18,6 +18,7 @@ const validInput = {
   city: '',
   state: 'PE',
   addressReference: 'Em frente à praça',
+  strategyType: 'external',
   interestId: 'complete-glasses',
   ametropiaIds: ['myopia', 'astigmatism'],
   pathologyIds: ['glaucoma', 'diabetes'],
@@ -75,6 +76,13 @@ describe('lead validation', () => {
   it('normalizes an optional RG and limits its length', () => {
     expect(createLeadUpdate(validInput).data.customerRg).toBe('12.345.678-X');
     expect(validateLeadInput({ ...validInput, customerRg: '1'.repeat(21) }).errors.customerRg).toBeDefined();
+  });
+
+  it('stores only a supported strategy type', () => {
+    expect(createLeadDocument(validInput, profile, 'installation-test').data.strategyType).toBe('external');
+    expect(createLeadUpdate({ ...validInput, strategyType: 'after-sales' }).data.strategyType).toBe('after-sales');
+    expect(validateLeadInput({ ...validInput, strategyType: 'invalid' }).errors.strategyType).toBeDefined();
+    expect(createLeadUpdate({ ...validInput, strategyType: '' }).data.strategyType).toBe('');
   });
 
   it('stores a different purchase holder without replacing the customer', () => {

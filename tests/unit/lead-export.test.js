@@ -15,6 +15,7 @@ describe('createLeadsCsv', () => {
       phone: '+5581999991234',
       phoneSearch: '81999991234',
       customerRg: '12.345.678-X',
+      strategyType: 'social-media',
       interestLabel: 'Armação',
       productPaymentMethods: ['pix', 'credit-card'],
       purchaseHolder: {
@@ -53,6 +54,8 @@ describe('createLeadsCsv', () => {
     expect(csv).toContain('"lead-001";"Cliente Exemplo";"CLI-1234";"850";"Cliente";"(81) 99999-1234"');
     expect(csv).toContain('"Cod. SavWin";"Score"');
     expect(csv).toContain('"Forma de pagamento do produto"');
+    expect(csv).toContain('"Tipo de estratégia"');
+    expect(csv).toContain('"Rede social"');
     expect(csv).toContain('Pix + Cartão de crédito');
     expect(csv).toContain('"Titular da compra"');
     expect(csv).toContain('"Outra pessoa";"Responsável Exemplo";"529.982.247-25";"Responsável legal";"(81) 98888-7777"');

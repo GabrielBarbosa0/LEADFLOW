@@ -218,6 +218,10 @@ describe('capture feature modules', () => {
     expect(markup).toContain('name="score"');
     expect(markup).toContain('name="score" type="text" inputmode="numeric" pattern="[0-9]*"');
     expect(markup).toContain('name="postalCode"');
+    expect(markup).toContain('name="strategyType"');
+    expect(markup).toContain('value="external">Externa</option>');
+    expect(markup).toContain('value="after-sales">Pós-venda</option>');
+    expect(markup).toContain('value="spontaneous-visit">Visita espontânea</option>');
     expect(markup).toContain('class="field-row document-fields"');
     expect(markup).toContain('class="field-row demographic-fields"');
     expect(markup).toContain('class="field-row preferred-postal-fields"');

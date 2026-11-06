@@ -1,4 +1,4 @@
-import { formatBrazilianPostalCode, INTERESTS } from '../../../utils/lead.js';
+import { formatBrazilianPostalCode, INTERESTS, STRATEGY_TYPES } from '../../../utils/lead.js';
 import { leadOriginLabel } from '../../../utils/lead-origin.js';
 import { formatBrazilianPhone } from '../../../utils/phone.js';
 import { servicesForStore } from '../../../utils/service-catalog.js';
@@ -53,6 +53,7 @@ export function leadDetailView({
     : appointmentTimeMarkup;
   const showAmetropiaFields = scheduleState.storeId === lead.storeId && scheduleState.settings.showAmetropiaFields;
   const interests = INTERESTS.map((item) => `<option value="${item.id}" ${lead.interestId === item.id ? 'selected' : ''}>${item.label}</option>`).join('');
+  const strategyTypes = STRATEGY_TYPES.map((item) => `<option value="${item.id}" ${String(lead.strategyType || '') === item.id ? 'selected' : ''}>${item.label}</option>`).join('');
   const selectedService = selectedLeadDetailService(lead, scheduleState);
   const availableServices = servicesForStore(scheduleState.services, lead.storeId);
   const serviceOptions = (availableServices.length ? availableServices : [selectedService])
@@ -93,6 +94,7 @@ export function leadDetailView({
       </div>
       <div class="field address-reference-field" data-field="addressReference"><label for="edit-addressReference">Referência do endereço</label><input id="edit-addressReference" name="addressReference" maxlength="160" autocomplete="off" value="${escapeHtml(lead.addressReference || '')}" placeholder="Ex.: próximo à praça, em frente à escola" ${locked} /><small class="field-error"></small></div>
       <div class="field-row interest-service-fields">
+        <div class="field" data-field="strategyType"><label for="edit-strategyType">Tipo de estratégia</label><select id="edit-strategyType" name="strategyType" ${locked}>${strategyTypes}</select><small class="field-error"></small></div>
         <div class="field"><label for="edit-interestId">Interesse principal</label><select id="edit-interestId" name="interestId" ${locked}>${interests}</select></div>
         <div class="field" data-field="appointmentServiceId"><label for="edit-appointmentServiceId">Serviço do agendamento</label><select id="edit-appointmentServiceId" name="appointmentServiceId" ${locked}><option value="">Selecione o serviço</option>${serviceOptions}</select><small class="field-error"></small></div>
       </div>

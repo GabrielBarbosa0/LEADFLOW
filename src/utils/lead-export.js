@@ -1,6 +1,6 @@
 import { formatBrazilianPhone } from './phone.js';
 import { STORES } from './stores.js';
-import { calculateAge, examPaymentMethodsLabel, examPricing, formatBrazilianPostalCode } from './lead.js';
+import { calculateAge, examPaymentMethodsLabel, examPricing, formatBrazilianPostalCode, STRATEGY_TYPES } from './lead.js';
 import { formatBrazilianCpf } from './savwin-matching.js';
 
 function datePart(value) {
@@ -72,6 +72,7 @@ const CSV_COLUMNS = [
   ['Levara acompanhante?', (lead) => lead.needsTransport && lead.hasCompanion ? 'Sim' : 'Não'],
   ['Quantidade de acompanhantes', (lead) => lead.needsTransport ? Number(lead.companionCount ?? (lead.hasCompanion ? 1 : 0)) : 0],
   ['Assentos do transporte', (lead) => Number(lead.transportSeats) || 0],
+  ['Tipo de estratégia', (lead) => STRATEGY_TYPES.find((item) => item.id === String(lead.strategyType || ''))?.label || 'Não informado'],
   ['Interesse principal', (lead) => lead.interestLabel],
   ['Forma de pagamento do produto', (lead) => Array.isArray(lead.productPaymentMethods) && lead.productPaymentMethods.length
     ? examPaymentMethodsLabel(lead.productPaymentMethods)
