@@ -6,7 +6,7 @@ import { DEFAULT_STORE_SCHEDULE, appointmentBlockTimes } from '../src/utils/sche
 import { appointmentResourceId } from '../src/utils/stores.js';
 
 const PROJECT_ID = 'demo-leadflow';
-const SEED_VERSION = 3;
+const SEED_VERSION = 4;
 const TEST_PASSWORD = 'LeadFlow@123';
 const resetRequested = process.argv.includes('--reset');
 const authHost = String(process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099');
@@ -95,7 +95,17 @@ function leadRecord({
   preferredName = '',
   addressReference = '',
   needsTransport = false,
-  companionCount = 0
+  companionCount = 0,
+  birthDate = '1985-04-12',
+  sex = 'female',
+  interestId = 'eye-exam',
+  interestLabel = 'Exame de vista',
+  pathologyIds = ['none'],
+  pathologyLabels = ['Não possui'],
+  careRoute = 'optometrist',
+  examPaymentType = 'paid',
+  appointmentCancellationReason = '',
+  appointmentRescheduleReason = ''
 }) {
   const createdAt = timestampAt(createdOffset, 10);
   const scheduled = Boolean(appointmentDate && appointmentTime);
@@ -109,9 +119,9 @@ function leadRecord({
     customerRg: '',
     savwinCode: `TEST-${id.toUpperCase()}`.slice(0, 40),
     score: 750,
-    birthDate: '1985-04-12',
-    birthMonthDay: '04-12',
-    sex: 'female',
+    birthDate,
+    birthMonthDay: birthDate ? birthDate.slice(5) : '',
+    sex,
     postalCode: '50000123',
     street: 'Rua de Teste',
     streetNumber: '100',
@@ -119,33 +129,35 @@ function leadRecord({
     city: 'Cidade de Teste',
     state: 'PE',
     addressReference,
-    interestId: 'eye-exam',
-    interestLabel: 'Exame de vista',
+    interestId,
+    interestLabel,
     ametropiaIds: ['unknown'],
     ametropiaLabels: ['Nao sabe informar'],
-    pathologyIds: ['none'],
-    pathologyLabels: ['Nao possui'],
+    pathologyIds,
+    pathologyLabels,
     diabetesLevel: null,
     diabetesNeedsMedicalAlert: false,
     eyeSurgeryStatus: 'no',
     eyeSurgeryType: '',
     eyeSurgeryDetails: '',
-    careRoute: 'optometrist',
+    careRoute,
     careRouteOverride: 'automatic',
     careRouteReasons: [],
-    examPaymentType: 'paid',
-    examPaymentMethods: ['pix'],
+    examPaymentType,
+    examPaymentMethods: examPaymentType === 'courtesy' ? [] : ['pix'],
     creditFatherName: '',
     creditMotherName: '',
     creditAuxiliaryPhone: '',
     creditAuxiliaryPhoneSearch: '',
-    examPrice: 150,
+    examPrice: examPaymentType === 'courtesy' ? 0 : careRoute === 'ophthalmologist' ? 200 : 150,
     needsTransport,
     hasCompanion: companionCount > 0,
     companionCount,
     transportSeats: needsTransport ? companionCount + 1 : 0,
     appointmentDate,
     appointmentTime,
+    appointmentCancellationReason,
+    appointmentRescheduleReason,
     funnelStage: funnelStage || (scheduled ? 'scheduled' : 'awaiting_appointment'),
     funnelReasonCode,
     funnelUpdatedAtClient: createdAt.toDate().toISOString(),
@@ -258,33 +270,57 @@ async function writeSeed(db, roleConfig, users) {
     updatedByUid: 'test-admin'
   });
 
+  const dashboardDemoLeads = [
+    { id: 'lead-demo-01', fullName: 'Ana Martins', phoneSearch: '81990000101', birthDate: '1952-02-18', sex: 'female', careRoute: 'ophthalmologist', pathologyIds: ['cataract'], pathologyLabels: ['Catarata'], examPaymentType: 'courtesy', interestId: 'complete-glasses', interestLabel: 'Óculos completo', appointmentDate: dateInSaoPaulo(-1), appointmentTime: '13:00', appointmentAttendance: 'attended' },
+    { id: 'lead-demo-02', fullName: 'Bruno Ferreira', phoneSearch: '81990000102', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1970-06-09', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['glaucoma'], pathologyLabels: ['Glaucoma'], interestId: 'frames', interestLabel: 'Armação', appointmentDate: dateInSaoPaulo(0), appointmentTime: '10:00' },
+    { id: 'lead-demo-03', fullName: 'Carla Souza', phoneSearch: '81990000103', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste', birthDate: '1998-09-23', sex: 'female', pathologyIds: ['diabetes'], pathologyLabels: ['Diabetes'], examPaymentType: 'courtesy', interestId: 'lenses', interestLabel: 'Lentes' },
+    { id: 'lead-demo-04', fullName: 'Daniel Lima', phoneSearch: '81990000104', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', birthDate: '1982-01-30', sex: 'male', pathologyIds: ['hypertension'], pathologyLabels: ['Pressão alta'], interestId: 'complete-glasses', interestLabel: 'Óculos completo', appointmentDate: dateInSaoPaulo(1), appointmentTime: '11:00', needsTransport: true, companionCount: 1 },
+    { id: 'lead-demo-05', fullName: 'Elisa Ribeiro', phoneSearch: '81990000105', birthDate: '1964-12-04', sex: 'female', careRoute: 'ophthalmologist', pathologyIds: ['keratoconus'], pathologyLabels: ['Ceratocone'], interestId: 'eye-exam', interestLabel: 'Exame de vista', appointmentDate: dateInSaoPaulo(-2), appointmentTime: '14:00', appointmentAttendance: 'missed' },
+    { id: 'lead-demo-06', fullName: 'Fabio Rocha', phoneSearch: '81990000106', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1955-05-16', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['retinopathy'], pathologyLabels: ['Retinopatia'], examPaymentType: 'courtesy', appointmentDate: dateInSaoPaulo(1), appointmentTime: '14:00' },
+    { id: 'lead-demo-07', fullName: 'Gabriela Alves', phoneSearch: '81990000107', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste', birthDate: '1988-08-12', sex: 'female', pathologyIds: ['cataract', 'glaucoma'], pathologyLabels: ['Catarata', 'Glaucoma'], interestId: 'frames', interestLabel: 'Armação', appointmentDate: dateInSaoPaulo(0), appointmentTime: '14:00', appointmentAttendance: 'attended' },
+    { id: 'lead-demo-08', fullName: 'Heitor Gomes', phoneSearch: '81990000108', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', birthDate: '2001-03-11', sex: 'male', interestId: 'frames', interestLabel: 'Armação' },
+    { id: 'lead-demo-09', fullName: 'Isabela Melo', phoneSearch: '81990000109', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '', sex: '', pathologyIds: ['other'], pathologyLabels: ['Outra'], interestId: 'other', interestLabel: 'Outro' },
+    { id: 'lead-demo-10', fullName: 'Joao Batista', phoneSearch: '81990000110', birthDate: '1977-11-19', sex: 'male', pathologyIds: ['diabetes', 'hypertension'], pathologyLabels: ['Diabetes', 'Pressão alta'], interestId: 'complete-glasses', interestLabel: 'Óculos completo', appointmentDate: dateInSaoPaulo(0), appointmentTime: '15:00' },
+    { id: 'lead-demo-11', fullName: 'Karen Nunes', phoneSearch: '81990000111', birthDate: '1990-07-07', sex: 'female', interestId: 'lenses', interestLabel: 'Lentes', appointmentDate: dateInSaoPaulo(1), appointmentTime: '15:00', appointmentAttendance: 'cancelled', appointmentStatus: 'cancelled', funnelStage: 'cancelled', appointmentCancellationReason: 'client_withdrew' },
+    { id: 'lead-demo-12', fullName: 'Lucas Barros', phoneSearch: '81990000112', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste', birthDate: '1984-04-25', sex: 'male', appointmentDate: dateInSaoPaulo(1), appointmentTime: '15:00', appointmentAttendance: 'cancelled', appointmentStatus: 'cancelled', funnelStage: 'cancelled', appointmentCancellationReason: 'transport_issue' },
+    { id: 'lead-demo-13', fullName: 'Marina Costa', phoneSearch: '81990000113', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', birthDate: '1962-10-02', sex: 'female', pathologyIds: ['cataract'], pathologyLabels: ['Catarata'], appointmentDate: dateInSaoPaulo(1), appointmentTime: '15:00', appointmentAttendance: 'cancelled', appointmentStatus: 'cancelled', funnelStage: 'cancelled', appointmentCancellationReason: 'schedule_conflict' },
+    { id: 'lead-demo-14', fullName: 'Naldo Pereira', phoneSearch: '81990000114', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1950-01-14', sex: 'male', careRoute: 'ophthalmologist', examPaymentType: 'courtesy', appointmentDate: dateInSaoPaulo(1), appointmentTime: '15:00', appointmentAttendance: 'cancelled', appointmentStatus: 'cancelled', funnelStage: 'cancelled', appointmentCancellationReason: 'other_provider' },
+    { id: 'lead-demo-15', fullName: 'Olivia Freitas', phoneSearch: '81990000115', birthDate: '1995-03-21', sex: 'female', interestId: 'lenses', interestLabel: 'Lentes', appointmentDate: dateInSaoPaulo(2), appointmentTime: '08:00', appointmentRescheduleReason: 'client_request', funnelReasonCode: 'client_request' },
+    { id: 'lead-demo-16', fullName: 'Paulo Ramos', phoneSearch: '81990000116', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste', birthDate: '1980-09-01', sex: 'male', pathologyIds: ['glaucoma'], pathologyLabels: ['Glaucoma'], appointmentDate: dateInSaoPaulo(2), appointmentTime: '08:00', appointmentRescheduleReason: 'professional_availability', funnelReasonCode: 'professional_availability' },
+    { id: 'lead-demo-17', fullName: 'Quezia Santos', phoneSearch: '81990000117', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', birthDate: '1973-06-13', sex: 'female', needsTransport: true, companionCount: 2, appointmentDate: dateInSaoPaulo(2), appointmentTime: '08:00', appointmentRescheduleReason: 'transport_issue', funnelReasonCode: 'transport_issue' },
+    { id: 'lead-demo-18', fullName: 'Rafael Duarte', phoneSearch: '81990000118', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1968-02-27', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['retinopathy'], pathologyLabels: ['Retinopatia'], appointmentDate: dateInSaoPaulo(2), appointmentTime: '08:00', appointmentRescheduleReason: 'schedule_conflict', funnelReasonCode: 'schedule_conflict' },
+    { id: 'lead-demo-19', fullName: 'Sonia Araujo', phoneSearch: '81990000119', birthDate: '2000-12-15', sex: 'female', pathologyIds: ['keratoconus'], pathologyLabels: ['Ceratocone'], interestId: 'other', interestLabel: 'Outro', examPaymentType: 'courtesy' },
+    { id: 'lead-demo-20', fullName: 'Tiago Monteiro', phoneSearch: '81990000120', birthDate: '1958-07-24', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['diabetes', 'retinopathy'], pathologyLabels: ['Diabetes', 'Retinopatia'], interestId: 'complete-glasses', interestLabel: 'Óculos completo', appointmentDate: dateInSaoPaulo(3), appointmentTime: '09:00', needsTransport: true }
+  ].map(leadRecord);
+
   const leads = [
     leadRecord({ id: 'lead-pending-today', fullName: 'Cliente Pendente Hoje', phoneSearch: '81990000001', appointmentDate: dateInSaoPaulo(0), appointmentTime: '08:00' }),
     leadRecord({ id: 'lead-attended-today', fullName: 'Cliente Compareceu Hoje', phoneSearch: '81990000002', appointmentDate: dateInSaoPaulo(0), appointmentTime: '08:20', appointmentAttendance: 'attended' }),
     leadRecord({ id: 'lead-missed-yesterday', fullName: 'Cliente Faltou Ontem', phoneSearch: '81990000003', appointmentDate: dateInSaoPaulo(-1), appointmentTime: '09:00', appointmentAttendance: 'missed' }),
     leadRecord({ id: 'lead-unscheduled', fullName: 'Cliente Sem Agendamento', phoneSearch: '81990000004' }),
     leadRecord({ id: 'lead-other-store', fullName: 'Cliente Outra Unidade', phoneSearch: '81990000005', storeId: 'loja-05', capturedByUid: 'test-receptionist-05', capturedByName: 'Balcao Loja 05', appointmentDate: dateInSaoPaulo(1), appointmentTime: '10:00' }),
-    leadRecord({ id: 'lead-rescheduled', fullName: 'Cliente Reagendado', phoneSearch: '81990000006', appointmentDate: dateInSaoPaulo(1), appointmentTime: '10:40', funnelReasonCode: 'schedule_conflict', notes: 'Reagendado pelo seed para validar o historico.' }),
-    leadRecord({ id: 'lead-cancelled', fullName: 'Cliente Cancelado', phoneSearch: '81990000007', appointmentDate: dateInSaoPaulo(1), appointmentTime: '11:20', appointmentAttendance: 'cancelled', appointmentStatus: 'cancelled', funnelStage: 'cancelled', funnelReasonCode: 'client_request', notes: 'Registro de teste para o funil cancelado.' }),
+    leadRecord({ id: 'lead-rescheduled', fullName: 'Cliente Reagendado', phoneSearch: '81990000006', appointmentDate: dateInSaoPaulo(1), appointmentTime: '10:40', appointmentRescheduleReason: 'schedule_conflict', funnelReasonCode: 'schedule_conflict', notes: 'Reagendado pelo seed para validar o historico.' }),
+    leadRecord({ id: 'lead-cancelled', fullName: 'Cliente Cancelado', phoneSearch: '81990000007', appointmentDate: dateInSaoPaulo(1), appointmentTime: '11:20', appointmentAttendance: 'cancelled', appointmentStatus: 'cancelled', funnelStage: 'cancelled', appointmentCancellationReason: 'client_withdrew', funnelReasonCode: 'client_request', notes: 'Registro de teste para o funil cancelado.' }),
     leadRecord({ id: 'lead-mei', fullName: 'Cliente Captado por MEI', phoneSearch: '81990000008', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste' }),
     leadRecord({ id: 'lead-walkin-waiting', fullName: 'Cliente Encaixe Aguardando', phoneSearch: '81990000009' }),
     leadRecord({ id: 'lead-walkin-called', fullName: 'Cliente Encaixe Chamado', phoneSearch: '81990000010' }),
     leadRecord({ id: 'lead-external-store-02', fullName: 'Cliente Rota Loja 02', preferredName: 'Dona Lucia', phoneSearch: '81990000012', appointmentDate: dateInSaoPaulo(0), appointmentTime: '09:00', needsTransport: true, companionCount: 1, addressReference: 'Portao azul, ao lado da farmacia' }),
-    leadRecord({ id: 'lead-external-store-06', fullName: 'Cliente Rota Loja 06', preferredName: 'Seu Jose', phoneSearch: '81990000011', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', appointmentDate: dateInSaoPaulo(0), appointmentTime: '09:20', needsTransport: true, companionCount: 2, addressReference: 'Casa em frente ao posto de saude' })
+    leadRecord({ id: 'lead-external-store-06', fullName: 'Cliente Rota Loja 06', preferredName: 'Seu Jose', phoneSearch: '81990000011', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', appointmentDate: dateInSaoPaulo(0), appointmentTime: '09:20', needsTransport: true, companionCount: 2, addressReference: 'Casa em frente ao posto de saude' }),
+    ...dashboardDemoLeads
   ];
 
   for (const lead of leads) {
     const { id, ...data } = lead;
     batch.set(db.doc(`leads/${id}`), data);
     batch.set(db.doc(`leads/${id}/history/seed-created`), historyEvent(lead));
-    if (id === 'lead-rescheduled') {
+    if (lead.appointmentRescheduleReason) {
       batch.set(db.doc(`leads/${id}/history/seed-rescheduled`), historyEvent(
         lead,
         'appointment_rescheduled',
         'Reagendado pelo seed para validar motivo e historico.'
       ));
     }
-    if (id === 'lead-cancelled') {
+    if (lead.appointmentStatus === 'cancelled') {
       batch.set(db.doc(`leads/${id}/history/seed-cancelled`), historyEvent(
         lead,
         'appointment_cancelled',
