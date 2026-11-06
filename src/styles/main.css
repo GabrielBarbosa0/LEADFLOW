@@ -3436,14 +3436,13 @@ svg {
   color: inherit;
   background: transparent;
   text-align: left;
-  transition: background 140ms ease, transform 140ms ease;
+  transition: background 140ms ease;
   cursor: pointer;
 }
 
 .dashboard-ranking-preview-row:hover,
 .dashboard-ranking-preview-row:focus-visible {
   background: var(--surface-subtle);
-  transform: translateX(2px);
 }
 
 .dashboard-ranking-badge,
