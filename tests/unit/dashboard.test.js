@@ -7,13 +7,13 @@ describe('dashboardSummary', () => {
       {
         appointmentDate: '2026-10-29', appointmentTime: '08:00', careRoute: 'ophthalmologist',
         examPaymentType: 'paid', examPaymentMethods: ['pix', 'cash'], productPaymentMethods: ['pix', 'credit-card'], needsTransport: true, transportSeats: 2, hasCompanion: true,
-        birthDate: '1960-10-20', sex: 'female', pathologyIds: ['cataract', 'retinopathy'], interestId: 'complete-glasses',
+        birthDate: '1960-10-20', sex: 'female', pathologyIds: ['cataract', 'retinopathy'], interestId: 'complete-glasses', strategyType: 'external',
         appointmentCancellationReason: 'client_withdrew'
       },
       {
         appointmentDate: '', appointmentTime: '', careRoute: 'optometrist',
         examPaymentType: 'courtesy', productPaymentMethods: ['cash'], needsTransport: false, birthDate: '1980-01-01',
-        sex: 'male', pathologyIds: ['glaucoma'], interestId: 'frames', appointmentRescheduleReason: 'client_request'
+        sex: 'male', pathologyIds: ['glaucoma'], interestId: 'frames', strategyType: 'social-media', appointmentRescheduleReason: 'client_request'
       },
       {
         appointmentDate: '2026-11-10', appointmentTime: '09:00', careRoute: 'ophthalmologist',
@@ -81,6 +81,14 @@ describe('dashboardSummary', () => {
     expect(summary.interests.map(({ label, count }) => [label, count])).toEqual([
       ['Óculos completo', 2],
       ['Armação', 1]
+    ]);
+    expect(summary.strategyTypes.map(({ label, count, percentage }) => [label, count, percentage])).toEqual([
+      ['Externa', 1, 33],
+      ['Pós-venda', 0, 0],
+      ['Telemarketing', 0, 0],
+      ['Rede social', 1, 33],
+      ['Visita espontânea', 0, 0],
+      ['Não informado', 1, 33]
     ]);
     expect(summary.transportByDay).toEqual([
       { date: '2026-10-29', clients: 1, companions: 1, seats: 2 }

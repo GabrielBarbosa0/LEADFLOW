@@ -1,4 +1,4 @@
-import { calculateAge, EXAM_PAYMENT_METHODS, INTERESTS, PATHOLOGIES } from './lead.js';
+import { calculateAge, EXAM_PAYMENT_METHODS, INTERESTS, PATHOLOGIES, STRATEGY_TYPES } from './lead.js';
 import { activeLeads } from './lead-archive.js';
 import { APPOINTMENT_CANCELLATION_REASONS, hasActiveAppointment } from './appointment-cancellation.js';
 import { APPOINTMENT_RESCHEDULE_REASONS } from './appointment-reschedule.js';
@@ -151,6 +151,16 @@ export function dashboardSummary(records = [], upcomingRecords = records, today 
     total
   )).filter((item) => item.count)
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'pt-BR'));
+  const strategyDefinitions = [
+    ...STRATEGY_TYPES.filter((item) => item.id),
+    ...STRATEGY_TYPES.filter((item) => !item.id)
+  ];
+  const strategyTypes = strategyDefinitions.map((item) => distributionItem(
+    item.id || 'not-informed',
+    item.label,
+    records.filter((lead) => (lead.strategyType || 'not-informed') === (item.id || 'not-informed')).length,
+    total
+  ));
   const transportByDay = [...upcomingTransport.reduce((days, lead) => {
     const current = days.get(lead.appointmentDate) || { date: lead.appointmentDate, clients: 0, companions: 0, seats: 0 };
     current.clients += 1;
@@ -188,6 +198,7 @@ export function dashboardSummary(records = [], upcomingRecords = records, today 
     examPaymentMethods,
     productPaymentMethods,
     interests,
+    strategyTypes,
     transportByDay,
     upcomingStartDate: startDate,
     upcomingEndDate: endDate

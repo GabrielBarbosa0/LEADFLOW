@@ -3171,7 +3171,7 @@ svg {
   grid-column: span 8;
 }
 
-.dashboard-grid > .dashboard-panel:nth-child(15) {
+.dashboard-grid > .dashboard-panel.dashboard-panel-wide {
   grid-column: 1 / -1;
 }
 
@@ -7266,7 +7266,7 @@ svg {
   .dashboard-grid > .dashboard-panel:nth-child(1),
   .dashboard-grid > .dashboard-panel:nth-child(10),
   .dashboard-grid > .dashboard-panel:nth-child(14),
-  .dashboard-grid > .dashboard-panel:nth-child(15) {
+  .dashboard-grid > .dashboard-panel.dashboard-panel-wide {
     grid-column: 1 / -1;
   }
 }

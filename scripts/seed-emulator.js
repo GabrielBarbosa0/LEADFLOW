@@ -98,6 +98,7 @@ function leadRecord({
   companionCount = 0,
   birthDate = '1985-04-12',
   sex = 'female',
+  strategyType = 'external',
   interestId = 'eye-exam',
   interestLabel = 'Exame de vista',
   pathologyIds = ['none'],
@@ -124,6 +125,7 @@ function leadRecord({
     birthDate,
     birthMonthDay: birthDate ? birthDate.slice(5) : '',
     sex,
+    strategyType,
     postalCode: '50000123',
     street: 'Rua de Teste',
     streetNumber: '100',
@@ -294,7 +296,10 @@ async function writeSeed(db, roleConfig, users) {
     { id: 'lead-demo-18', fullName: 'Rafael Duarte', phoneSearch: '81990000118', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', birthDate: '1968-02-27', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['retinopathy'], pathologyLabels: ['Retinopatia'], appointmentDate: dateInSaoPaulo(2), appointmentTime: '08:00', appointmentRescheduleReason: 'schedule_conflict', funnelReasonCode: 'schedule_conflict' },
     { id: 'lead-demo-19', fullName: 'Sonia Araujo', phoneSearch: '81990000119', birthDate: '2000-12-15', sex: 'female', pathologyIds: ['keratoconus'], pathologyLabels: ['Ceratocone'], interestId: 'other', interestLabel: 'Outro', examPaymentType: 'courtesy' },
     { id: 'lead-demo-20', fullName: 'Tiago Monteiro', phoneSearch: '81990000120', birthDate: '1958-07-24', sex: 'male', careRoute: 'ophthalmologist', pathologyIds: ['diabetes', 'retinopathy'], pathologyLabels: ['Diabetes', 'Retinopatia'], interestId: 'complete-glasses', interestLabel: 'Óculos completo', examPaymentMethods: ['pix', 'cash'], productPaymentMethods: ['pix', 'credit-card'], appointmentDate: dateInSaoPaulo(3), appointmentTime: '09:00', needsTransport: true }
-  ].map(leadRecord);
+  ].map((lead, index) => leadRecord({
+    ...lead,
+    strategyType: ['external', 'after-sales', 'telemarketing', 'social-media', 'spontaneous-visit', ''][index % 6]
+  }));
 
   const leads = [
     leadRecord({ id: 'lead-pending-today', fullName: 'Cliente Pendente Hoje', phoneSearch: '81990000001', appointmentDate: dateInSaoPaulo(0), appointmentTime: '08:00' }),
