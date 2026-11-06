@@ -7144,7 +7144,7 @@ svg {
   }
 
   .management-card {
-    padding: 16px;
+    padding: 14px;
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--surface);
@@ -7163,15 +7163,15 @@ svg {
 
   .management-card dl {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin: 16px 0 0;
-    padding-top: 14px;
+    grid-template-columns: minmax(0, 1.25fr) minmax(58px, 0.55fr) minmax(112px, 1fr);
+    gap: 8px;
+    margin: 12px 0 0;
+    padding-top: 10px;
     border-top: 1px solid var(--line);
   }
 
   .management-card dl > div:last-child {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
 
   .management-card dt,
@@ -7189,7 +7189,7 @@ svg {
   .management-card dd {
     margin-top: 4px;
     overflow-wrap: anywhere;
-    font-size: 0.86rem;
+    font-size: 0.8rem;
   }
 
   .pagination {

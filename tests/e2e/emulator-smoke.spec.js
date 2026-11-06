@@ -301,6 +301,14 @@ test('opens the lead archive workflow only from active management records', asyn
   await page.getByRole('button', { name: /Painel de gestão/ }).click();
   await expect(page).toHaveURL(/#\/management$/);
   await expect(page.getByLabel('Registros')).toHaveValue('active');
+  if ((page.viewportSize()?.width || 0) <= 600) {
+    const managementCard = page.locator('.management-card').first();
+    await expect(managementCard).toBeVisible();
+    const cardBox = await managementCard.boundingBox();
+    const detailRows = await managementCard.locator('dl > div').evaluateAll((details) => details.map((detail) => detail.getBoundingClientRect().y));
+    expect(cardBox.height).toBeLessThan(160);
+    expect(Math.max(...detailRows) - Math.min(...detailRows)).toBeLessThan(4);
+  }
   const archiveButton = page.getByRole('button', { name: 'Arquivar leads' });
   await expect(archiveButton).toBeEnabled();
   await archiveButton.click();
