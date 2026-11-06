@@ -7714,7 +7714,7 @@ svg {
 
 .walk-in-heading {
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 
 .lead-history-list p {
@@ -7722,18 +7722,6 @@ svg {
   color: var(--ink);
   font-size: 0.78rem;
   line-height: 1.45;
-}
-
-.walk-in-today {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--brand-dark);
-  font-weight: 800;
-}
-
-.walk-in-today svg {
-  width: 20px;
 }
 
 .walk-in-metrics {
@@ -7814,12 +7802,6 @@ svg {
   margin-top: 4px;
   color: var(--muted);
   font-size: 0.85rem;
-}
-
-.walk-in-create-panel > header > svg {
-  width: 34px;
-  height: 34px;
-  color: var(--brand);
 }
 
 .walk-in-create-grid {

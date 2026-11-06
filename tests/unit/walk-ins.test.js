@@ -90,6 +90,8 @@ describe('walk-in queue', () => {
       now: new Date('2026-10-30T10:20:00-03:00')
     });
     expect(markup).toContain('Novo encaixe');
+    expect(markup).not.toContain('Fila de hoje');
+    expect(markup).not.toContain('<i data-lucide="clock-3"></i></header>');
     expect(markup).toContain('Maria Silva');
     expect(markup).toContain('20</strong><span>min');
     expect(markup).toContain('data-walk-in-transition="called"');
