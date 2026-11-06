@@ -319,6 +319,8 @@ test('keeps team access cards compact on mobile', async ({ page }) => {
   await expect(page).toHaveURL(/#\/access$/);
   const firstCard = page.locator('.access-row').first();
   await expect(firstCard).toBeVisible();
+  const toggleWidths = await page.locator('.access-toggle').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().width));
+  expect(new Set(toggleWidths).size).toBe(1);
 
   if ((page.viewportSize()?.width || 0) <= 600) {
     const cardBox = await firstCard.boundingBox();
