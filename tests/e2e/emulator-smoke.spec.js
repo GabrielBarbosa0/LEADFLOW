@@ -54,6 +54,12 @@ test('loads store-scoped logistics for an external leader', async ({ page }) => 
   await expect(page.getByText(/Portao azul/).first()).toBeVisible();
   await expect(page.getByText('Seu Jose').first()).toBeVisible();
   await expect(page.locator('body')).not.toContainText('CPF');
+  await page.locator('[data-external-detail-open]').first().click();
+  const detailDialog = page.locator('#external-operation-detail-dialog');
+  await expect(detailDialog).toBeVisible();
+  await expect(detailDialog.getByRole('button', { name: 'Fechar', exact: true })).toHaveCount(0);
+  await detailDialog.getByRole('button', { name: 'Fechar detalhes' }).click();
+  await expect(detailDialog).toHaveCount(0);
 
   await page.getByLabel('Transporte').selectOption('without');
   await expect(page.getByText('Cliente Compareceu Hoje').first()).toBeVisible();

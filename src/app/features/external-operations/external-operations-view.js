@@ -47,7 +47,7 @@ function detailDialog(lead) {
         <section><h3><i data-lucide="map-pin"></i>Endereço</h3><p><strong>${escapeHtml(addressLine(lead))}</strong>${cityLine(lead) ? `<span>${escapeHtml(cityLine(lead))}</span>` : ''}${lead.addressReference ? `<span>Referência: ${escapeHtml(lead.addressReference)}</span>` : ''}</p></section>
         <section><h3><i data-lucide="bus-front"></i>Deslocamento</h3><p><strong>${escapeHtml(lead.needsTransport ? 'Transporte solicitado' : 'Sem transporte')}</strong><span>${escapeHtml(transportLabel(lead))}</span><span>${escapeHtml(companionLabel(lead))}</span></p></section>
       </div>
-      <footer><span>${lead.capturedByName ? `Cadastro de ${escapeHtml(lead.capturedByName)}` : ''}</span><button class="button button-secondary" type="button" data-external-detail-close>Fechar</button></footer>
+      <footer><span>${lead.capturedByName ? `Cadastro de ${escapeHtml(lead.capturedByName)}` : ''}</span></footer>
     </section>
   </dialog>`;
 }

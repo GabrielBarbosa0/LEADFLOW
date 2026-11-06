@@ -77,6 +77,8 @@ describe('external operations', () => {
     expect(markup).toContain('Dona Maria');
     expect(markup).toContain('Rua das Flores');
     expect(markup).toContain('Referência: Perto da praça');
+    expect(markup.match(/data-external-detail-close/g)).toHaveLength(1);
+    expect(markup).not.toContain('>Fechar</button>');
     expect(markup).not.toContain('CPF');
   });
 });
