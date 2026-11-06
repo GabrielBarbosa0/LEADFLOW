@@ -137,6 +137,26 @@ test('loads the real appointment flow for a receptionist profile', async ({ page
   await expect(page.getByRole('button', { name: 'Não compareceu' }).first()).toBeVisible();
 });
 
+test('keeps the confirmation period beside a compact back button', async ({ page }) => {
+  await signIn(page, 'admin@leadflow.test');
+  await page.locator('[data-route="confirmations"]').click();
+  await expect(page).toHaveURL(/#\/confirmations$/);
+
+  const period = page.locator('.reminder-period');
+  const backButton = page.locator('.reminder-back-button');
+  await expect(period).toBeVisible();
+  await expect(backButton).toBeVisible();
+  await expect(backButton).toHaveAttribute('aria-label', 'Voltar ao início');
+  await expect(backButton.locator('span')).toHaveCount(0);
+  const layout = await page.locator('.reminder-toolbar').evaluate((toolbar) => {
+    const periodRect = toolbar.querySelector('.reminder-period').getBoundingClientRect();
+    const backRect = toolbar.querySelector('.reminder-back-button').getBoundingClientRect();
+    return { periodY: periodRect.y, backY: backRect.y, backWidth: backRect.width };
+  });
+  expect(Math.abs(layout.periodY - layout.backY)).toBeLessThan(2);
+  expect(layout.backWidth).toBe(54);
+});
+
 test('validates appointment cancellation reasons for a receptionist', async ({ page }) => {
   await signIn(page, 'balcao@leadflow.test');
 

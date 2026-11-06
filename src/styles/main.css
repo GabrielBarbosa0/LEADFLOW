@@ -1003,7 +1003,7 @@ svg {
 
 .management-heading.reminder-toolbar {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 270px));
+  grid-template-columns: minmax(0, 270px) 54px;
   align-items: stretch;
   justify-content: end;
   gap: 12px;
@@ -1302,6 +1302,11 @@ svg {
 
 .identity-fields {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(130px, 0.65fr);
+}
+
+.reminder-back-button {
+  width: 54px;
+  height: 54px;
 }
 
 .document-fields,
@@ -7052,7 +7057,7 @@ svg {
 
   .reminder-toolbar {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) 54px;
     align-items: stretch;
   }
 
@@ -7446,7 +7451,7 @@ svg {
 
 @media (max-width: 440px) {
   .reminder-toolbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 54px;
     align-items: stretch;
   }
 

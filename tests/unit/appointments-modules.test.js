@@ -95,6 +95,9 @@ describe('appointments feature modules', () => {
       profileName: 'Gestor', queryLimit: 500, now: new Date('2026-10-29T12:00:00-03:00')
     });
     expect(pending).toContain('Marcar como feito');
+    expect(pending).toContain('class="icon-button reminder-back-button"');
+    expect(pending).toContain('aria-label="Voltar ao início"');
+    expect(pending).not.toContain('<span>Voltar ao início</span>');
     const completedLead = { ...lead, appointmentReminderSentAt: '2026-10-29T12:00:00-03:00', appointmentReminderSentByName: 'Gestor', appointmentReminderAppointmentKey: '2026-10-30|08:00' };
     const completed = confirmationsView({
       allowed: true, source: [completedLead], confirmations: { filter: 'done', updatingId: '', loading: false, error: '', truncated: false },
