@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, runTransaction, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { createLeadDocument } from '../../src/utils/lead.js';
 
 const projectId = 'demo-fascinlead-leads';
@@ -1960,6 +1960,86 @@ describe('lead responsibility transfers', () => {
       const slot = await getDoc(doc(verificationDb, 'appointmentSlots', slotId));
       if (slot.data().capturedByUid !== 'outro-uid') throw new Error('Reserva nao acompanhou o novo responsavel.');
     });
+  });
+
+  it('preserves history and lets the new MEI owner reactivate a cancelled appointment', async () => {
+    const leadId = 'transferred-cancelled-lead';
+    const oldSlotIds = [
+      'slot-consultorio-surubim-2026-11-07-09:00',
+      'slot-consultorio-surubim-2026-11-07-09:10'
+    ];
+    const newSlotIds = [
+      'slot-consultorio-surubim-2026-11-14-08:00',
+      'slot-consultorio-surubim-2026-11-14-08:10'
+    ];
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const seedDb = context.firestore();
+      await Promise.all([
+        setDoc(doc(seedDb, 'leads', leadId), {
+          fullName: 'Jose Barbosa', phone: '+5581999991234', phoneSearch: '81999991234', notes: '',
+          consentGiven: true, source: 'street', schemaVersion: 1, storeId: 'loja-02',
+          capturedByUid: 'mei-uid', capturedByName: 'Captador MEI',
+          originalCapturedByUid: 'captor-uid', originalCapturedByName: 'Captador Teste',
+          ownershipUpdatedAtServer: Timestamp.now(), ownershipUpdatedByUid: 'manager-uid',
+          ownershipUpdatedByName: 'Gestor Teste', ownershipChangeType: 'reassign',
+          appointmentDate: '2026-11-07', appointmentTime: '09:00', appointmentSchedulingMode: 'controlled',
+          appointmentDurationMinutes: 20, appointmentServiceId: 'default-eye-exam',
+          appointmentServiceName: 'Exame de vista', appointmentStatus: 'cancelled',
+          appointmentAttendance: 'cancelled', funnelStage: 'cancelled', funnelReasonCode: 'client_withdrew',
+          capturedAtClient: '2026-11-06T12:00:00.000Z', createdAtServer: Timestamp.now(),
+          updatedAtServer: Timestamp.now()
+        }),
+        setDoc(doc(seedDb, 'leads', leadId, 'history', 'created'), {
+          leadId, storeId: 'loja-02', eventType: 'lead_created', funnelStage: 'awaiting_schedule',
+          reasonCode: '', actorUid: 'captor-uid', actorName: 'Captador Teste', actorRole: 'captor',
+          occurredAtClient: '2026-11-06T12:00:00.000Z', occurredAtServer: Timestamp.now(), schemaVersion: 1
+        }),
+        setDoc(doc(seedDb, 'leads', leadId, 'history', 'cancelled'), {
+          leadId, storeId: 'loja-02', eventType: 'appointment_cancelled', funnelStage: 'cancelled',
+          reasonCode: 'client_withdrew', actorUid: 'captor-uid', actorName: 'Captador Teste', actorRole: 'captor',
+          occurredAtClient: '2026-11-06T13:00:00.000Z', occurredAtServer: Timestamp.now(), schemaVersion: 1
+        }),
+        setDoc(doc(seedDb, 'leads', leadId, 'history', 'reassigned'), {
+          leadId, storeId: 'loja-02', eventType: 'lead_reassigned', funnelStage: 'cancelled',
+          reasonCode: 'reassign', actorUid: 'manager-uid', actorName: 'Gestor Teste', actorRole: 'manager',
+          occurredAtClient: '2026-11-06T14:00:00.000Z', occurredAtServer: Timestamp.now(), schemaVersion: 1
+        })
+      ]);
+    });
+
+    const db = authenticatedDb('mei-uid', 'mei@example.com');
+    await assertSucceeds(getDocs(query(
+      collection(db, 'leads', leadId, 'history'),
+      orderBy('occurredAtServer', 'asc')
+    )));
+
+    await assertSucceeds(runTransaction(db, async (transaction) => {
+      const leadRef = doc(db, 'leads', leadId);
+      const historyRef = doc(db, 'leads', leadId, 'history', 'rescheduled');
+      const slotRefs = [...newSlotIds, ...oldSlotIds].map((slotId) => doc(db, 'appointmentSlots', slotId));
+      await Promise.all(slotRefs.map((slotRef) => transaction.get(slotRef)));
+      transaction.update(leadRef, {
+        appointmentDate: '2026-11-14', appointmentTime: '08:00', appointmentSchedulingMode: 'controlled',
+        appointmentDurationMinutes: 20, appointmentServiceId: 'default-eye-exam',
+        appointmentServiceName: 'Exame de vista', appointmentStatus: 'scheduled', appointmentAttendance: 'pending',
+        appointmentRescheduledAtServer: serverTimestamp(), appointmentRescheduledByUid: 'mei-uid',
+        appointmentRescheduledByName: 'Captador MEI', appointmentRescheduleReason: 'other',
+        appointmentRescheduleDetails: 'Cliente transferido', funnelStage: 'scheduled', funnelReasonCode: 'other',
+        funnelUpdatedAtClient: '2026-11-06T15:00:00.000Z', funnelUpdatedAtServer: serverTimestamp(),
+        updatedAtServer: serverTimestamp()
+      });
+      newSlotIds.forEach((slotId, index) => transaction.set(doc(db, 'appointmentSlots', slotId), {
+        storeId: 'loja-02', appointmentDate: '2026-11-14', appointmentTime: '08:00',
+        blockTime: index ? '08:10' : '08:00', durationMinutes: 20,
+        leadId, capturedByUid: 'mei-uid', createdAt: serverTimestamp()
+      }));
+      transaction.set(historyRef, {
+        leadId, storeId: 'loja-02', eventType: 'appointment_rescheduled', funnelStage: 'scheduled',
+        reasonCode: 'other', description: 'Agendamento cancelado reativado para 14/11/2026 08:00.',
+        actorUid: 'mei-uid', actorName: 'Captador MEI', actorRole: 'captor',
+        occurredAtClient: '2026-11-06T15:00:00.000Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
+      });
+    }));
   });
 });
 

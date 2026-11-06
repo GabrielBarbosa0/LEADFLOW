@@ -12,6 +12,9 @@ function dirtyState() {
     appointmentCreate: { saving: true },
     newLeadSchedule: { loaded: true },
     leadDetailSchedule: { loading: true },
+    leadHistory: { leadId: 'lead-1', profileUid: 'old-user', records: [{ id: 'event-1' }] },
+    leadDetailDialog: { leadId: 'lead-1' },
+    leadHistoryDialogOpen: true,
     offlineCapture: { loaded: true, enabled: true },
     followUps: { loaded: true },
     settings: { loaded: true },
@@ -34,6 +37,11 @@ describe('core session', () => {
     expect(state.management).toMatchObject({ loaded: false, records: [] });
     expect(state.appointments).toMatchObject({ loaded: false, records: [] });
     expect(state.externalOperations.transportMode).toBe('with');
+    expect(state.leadHistory).toEqual({
+      leadId: '', profileUid: '', loading: false, error: '', records: [], stage: ''
+    });
+    expect(state.leadDetailDialog).toEqual({ leadId: '' });
+    expect(state.leadHistoryDialogOpen).toBe(false);
     expect(state.settings).toMatchObject({ loaded: false, services: [] });
     expect(state.settings.roleDraft).toEqual({ name: '', scope: 'own', permissions: ['leads.create'] });
     expect(state.goals).toMatchObject({ loaded: false, records: [], draft: { title: 'Meta de captações' } });

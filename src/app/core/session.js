@@ -107,6 +107,16 @@ export function resetSessionState(state, {
     error: '',
     settings: { ...DEFAULT_STORE_SCHEDULE }
   };
+  state.leadHistory = {
+    leadId: '',
+    profileUid: '',
+    loading: false,
+    error: '',
+    records: [],
+    stage: ''
+  };
+  state.leadDetailDialog = { leadId: '' };
+  state.leadHistoryDialogOpen = false;
   state.offlineCapture = { loaded: false, enabled: false };
   state.followUps = {
     loaded: false,

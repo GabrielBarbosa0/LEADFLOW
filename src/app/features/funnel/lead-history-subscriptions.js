@@ -8,12 +8,13 @@ export function stopLeadHistorySubscription(state) {
 export function ensureLeadHistory({ state, lead, render }) {
   if (!lead?.id) {
     stopLeadHistorySubscription(state);
-    state.leadHistory = { leadId: '', loading: false, error: '', records: [], stage: '' };
+    state.leadHistory = { leadId: '', profileUid: '', loading: false, error: '', records: [], stage: '' };
     return;
   }
-  if (state.leadHistory.leadId === lead.id) return;
+  const profileUid = state.profile?.uid || '';
+  if (state.leadHistory.leadId === lead.id && state.leadHistory.profileUid === profileUid) return;
   stopLeadHistorySubscription(state);
-  state.leadHistory = { leadId: lead.id, loading: true, error: '', records: [], stage: lead.funnelStage || '' };
+  state.leadHistory = { leadId: lead.id, profileUid, loading: true, error: '', records: [], stage: lead.funnelStage || '' };
   render();
   state.unsubscribeLeadHistory = subscribeToLeadHistory(state.profile, lead.id, (records) => {
     state.leadHistory = { ...state.leadHistory, records, loading: false, error: '', stage: lead.funnelStage || '' };

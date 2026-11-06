@@ -172,6 +172,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
     },
     leadHistory: {
       leadId: '',
+      profileUid: '',
       loading: false,
       error: '',
       records: [],

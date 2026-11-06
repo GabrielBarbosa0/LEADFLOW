@@ -50,6 +50,7 @@ export async function handleAuthenticationAction(action, dependencies) {
     stopConfirmationsSubscription,
     stopWalkInsSubscription,
     stopNewLeadScheduleSubscriptions,
+    stopLeadHistorySubscription,
     createDefaultManagementFilters,
     createDefaultGoalDraft,
     createDefaultRoleDraft
@@ -118,6 +119,7 @@ export async function handleAuthenticationAction(action, dependencies) {
   stopConfirmationsSubscription();
   stopWalkInsSubscription?.();
   stopNewLeadScheduleSubscriptions();
+  stopLeadHistorySubscription?.();
   stopOfflineCaptureSubscription();
   stopFollowUpScheduleSubscription();
   await signOutUser();
@@ -139,7 +141,8 @@ export async function startAuthenticationController(dependencies) {
     hasAccess,
     stopAppointmentsSubscription,
     stopConfirmationsSubscription,
-    stopWalkInsSubscription
+    stopWalkInsSubscription,
+    stopLeadHistorySubscription
   } = dependencies;
 
   try {
@@ -151,6 +154,10 @@ export async function startAuthenticationController(dependencies) {
   observeAuth(async (firebaseUser) => {
     state.unsubscribeProfile?.();
     state.unsubscribeProfile = null;
+    stopLeadHistorySubscription?.();
+    state.leadHistory = { leadId: '', profileUid: '', loading: false, error: '', records: [], stage: '' };
+    state.leadDetailDialog = { leadId: '' };
+    state.leadHistoryDialogOpen = false;
     stopOfflineCaptureSubscription();
     state.loading = true;
     render();

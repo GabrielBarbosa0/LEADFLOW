@@ -437,7 +437,7 @@ function closeLeadDetailDialog() {
   state.unsubscribeDayAppointments?.();
   state.unsubscribeDayAppointments = null;
   stopLeadHistorySubscription(state);
-  state.leadHistory = { leadId: '', loading: false, error: '', records: [], stage: '' };
+  state.leadHistory = { leadId: '', profileUid: '', loading: false, error: '', records: [], stage: '' };
   render();
 }
 
@@ -1764,7 +1764,7 @@ function ensureLeadDetailSchedule() {
 function ensureLeadDetailHistory() {
   if (!isLeadDetailOpen()) {
     stopLeadHistorySubscription(state);
-    state.leadHistory = { leadId: '', loading: false, error: '', records: [], stage: '' };
+    state.leadHistory = { leadId: '', profileUid: '', loading: false, error: '', records: [], stage: '' };
     return;
   }
   ensureLeadHistory({ state, lead: existingLeadForDetail(activeLeadDetailId()), render });
