@@ -4823,9 +4823,11 @@ svg {
 
 .service-store-option {
   min-height: 44px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 17px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
+  margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -4842,11 +4844,15 @@ svg {
 .service-store-option input {
   width: 17px;
   height: 17px;
+  min-height: 17px;
   margin: 0;
+  padding: 0;
   accent-color: var(--brand);
 }
 
 .field label.service-store-option > span {
+  display: block;
+  line-height: 1.25;
   color: var(--ink);
 }
 

@@ -41,6 +41,7 @@ describe('services feature modules', () => {
     expect(editor).toContain('Editar serviço');
     expect(editor).toContain('value="Exame de Vista"');
     expect(editor).toContain('value="loja-02" checked');
+    expect(editor).toContain('class="service-store-option checkbox-label"');
 
     const deletion = serviceDialogs(settings({ pendingDeleteServiceId: 'cleaning' }));
     expect(deletion).toContain('Excluir serviço?');

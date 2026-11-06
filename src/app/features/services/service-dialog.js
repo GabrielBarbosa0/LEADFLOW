@@ -6,7 +6,7 @@ export function serviceDialogs(settings) {
   const editing = services.find((service) => service.id === editingServiceId) || null;
   const deleting = services.find((service) => service.id === pendingDeleteServiceId) || null;
   const selectedStoreIds = editing?.storeIds || [settings.selectedStoreId || STORES[0].id];
-  const storeOptions = STORES.map((store) => `<label class="service-store-option"><input type="checkbox" name="storeIds" value="${store.id}" ${selectedStoreIds.includes(store.id) ? 'checked' : ''} /><span>${store.label}</span></label>`).join('');
+  const storeOptions = STORES.map((store) => `<label class="service-store-option checkbox-label"><input type="checkbox" name="storeIds" value="${store.id}" ${selectedStoreIds.includes(store.id) ? 'checked' : ''} /><span>${store.label}</span></label>`).join('');
 
   return `${serviceEditorOpen ? `<dialog id="service-editor-dialog" class="access-editor-dialog service-editor-dialog" aria-labelledby="service-editor-title">
     <form id="service-form" class="access-form" novalidate>

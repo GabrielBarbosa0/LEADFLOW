@@ -378,3 +378,20 @@ test('keeps team access cards compact on mobile', async ({ page }) => {
   await expect(searchInput).toBeFocused();
   await expect(searchInput).toHaveValue('colaborador');
 });
+
+test('aligns service store checkboxes with their labels', async ({ page }) => {
+  await signIn(page, 'admin@leadflow.test');
+  await page.locator('[data-route="settings"]').click();
+  await expect(page).toHaveURL(/#\/settings$/);
+  await page.locator('[data-settings-section="services"]').click();
+  await page.locator('[data-service-new]').click();
+
+  const dialog = page.locator('#service-editor-dialog');
+  await expect(dialog).toBeVisible();
+  const alignmentOffsets = await dialog.locator('.service-store-option').evaluateAll((options) => options.map((option) => {
+    const input = option.querySelector('input').getBoundingClientRect();
+    const text = option.querySelector('span').getBoundingClientRect();
+    return Math.abs((input.top + input.height / 2) - (text.top + text.height / 2));
+  }));
+  expect(Math.max(...alignmentOffsets)).toBeLessThan(1);
+});
