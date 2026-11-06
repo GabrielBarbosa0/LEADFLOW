@@ -51,6 +51,15 @@ beforeEach(async () => {
         storeId: 'loja-06',
         active: true
       }),
+      setDoc(doc(db, 'users', 'internal-uid'), {
+        email: 'internal@example.com',
+        displayName: 'Colaborador Interno Multi-loja',
+        role: 'manager',
+        roleProfileId: 'system-captor',
+        storeId: 'loja-02',
+        storeIds: ['loja-02', 'loja-06'],
+        active: true
+      }),
       setDoc(doc(db, 'users', 'admin-uid'), {
         email: 'admin@example.com',
         displayName: 'Administrador Teste',
@@ -1946,9 +1955,9 @@ describe('lead responsibility transfers', () => {
     const managerDb = authenticatedDb('manager-uid', 'manager@example.com');
     const batch = writeBatch(managerDb);
     batch.update(doc(managerDb, 'leads', 'lead-test'), ownershipUpdate(
-      'outro-uid', 'Outro Captador', 'manager-uid', 'Gestor Teste', 'reassign'
+      'internal-uid', 'Colaborador Interno Multi-loja', 'manager-uid', 'Gestor Teste', 'reassign'
     ));
-    batch.update(doc(managerDb, 'appointmentSlots', slotId), { capturedByUid: 'outro-uid' });
+    batch.update(doc(managerDb, 'appointmentSlots', slotId), { capturedByUid: 'internal-uid' });
     batch.set(doc(managerDb, 'leads', 'lead-test', 'history', 'reassigned'), ownershipHistory(
       'manager-uid', 'Gestor Teste', 'lead_reassigned', 'reassign'
     ));
@@ -1958,7 +1967,7 @@ describe('lead responsibility transfers', () => {
       const snapshot = await getDoc(doc(verificationDb, 'leads', 'lead-test'));
       if (snapshot.data().originalCapturedByUid !== 'captor-uid') throw new Error('Autor original nao foi preservado.');
       const slot = await getDoc(doc(verificationDb, 'appointmentSlots', slotId));
-      if (slot.data().capturedByUid !== 'outro-uid') throw new Error('Reserva nao acompanhou o novo responsavel.');
+      if (slot.data().capturedByUid !== 'internal-uid') throw new Error('Reserva nao acompanhou o novo responsavel.');
     });
   });
 

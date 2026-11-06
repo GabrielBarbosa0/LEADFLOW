@@ -42,6 +42,10 @@ export function canTransferLead(profile, lead) {
   );
 }
 
+export function isAssignableLeadOwner(profile) {
+  return Boolean(profile?.active === true && isCollaboratorProfile(profile));
+}
+
 export async function loadAssignableLeadOwners(profile, lead) {
   if (!canTransferLead(profile, lead)) return [];
   const usersQuery = profile.role === 'admin'
@@ -50,8 +54,7 @@ export async function loadAssignableLeadOwners(profile, lead) {
   const snapshot = await getDocs(usersQuery);
   return snapshot.docs
     .map((item) => ({ uid: item.id, ...item.data() }))
-    .filter((member) => member.active === true
-      && isCollaboratorProfile(member)
+    .filter((member) => isAssignableLeadOwner(member)
       && member.uid !== lead.capturedByUid
       && (member.storeId === lead.storeId || member.storeIds?.includes(lead.storeId)))
     .sort((left, right) => String(left.displayName || '').localeCompare(String(right.displayName || ''), 'pt-BR'));
@@ -143,7 +146,7 @@ export async function claimCancelledLead(profile, lead) {
 }
 
 export async function transferLead(profile, lead, target) {
-  if (!canTransferLead(profile, lead) || !target?.uid || target.active !== true || target.role !== 'captor') {
+  if (!canTransferLead(profile, lead) || !target?.uid || !isAssignableLeadOwner(target)) {
     throw assignmentError('permission-denied', 'Transferencia de lead nao autorizada.');
   }
   if (!canAccessStore(target, lead.storeId)) {

@@ -302,14 +302,14 @@ test('lets a store manager transfer a lead with an audited history entry', async
 
   const dialog = page.locator('#lead-assignment-dialog');
   await expect(dialog.getByRole('heading', { name: 'Transferir responsável' })).toBeVisible();
-  await dialog.getByLabel('Novo responsável').selectOption({ label: 'MEI Teste' });
+  await dialog.getByLabel('Novo responsável').selectOption({ label: 'Colaborador Interno Multi-loja' });
   await dialog.getByRole('button', { name: 'Confirmar transferência' }).click();
   await expect(dialog).toHaveCount(0);
 
   await page.getByText('Ver histórico', { exact: true }).click();
   const history = page.locator('#lead-history-dialog');
   await expect(history.getByText('Responsável transferido')).toBeVisible();
-  await expect(history).toContainText('Colaborador Teste para MEI Teste');
+  await expect(history).toContainText('Colaborador Teste para Colaborador Interno Multi-loja');
 });
 
 test('renders the compact registration fields and product payment options', async ({ page }) => {

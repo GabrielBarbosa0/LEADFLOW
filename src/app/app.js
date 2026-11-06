@@ -1004,7 +1004,7 @@ function bindPageEvents() {
   const cancellationDialog = document.querySelector('#appointment-cancellation-dialog');
   if (cancellationDialog) {
     requestAnimationFrame(() => {
-      if (!cancellationDialog.open) cancellationDialog.showModal();
+      if (cancellationDialog.isConnected && !cancellationDialog.open) cancellationDialog.showModal();
     });
     initializeAppointmentCancellationDialog(cancellationDialog, {
       close: () => {
