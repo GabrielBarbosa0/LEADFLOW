@@ -12,6 +12,7 @@ export function loginView({ state, firebaseConfigured }) {
 
 export function currentPageTitle(state, canManage) {
   if (state.route === 'walk-ins') return 'Encaixes do dia';
+  if (state.route === 'external-operations') return 'Operação externa';
   const titles = { home: 'Início', new: 'Cadastro', leads: 'Meus cadastros', search: 'Pesquisa', lead: 'Detalhes do cadastro', management: 'Painel de leads', 'management-lead': 'Detalhes do lead', dashboard: 'Dashboard', appointments: 'Agenda de exames', confirmations: 'Confirmações', access: 'Acessos da equipe', goals: 'Metas', settings: 'Configurações' };
   if (state.route === 'kanban') return 'Funil de leads';
   if (state.route === 'follow-ups') return canManage() ? 'Retornos da equipe' : 'Retornos pendentes';
@@ -28,7 +29,7 @@ export function headerView({ state, canManage }) {
 }
 
 export function appShellView({ state, page, canManage, hasAccess, pendingFollowUps }) {
-  const wideLayout = ['management', 'kanban', 'dashboard', 'appointments', 'confirmations', 'walk-ins', 'access', 'goals', 'settings'].includes(state.route);
+  const wideLayout = ['management', 'kanban', 'dashboard', 'appointments', 'confirmations', 'walk-ins', 'external-operations', 'access', 'goals', 'settings'].includes(state.route);
   const routeLayout = state.route === 'kanban' ? 'layout-kanban' : '';
   return `${headerView({ state, canManage })}<main class="app-main ${wideLayout ? 'layout-wide' : ''} ${routeLayout}">${page}</main>${bottomNavigation({ state, hasAccess, canManage, pendingFollowUps })}`;
 }

@@ -33,6 +33,7 @@ configuracoes, acessos da equipe, relatorios e operacoes administrativas.
 | Telemarketing | `telemarketing@leadflow.test` | `LeadFlow@123` | Todas |
 | Colaborador | `colaborador@leadflow.test` | `LeadFlow@123` | Loja 02 |
 | MEI | `mei@leadflow.test` | `LeadFlow@123` | Lojas 02 e 05 |
+| Lider de Externa | `externa@leadflow.test` | `LeadFlow@123` | Lojas 02 e 06 |
 | Usuario bloqueado | `bloqueado@leadflow.test` | `LeadFlow@123` | Loja 02 |
 
 ## Blocos para copiar
@@ -79,6 +80,13 @@ E-mail: mei@leadflow.test
 Senha: LeadFlow@123
 ```
 
+### Lider de Externa
+
+```text
+E-mail: externa@leadflow.test
+Senha: LeadFlow@123
+```
+
 ### Usuario bloqueado
 
 ```text
@@ -99,6 +107,7 @@ O usuario bloqueado existe para validar a recusa de acesso e nao consegue entrar
 | Telemarketing | Consultar unidades, agenda e retornos da equipe | Sem gestao operacional, comparecimento, encaixes ou exclusao |
 | Colaborador | Criar, consultar e editar os proprios cadastros | Sem acesso aos cadastros de outras pessoas ou a gestao |
 | MEI | Mesmo escopo pessoal do Colaborador em lojas permitidas | Sem acesso aos cadastros de outras pessoas ou a gestao |
+| Lider de Externa | Consultar rotas, transporte, acompanhantes e localizacao | Recebe apenas dados logisticos das Lojas 02 e 06 |
 | Usuario bloqueado | Validar bloqueio de autenticacao | Nao consegue entrar |
 
 As permissoes detalhadas e os resultados esperados de cada fluxo estao em

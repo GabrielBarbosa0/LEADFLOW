@@ -11,8 +11,8 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(4);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 4)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(5);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 5)).toBe(true);
   });
 
   it('keeps the administrator profile with every permission', () => {
@@ -26,6 +26,15 @@ describe('role profiles', () => {
     const mei = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-mei');
     expect(mei).toMatchObject({ name: 'MEI', scope: 'own', baseRole: 'captor', system: true });
     expect(mei.permissions).toEqual(collaborator.permissions);
+  });
+
+  it('provides a store-scoped external leader with only the logistical team permission', () => {
+    const externalLeader = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-external-leader');
+
+    expect(externalLeader).toMatchObject({ name: 'Líder de Externa', scope: 'stores', baseRole: 'captor', system: true });
+    expect(externalLeader.permissions).toContain('external.operations.read');
+    expect(externalLeader.permissions).not.toContain('management.view');
+    expect(externalLeader.permissions).not.toContain('leads.view_stores');
   });
 
   it('gives the receptionist operational lead access without dashboard, export or deletion', () => {

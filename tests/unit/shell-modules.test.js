@@ -47,6 +47,29 @@ describe('application shell modules', () => {
     expect(telemarketingMarkup).not.toContain('Painel de gestão');
   });
 
+  it('shows external operations only with the dedicated permission', () => {
+    const leaderMarkup = homeView({
+      state,
+      hasAccess: (permission) => permission === 'external.operations.read',
+      canManage: () => false,
+      canManageGoals: () => false,
+      isAdmin: () => false,
+      pendingFollowUps: () => []
+    });
+    const collaboratorMarkup = homeView({
+      state,
+      hasAccess,
+      canManage: () => false,
+      canManageGoals: () => false,
+      isAdmin: () => false,
+      pendingFollowUps: () => []
+    });
+
+    expect(leaderMarkup).toContain('Operação externa');
+    expect(collaboratorMarkup).not.toContain('Operação externa');
+    expect(currentPageTitle({ route: 'external-operations' }, () => false)).toBe('Operação externa');
+  });
+
   it('keeps navigation active state and management grouping', () => {
     const navigation = bottomNavigation({ state: { ...state, route: 'dashboard' }, hasAccess, canManage: () => true, pendingFollowUps: () => [] });
     expect(navigation).toContain('Gestão');

@@ -31,6 +31,7 @@ export const PERMISSION_GROUPS = [
       { id: 'followups.team', label: 'Acompanhar retornos da equipe', scopes: ['stores'] },
       { id: 'goals.manage', label: 'Criar e editar metas da equipe', scopes: ['stores'] },
       { id: 'dashboard.view', label: 'Visualizar dashboard', scopes: ['stores'] },
+      { id: 'external.operations.read', label: 'Visualizar operação externa', scopes: ['stores'] },
       { id: 'leads.export', label: 'Exportar leads em CSV', scopes: ['stores'] }
     ]
   },

@@ -444,3 +444,93 @@ exports.checkCpfActiveAppointment = onCall({ region: 'southamerica-east1' }, asy
     .get();
   return { hasAppointment: snapshot.docs.some((lead) => lead.data().archived !== true && hasActiveAppointment(lead.data())) };
 });
+
+async function externalOperationsCaller(request) {
+  const email = normalizeEmail(request.auth?.token?.email);
+  if (!request.auth || request.auth.token.email_verified !== true || !email) {
+    throw new HttpsError('unauthenticated', 'Entre novamente para consultar a operação externa.');
+  }
+
+  if (email === PRIMARY_ADMIN_EMAIL) return { allStores: true, storeIds: [] };
+
+  const accessSnapshot = await getFirestore().doc(`allowedEmails/${email}`).get();
+  const access = accessSnapshot.data();
+  if (!accessSnapshot.exists || access?.active !== true) {
+    throw new HttpsError('permission-denied', 'Seu perfil não possui acesso à operação externa.');
+  }
+
+  const permissions = currentPermissions(access, systemProfileForAccess(access));
+  if (!permissions.includes('external.operations.read')) {
+    throw new HttpsError('permission-denied', 'Seu perfil não possui acesso à operação externa.');
+  }
+  const storeIds = [...new Set([access.storeId, ...(Array.isArray(access.storeIds) ? access.storeIds : [])]
+    .filter(Boolean)
+    .map(String))];
+  return { allStores: access.role === 'admin', storeIds };
+}
+
+function externalOperationLead(snapshot) {
+  const lead = snapshot.data();
+  return externalOperationProjection(snapshot.id, lead);
+}
+
+function externalOperationProjection(id, lead) {
+  const companions = Number(lead.companionCount ?? (lead.hasCompanion ? 1 : 0));
+  return {
+    id,
+    fullName: String(lead.fullName || ''),
+    preferredName: String(lead.preferredName || ''),
+    phoneSearch: String(lead.phoneSearch || ''),
+    storeId: String(lead.storeId || ''),
+    appointmentDate: String(lead.appointmentDate || ''),
+    appointmentTime: String(lead.appointmentTime || ''),
+    appointmentServiceName: String(lead.appointmentServiceName || ''),
+    needsTransport: lead.needsTransport === true,
+    hasCompanion: companions > 0,
+    companionCount: Math.max(0, companions),
+    transportSeats: Number(lead.transportSeats) || (lead.needsTransport ? companions + 1 : 0),
+    postalCode: String(lead.postalCode || ''),
+    street: String(lead.street || ''),
+    streetNumber: String(lead.streetNumber || lead.number || ''),
+    neighborhood: String(lead.neighborhood || ''),
+    city: String(lead.city || ''),
+    state: String(lead.state || ''),
+    addressReference: String(lead.addressReference || ''),
+    capturedByName: String(lead.capturedByName || '')
+  };
+}
+
+exports.listExternalOperations = onCall({ region: 'southamerica-east1' }, async (request) => {
+  const caller = await externalOperationsCaller(request);
+  const startDate = String(request.data?.startDate || '');
+  const endDate = String(request.data?.endDate || '');
+  const requestedStoreId = String(request.data?.storeId || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate) || startDate > endDate) {
+    throw new HttpsError('invalid-argument', 'Informe um período válido.');
+  }
+  const days = Math.floor((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000);
+  if (days > 30) throw new HttpsError('invalid-argument', 'O período máximo é de 31 dias.');
+  if (!caller.allStores && requestedStoreId && !caller.storeIds.includes(requestedStoreId)) {
+    throw new HttpsError('permission-denied', 'Esta unidade não está permitida para seu perfil.');
+  }
+
+  const snapshot = await getFirestore().collection('leads')
+    .where('appointmentDate', '>=', startDate)
+    .where('appointmentDate', '<=', endDate)
+    .limit(500)
+    .get();
+  const records = snapshot.docs
+    .filter((item) => {
+      const lead = item.data();
+      return lead.archived !== true
+        && Boolean(lead.appointmentTime)
+        && lead.appointmentStatus !== 'cancelled'
+        && lead.appointmentAttendance !== 'cancelled'
+        && (!requestedStoreId || lead.storeId === requestedStoreId)
+        && (caller.allStores || caller.storeIds.includes(lead.storeId));
+    })
+    .map(externalOperationLead)
+    .sort((left, right) => `${left.appointmentDate}-${left.appointmentTime}-${left.fullName}`
+      .localeCompare(`${right.appointmentDate}-${right.appointmentTime}-${right.fullName}`, 'pt-BR'));
+  return { records, truncated: snapshot.size === 500 };
+});

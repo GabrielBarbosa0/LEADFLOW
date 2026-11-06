@@ -113,6 +113,20 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       quickDraft: {},
       updatingId: ''
     },
+    externalOperations: {
+      loading: false,
+      loaded: false,
+      error: '',
+      records: [],
+      truncated: false,
+      startDate: toLocalDateInput(new Date()),
+      endDate: toLocalDateInput(new Date()),
+      storeId: '',
+      query: '',
+      transportMode: 'all',
+      companionMode: 'all',
+      detailLeadId: ''
+    },
     appointmentCreate: {
       loading: false,
       saving: false,

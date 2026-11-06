@@ -13,7 +13,7 @@
     "build:pages": "vite build --base=/LEADFLOW/",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.js\"",
+    "test:rules": "firebase emulators:exec --config firebase.emulators.test.json --only firestore \"vitest run --config vitest.rules.config.js\"",
     "verify:firebase": "npm run test:rules && node --check functions/index.js",
     "verify:staging": "node scripts/verify-staging-env.js",
     "verify:emulator": "node scripts/verify-emulator-env.js",

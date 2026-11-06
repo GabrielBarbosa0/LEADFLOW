@@ -19,6 +19,30 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   await expect(page.getByRole('button', { name: /Configurações/ })).toBeVisible();
 });
 
+test('loads store-scoped logistics for an external leader', async ({ page }) => {
+  await signIn(page, 'externa@leadflow.test');
+
+  await page.getByRole('button', { name: /Operação externa/ }).click();
+  await expect(page).toHaveURL(/#\/external-operations$/);
+  await expect(page.getByRole('heading', { name: 'Rotas e deslocamentos' })).toBeVisible();
+  await expect(page.getByLabel('Transporte')).toBeVisible();
+  await expect(page.getByLabel('Acompanhante')).toBeVisible();
+  await expect(page.getByText('Dona Lucia').first()).toBeVisible();
+  await expect(page.getByText(/Portao azul/).first()).toBeVisible();
+  await expect(page.getByText('Seu Jose').first()).toBeVisible();
+  await expect(page.locator('body')).not.toContainText('CPF');
+
+  await page.getByLabel('Transporte').selectOption('without');
+  await expect(page.getByText('Cliente Compareceu Hoje').first()).toBeVisible();
+  await expect(page.getByText('Dona Lucia')).toHaveCount(0);
+
+  await page.getByLabel('Transporte').selectOption('with');
+  await page.getByLabel('Acompanhante').selectOption('with');
+  await expect(page.getByText('Dona Lucia').first()).toBeVisible();
+  await expect(page.getByText('Seu Jose').first()).toBeVisible();
+  await expect(page.getByText('Cliente Compareceu Hoje')).toHaveCount(0);
+});
+
 test('lists active store captors when creating a quick walk-in', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
   await page.goto('/#/walk-ins');
