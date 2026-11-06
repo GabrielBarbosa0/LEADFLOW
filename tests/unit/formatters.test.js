@@ -63,6 +63,21 @@ describe('shared formatters', () => {
     expect(syncLabel({
       appointmentDate: '2026-10-29', appointmentTime: '08:00', appointmentAttendance: 'cancelled'
     })).toEqual(['Cancelado', 'warning']);
+    expect(syncLabel({
+      appointmentDate: '2026-10-29', appointmentTime: '08:00', funnelStage: 'confirmation'
+    })).toEqual(['Confirmação pendente', 'warning']);
+    expect(syncLabel({
+      appointmentDate: '2026-10-29', appointmentTime: '08:00', funnelStage: 'confirmed'
+    })).toEqual(['Confirmado', 'success']);
+    expect(syncLabel({
+      appointmentDate: '2026-10-29', appointmentTime: '08:00', appointmentAttendance: 'attended'
+    })).toEqual(['Compareceu', 'success']);
+    expect(syncLabel({
+      appointmentDate: '2026-10-29', appointmentTime: '08:00', appointmentAttendance: 'missed'
+    })).toEqual(['Não compareceu', 'danger']);
+    expect(syncLabel({
+      appointmentDate: '2026-10-29', appointmentTime: '08:00', appointmentAttendance: 'missed', funnelStage: 'awaiting_reschedule'
+    })).toEqual(['Aguardando reagendamento', 'warning']);
     expect(offlineSyncDetail({ syncState: 'error' })).toContain('continua salvo');
     expect(offlineSyncDetail({ syncState: 'synced' })).toBe('');
   });

@@ -87,9 +87,14 @@ export function syncLabel(lead) {
   if (lead.syncState === 'error') return ['Não sincronizado', 'danger'];
   if (lead.syncState === 'syncing') return ['Sincronizando', 'warning'];
   if (lead.syncState === 'pending') return ['Pendente de sincronização', 'warning'];
-  if (lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled') {
+  if (lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled' || lead.funnelStage === 'cancelled') {
     return ['Cancelado', 'warning'];
   }
+  if (lead.funnelStage === 'awaiting_reschedule') return ['Aguardando reagendamento', 'warning'];
+  if (lead.funnelStage === 'confirmation') return ['Confirmação pendente', 'warning'];
+  if (lead.funnelStage === 'confirmed') return ['Confirmado', 'success'];
+  if (lead.funnelStage === 'attended' || lead.appointmentAttendance === 'attended') return ['Compareceu', 'success'];
+  if (lead.funnelStage === 'missed' || lead.appointmentAttendance === 'missed') return ['Não compareceu', 'danger'];
   if (!lead.appointmentDate || !lead.appointmentTime) return ['Aguardando agendamento', 'warning'];
   return ['Agendado', 'success'];
 }

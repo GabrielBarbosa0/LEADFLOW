@@ -1,12 +1,19 @@
 import { formatBrazilianCpf } from '../../../utils/savwin-matching.js';
-import { escapeHtml, formatAppointmentDate, storeLabel } from '../../shared/formatters.js';
+import { escapeHtml, formatAppointmentDate, storeLabel, syncLabel } from '../../shared/formatters.js';
 
 function appointmentStatus(lead) {
-  if (lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled') return ['Cancelado', 'warning', 'calendar-x'];
-  if (lead.appointmentAttendance === 'attended') return ['Compareceu', 'success', 'circle-check'];
-  if (lead.appointmentAttendance === 'missed') return ['Não compareceu', 'danger', 'circle-x'];
-  if (lead.appointmentDate && lead.appointmentTime) return ['Agendado', 'success', 'calendar-check'];
-  return ['Sem agendamento', 'neutral', 'calendar-x'];
+  const [label, tone] = syncLabel(lead);
+  const icon = {
+    'Aguardando agendamento': 'calendar-clock',
+    Agendado: 'calendar-check',
+    'Confirmação pendente': 'message-circle',
+    Confirmado: 'badge-check',
+    Compareceu: 'circle-check',
+    'Não compareceu': 'circle-x',
+    'Aguardando reagendamento': 'calendar-clock',
+    Cancelado: 'calendar-x'
+  }[label] || 'clock-3';
+  return [label, tone, icon];
 }
 
 function searchResult(lead) {

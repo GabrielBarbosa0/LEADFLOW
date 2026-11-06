@@ -2,10 +2,10 @@ export const FUNNEL_STAGES = Object.freeze([
   { id: 'captured', label: 'Captado' },
   { id: 'awaiting_appointment', label: 'Aguardando agendamento' },
   { id: 'scheduled', label: 'Agendado' },
-  { id: 'confirmation', label: 'Em confirmação' },
+  { id: 'confirmation', label: 'Confirmação pendente' },
   { id: 'confirmed', label: 'Confirmado' },
   { id: 'attended', label: 'Compareceu' },
-  { id: 'missed', label: 'Faltou' },
+  { id: 'missed', label: 'Não compareceu' },
   { id: 'awaiting_reschedule', label: 'Aguardando reagendamento' },
   { id: 'cancelled', label: 'Cancelado' },
   { id: 'closed', label: 'Encerrado' }

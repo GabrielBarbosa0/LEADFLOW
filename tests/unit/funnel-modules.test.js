@@ -7,6 +7,8 @@ describe('funnel feature modules', () => {
     expect(initialFunnelStage()).toBe('awaiting_appointment');
     expect(initialFunnelStage('2026-11-03')).toBe('scheduled');
     expect(funnelStageLabel('scheduled')).toBe('Agendado');
+    expect(funnelStageLabel('confirmation')).toBe('Confirmação pendente');
+    expect(funnelStageLabel('missed')).toBe('Não compareceu');
   });
 
   it('creates immutable creation events for the lead timeline', () => {

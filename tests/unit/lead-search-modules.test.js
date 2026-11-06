@@ -51,7 +51,7 @@ describe('lead appointment search', () => {
       search: { query: 'maria', loading: false, searched: true, error: '', results: leads }
     });
     expect(markup).toContain('Agendado');
-    expect(markup).toContain('Sem agendamento');
+    expect(markup).toContain('Aguardando agendamento');
     expect(markup).toContain('Cancelado');
     expect(markup).toContain('Consultar lead cancelado');
     expect(markup).toContain('05 de novembro às 08:20');
