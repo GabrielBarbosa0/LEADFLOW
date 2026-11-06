@@ -3608,7 +3608,7 @@ svg {
 }
 
 .dashboard-ranking-sort > div {
-  min-height: 42px;
+  height: 50px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
@@ -3808,6 +3808,7 @@ svg {
   }
 
   .dashboard-ranking-sort > div {
+    height: auto;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 3px;
   }
