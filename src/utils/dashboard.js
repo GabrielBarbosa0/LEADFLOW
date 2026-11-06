@@ -1,6 +1,7 @@
 import { calculateAge, INTERESTS, PATHOLOGIES } from './lead.js';
 import { activeLeads } from './lead-archive.js';
-import { hasActiveAppointment } from './appointment-cancellation.js';
+import { APPOINTMENT_CANCELLATION_REASONS, hasActiveAppointment } from './appointment-cancellation.js';
+import { APPOINTMENT_RESCHEDULE_REASONS } from './appointment-reschedule.js';
 
 function percentage(count, total) {
   return total ? Math.round((count / total) * 100) : 0;
@@ -35,6 +36,17 @@ function companionCountFor(lead) {
 
 function distributionItem(id, label, count, total) {
   return { id, label, count, percentage: percentage(count, total) };
+}
+
+function reasonDistribution(records, field, options) {
+  const informed = records.filter((lead) => lead[field]);
+  return options.map((option) => distributionItem(
+    option.id,
+    option.label,
+    informed.filter((lead) => lead[field] === option.id).length,
+    informed.length
+  )).filter((item) => item.count)
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'pt-BR'));
 }
 
 function ageRangeFor(birthDate, referenceDate) {
@@ -105,6 +117,19 @@ export function dashboardSummary(records = [], upcomingRecords = records, today 
     records.filter((lead) => ageRangeFor(lead.birthDate, today) === id).length,
     total
   ));
+  const sexes = [
+    ['female', 'Feminino'],
+    ['male', 'Masculino'],
+    ['other', 'Outro'],
+    ['not-informed', 'Não informado']
+  ].map(([id, label]) => distributionItem(
+    id,
+    label,
+    records.filter((lead) => (lead.sex || 'not-informed') === id).length,
+    total
+  ));
+  const cancellationReasons = reasonDistribution(records, 'appointmentCancellationReason', APPOINTMENT_CANCELLATION_REASONS);
+  const rescheduleReasons = reasonDistribution(records, 'appointmentRescheduleReason', APPOINTMENT_RESCHEDULE_REASONS);
   const interests = INTERESTS.map((item) => distributionItem(
     item.id || 'not-informed',
     item.label,
@@ -143,6 +168,9 @@ export function dashboardSummary(records = [], upcomingRecords = records, today 
     clinicalRoutes,
     pathologies,
     ageRanges,
+    sexes,
+    cancellationReasons,
+    rescheduleReasons,
     interests,
     transportByDay,
     upcomingStartDate: startDate,

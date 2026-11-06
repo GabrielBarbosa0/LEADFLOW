@@ -94,7 +94,7 @@ export function applyAccessListFilters(state, root = document) {
   });
   const filtersActive = Boolean(query || storeId);
   const count = root.querySelector('[data-access-filter-count]');
-  if (count) count.textContent = filtersActive ? `${visibleCount} de ${rows.length}` : `${rows.length} pessoa(s)`;
+  if (count) count.textContent = filtersActive ? `${visibleCount} de ${rows.length}` : String(rows.length);
   const empty = root.querySelector('[data-access-filter-empty]');
   if (empty) empty.hidden = visibleCount > 0;
   const clear = root.querySelector('[data-access-clear-filters]');

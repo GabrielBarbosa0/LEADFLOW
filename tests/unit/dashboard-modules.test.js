@@ -78,6 +78,11 @@ describe('dashboard feature modules', () => {
     expect(markup).toContain('Desempenho por unidade');
     expect(markup).not.toContain('Resultados por captador');
     expect(markup).toContain('Agendamentos por dia da semana');
+    expect(markup).toContain('Sexo dos clientes');
+    expect(markup).toContain('Cancelamentos');
+    expect(markup).toContain('Reagendamentos');
+    expect(markup).toContain('aria-label="Voltar para gestão"');
+    expect(markup).not.toContain('<span>Voltar para gestão</span>');
     expect(markup).toContain('data-dashboard-ranking-open');
     expect(markup).toContain('data-lucide="trophy"');
     expect(markup).not.toContain('data-lucide="list-ordered"');

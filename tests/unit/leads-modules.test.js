@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { leadDetailSubmissionValues } from '../../src/app/features/leads/lead-detail-events.js';
 import { leadDetailAppointmentTimeField, selectedLeadDetailService } from '../../src/app/features/leads/lead-appointment.js';
 import { leadDetailView } from '../../src/app/features/leads/lead-detail-view.js';
-import { leadsView } from '../../src/app/features/leads/leads-view.js';
+import { filterLeadRecords, leadsView } from '../../src/app/features/leads/leads-view.js';
 import { DEFAULT_STORE_SCHEDULE } from '../../src/utils/schedule.js';
 
 afterEach(() => {
@@ -63,9 +63,20 @@ function scheduleState(overrides = {}) {
 describe('leads feature modules', () => {
   it('filters the lead list by name and phone', () => {
     const leads = [sampleLead(), sampleLead({ id: 'lead-2', fullName: 'João Santos', phoneSearch: '81988887777' })];
-    expect(leadsView({ leads, search: 'maria', canCreate: true })).toContain('Maria Silva');
-    expect(leadsView({ leads, search: 'maria', canCreate: true })).not.toContain('João Santos');
-    expect(leadsView({ leads, search: '988887777', canCreate: true })).toContain('João Santos');
+    expect(filterLeadRecords(leads, { query: 'maria' }).map((lead) => lead.id)).toEqual(['lead-1']);
+    expect(filterLeadRecords(leads, { query: '988887777' }).map((lead) => lead.id)).toEqual(['lead-2']);
+  });
+
+  it('filters the lead list by store and capture period', () => {
+    const leads = [
+      sampleLead(),
+      sampleLead({ id: 'lead-2', storeId: 'loja-02', capturedAtClient: '2026-11-03T10:00:00-03:00' })
+    ];
+    expect(filterLeadRecords(leads, { storeId: 'loja-02', startDate: '2026-11-01', endDate: '2026-11-05' }).map((lead) => lead.id)).toEqual(['lead-2']);
+    const markup = leadsView({ leads, filters: { storeId: 'loja-02' }, allowedStores: [{ id: 'loja-02', label: 'Loja 02' }] });
+    expect(markup).toContain('id="lead-start-date"');
+    expect(markup).toContain('id="lead-end-date"');
+    expect(markup).toContain('data-lead-filters-clear');
   });
 
   it('shows a marker for a Captar import', () => {

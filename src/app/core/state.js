@@ -15,6 +15,12 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
     dataError: '',
     toast: null,
     search: '',
+    leadFilters: {
+      query: '',
+      storeId: '',
+      startDate: '',
+      endDate: ''
+    },
     leadSearch: {
       query: '',
       loading: false,

@@ -12,7 +12,7 @@ export function settingsView({ allowed, settings, content }) {
         <button class="settings-tab ${section === 'services' ? 'is-active' : ''}" type="button" role="tab" aria-selected="${section === 'services'}" data-settings-section="services"><i data-lucide="stethoscope"></i><span>Serviços</span></button>
         <button class="settings-tab ${section === 'roles' ? 'is-active' : ''}" type="button" role="tab" aria-selected="${section === 'roles'}" data-settings-section="roles"><i data-lucide="shield-check"></i><span>Perfis e permissões</span></button>
       </div>
-      <button class="back-link" type="button" data-route="management"><i data-lucide="arrow-left"></i><span>Voltar para gestão</span></button>
+      <button class="icon-button" type="button" data-route="management" aria-label="Voltar para gestão" title="Voltar para gestão"><i data-lucide="arrow-left"></i></button>
     </section>
     ${error ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(error)}</span></div>` : ''}
     <div aria-busy="${loading || saving}">${content}</div>`;

@@ -63,7 +63,7 @@ import { leadDetailView as renderLeadDetailView } from './features/leads/lead-de
 import { leadAssignmentDialog as renderLeadAssignmentDialog } from './features/leads/lead-assignment-dialog.js';
 import { ensureLeadHistory, stopLeadHistorySubscription } from './features/funnel/lead-history-subscriptions.js';
 import { leadHistoryView } from './features/funnel/lead-history-view.js';
-import { leadsView as renderLeadsView } from './features/leads/leads-view.js';
+import { filterLeadRecords, leadsView as renderLeadsView } from './features/leads/leads-view.js';
 import { validateLeadSearch } from './features/search/lead-search-data.js';
 import { checkCpfActiveAppointment, loadSearchLead, searchLeadAppointments } from './features/search/lead-search-service.js';
 import { leadSearchView as renderLeadSearchView } from './features/search/lead-search-view.js';
@@ -261,7 +261,8 @@ function newLeadView() {
 function leadsView() {
   return renderLeadsView({
     leads: state.leads,
-    search: state.search,
+    filters: state.leadFilters,
+    allowedStores: isAdmin() ? STORES : STORES.filter((store) => captureStoreIds().includes(store.id)),
     dataError: state.dataError,
     canCreate: hasAccess('leads.create')
   });
@@ -1125,16 +1126,34 @@ function bindPageEvents() {
     if (event.target === deleteLeadDialog) deleteLeadDialog.close();
   });
 
-  const search = document.querySelector('#lead-search');
-  if (search) {
-    search.addEventListener('input', () => {
-      const selectionStart = search.selectionStart;
-      const selectionEnd = search.selectionEnd;
-      state.search = search.value;
-      render();
-      const nextSearch = document.querySelector('#lead-search');
-      nextSearch?.focus();
-      nextSearch?.setSelectionRange(selectionStart, selectionEnd);
+  const leadFilters = document.querySelector('[data-lead-filters]');
+  if (leadFilters) {
+    const queryInput = leadFilters.querySelector('#lead-search');
+    const storeInput = leadFilters.querySelector('#lead-store-filter');
+    const startInput = leadFilters.querySelector('#lead-start-date');
+    const endInput = leadFilters.querySelector('#lead-end-date');
+    const clearButton = leadFilters.querySelector('[data-lead-filters-clear]');
+    const applyLeadFilters = () => {
+      state.leadFilters = {
+        query: queryInput?.value || '',
+        storeId: storeInput?.value || '',
+        startDate: startInput?.value || '',
+        endDate: endInput?.value || ''
+      };
+      const visibleIds = new Set(filterLeadRecords(state.leads, state.leadFilters).map((lead) => lead.id));
+      document.querySelectorAll('[data-lead-list-row]').forEach((row) => { row.hidden = !visibleIds.has(row.dataset.openLeadId); });
+      const empty = document.querySelector('[data-lead-filter-empty]');
+      if (empty) empty.hidden = visibleIds.size > 0;
+      const count = document.querySelector('[data-lead-filter-count]');
+      if (count) count.textContent = `${visibleIds.size} de ${state.leads.length}`;
+      if (clearButton) clearButton.disabled = !Object.values(state.leadFilters).some(Boolean);
+    };
+    queryInput?.addEventListener('input', applyLeadFilters);
+    [storeInput, startInput, endInput].forEach((input) => input?.addEventListener('change', applyLeadFilters));
+    clearButton?.addEventListener('click', () => {
+      [queryInput, storeInput, startInput, endInput].forEach((input) => { if (input) input.value = ''; });
+      applyLeadFilters();
+      queryInput?.focus();
     });
   }
 

@@ -11,6 +11,7 @@ export function resetSessionState(state, {
 }) {
   state.profile = null;
   state.leads = [];
+  state.leadFilters = { query: '', storeId: '', startDate: '', endDate: '' };
   state.leadSearch = { query: '', loading: false, searched: false, error: '', results: [] };
   state.management = {
     loading: false,

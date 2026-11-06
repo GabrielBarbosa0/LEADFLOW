@@ -79,14 +79,14 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
 
   return `
     <section class="page-toolbar">
-      <button class="back-link" type="button" data-route="management"><i data-lucide="arrow-left"></i><span>Voltar para gestão</span></button>
+      <button class="icon-button" type="button" data-route="management" aria-label="Voltar para gestão" title="Voltar para gestão"><i data-lucide="arrow-left"></i></button>
       <div class="access-toolbar-actions">
+        <span class="access-total-summary"><i data-lucide="users"></i><strong data-access-filter-count>${filtersActive ? `${visibleAccesses.length} de ${accesses.length}` : accesses.length}</strong><span>acessos</span></span>
         <button class="icon-button" type="button" data-action="reload-accesses" title="Atualizar acessos" aria-label="Atualizar acessos" ${loading ? 'disabled' : ''}><i data-lucide="refresh-cw"></i></button>
         <button class="button button-primary" type="button" data-access-new><i data-lucide="user-plus"></i><span>Novo acesso</span></button>
       </div>
     </section>
     <section class="access-list-panel" aria-busy="${loading}">
-      <div class="access-list-heading"><div><strong>Acessos cadastrados</strong><span data-access-filter-count>${filtersActive ? `${visibleAccesses.length} de ${accesses.length}` : accesses.length} pessoa(s)</span></div></div>
       <div class="access-list-filters" role="search">
         <div class="field access-list-search"><label for="access-list-search">Nome ou e-mail</label><div class="access-filter-input"><i data-lucide="search"></i><input id="access-list-search" type="search" data-access-search value="${escapeHtml(query)}" placeholder="Pesquisar colaborador" autocomplete="off" /></div></div>
         <div class="field access-list-store-filter"><label for="access-list-store">Loja</label><select id="access-list-store" data-access-store-filter><option value="">Todas as lojas</option>${storeFilterOptions}</select></div>

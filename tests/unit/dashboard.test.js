@@ -7,17 +7,18 @@ describe('dashboardSummary', () => {
       {
         appointmentDate: '2026-10-29', appointmentTime: '08:00', careRoute: 'ophthalmologist',
         examPaymentType: 'paid', needsTransport: true, transportSeats: 2, hasCompanion: true,
-        birthDate: '1960-10-20', pathologyIds: ['cataract', 'retinopathy'], interestId: 'complete-glasses'
+        birthDate: '1960-10-20', sex: 'female', pathologyIds: ['cataract', 'retinopathy'], interestId: 'complete-glasses',
+        appointmentCancellationReason: 'client_withdrew'
       },
       {
         appointmentDate: '', appointmentTime: '', careRoute: 'optometrist',
         examPaymentType: 'courtesy', needsTransport: false, birthDate: '1980-01-01',
-        pathologyIds: ['glaucoma'], interestId: 'frames'
+        sex: 'male', pathologyIds: ['glaucoma'], interestId: 'frames', appointmentRescheduleReason: 'client_request'
       },
       {
         appointmentDate: '2026-11-10', appointmentTime: '09:00', careRoute: 'ophthalmologist',
         needsTransport: true, hasCompanion: false, birthDate: '2000-01-01',
-        pathologyIds: ['retinopathy'], interestId: 'complete-glasses'
+        sex: 'female', pathologyIds: ['retinopathy'], interestId: 'complete-glasses', appointmentRescheduleReason: 'transport_issue'
       }
     ];
 
@@ -55,6 +56,17 @@ describe('dashboardSummary', () => {
       ['55 a 64 anos', 0],
       ['65 anos ou mais', 1],
       ['Não informado', 0]
+    ]);
+    expect(summary.sexes.map(({ label, count }) => [label, count])).toEqual([
+      ['Feminino', 2],
+      ['Masculino', 1],
+      ['Outro', 0],
+      ['Não informado', 0]
+    ]);
+    expect(summary.cancellationReasons.map(({ label, count }) => [label, count])).toEqual([['Cliente desistiu', 1]]);
+    expect(summary.rescheduleReasons.map(({ label, count }) => [label, count])).toEqual([
+      ['Problema de transporte', 1],
+      ['Solicitação do cliente', 1]
     ]);
     expect(summary.interests.map(({ label, count }) => [label, count])).toEqual([
       ['Óculos completo', 2],

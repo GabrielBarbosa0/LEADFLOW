@@ -107,6 +107,9 @@ describe('access feature modules', () => {
     expect(markup).toContain('data-access-search');
     expect(markup).toContain('data-access-store-filter');
     expect(markup).toContain('class="access-toolbar-actions"');
+    expect(markup).toContain('class="access-total-summary"');
+    expect(markup).not.toContain('Acessos cadastrados');
+    expect(markup).not.toContain('<span>Voltar para gestão</span>');
     expect(markup.indexOf('data-action="reload-accesses"')).toBeLessThan(markup.indexOf('data-access-new'));
     expect(markup).not.toContain('id="access-email" name="email" type="email" maxlength="254" autocomplete="email" value="maria@example.com" placeholder="nome@exemplo.com" readonly');
   });

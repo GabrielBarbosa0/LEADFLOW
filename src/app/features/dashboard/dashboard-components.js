@@ -1,9 +1,9 @@
 import { escapeHtml } from '../../shared/formatters.js';
 
-export function dashboardDistributionRows(items, emptyMessage = 'Nenhum dado informado') {
+export function dashboardDistributionRows(items, emptyMessage = 'Nenhum dado informado', suffix = 'dos cadastros') {
   if (!items.length) return `<div class="dashboard-panel-empty">${emptyMessage}</div>`;
   const tones = ['brand', 'success', 'neutral', 'brand', 'success', 'neutral'];
-  return items.map((item, index) => `<div class="dashboard-status-row"><div><span class="dashboard-status-dot is-${tones[index % tones.length]}"></span><strong>${escapeHtml(item.label)}</strong><span>${item.count}</span></div><div class="dashboard-progress is-${tones[index % tones.length]}"><i style="width:${item.percentage}%"></i></div><small>${item.percentage}% dos cadastros</small></div>`).join('');
+  return items.map((item, index) => `<div class="dashboard-status-row"><div><span class="dashboard-status-dot is-${tones[index % tones.length]}"></span><strong>${escapeHtml(item.label)}</strong><span>${item.count}</span></div><div class="dashboard-progress is-${tones[index % tones.length]}"><i style="width:${item.percentage}%"></i></div><small>${item.percentage}% ${escapeHtml(suffix)}</small></div>`).join('');
 }
 
 export function reportDistributionPanel(title, description, icon, items, total, highlightLabel = '') {
