@@ -25,7 +25,7 @@ export function reportFiltersView({ filters, records, allowedStores, loading }) 
       <div class="field"><label for="management-captor">Captador</label><select id="management-captor" name="capturedByUid"><option value="">Todos os captadores</option>${captorOptions}</select></div>
       <div class="field"><label for="management-archive-status">Registros</label><select id="management-archive-status" name="archiveStatus"><option value="active" ${filters.archiveStatus !== 'archived' ? 'selected' : ''}>Ativos</option><option value="archived" ${filters.archiveStatus === 'archived' ? 'selected' : ''}>Arquivados</option></select></div>
       <div class="field management-search-field"><label for="management-search">Nome ou telefone</label><input id="management-search" name="search" type="search" value="${escapeHtml(filters.search)}" placeholder="Buscar nos resultados" /></div>
-      <button class="button button-primary management-filter-button" type="submit" ${loading ? 'disabled' : ''}><i data-lucide="search"></i><span>${loading ? 'Consultando...' : 'Aplicar filtros'}</span></button>
+      <button class="button button-primary management-filter-button" type="submit" aria-label="${loading ? 'Consultando' : 'Aplicar filtros'}" title="${loading ? 'Consultando...' : 'Aplicar filtros'}" ${loading ? 'disabled' : ''}><i data-lucide="${loading ? 'loader-circle' : 'search'}"></i></button>
     </div>
   </form>`;
 }
