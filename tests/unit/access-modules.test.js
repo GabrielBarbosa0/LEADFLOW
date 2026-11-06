@@ -101,7 +101,7 @@ describe('access feature modules', () => {
       allowed: true
     });
     expect(markup).toContain('Maria Silva');
-    expect(markup).toContain('Gestor loja');
+    expect(markup).toContain('Gestor');
     expect(markup).toContain('Editar acesso');
     expect(markup).toContain('value="loja-06" checked');
     expect(markup).toContain('data-access-search');
@@ -115,7 +115,7 @@ describe('access feature modules', () => {
     const access = {
       email: 'colaborador@example.com',
       displayName: 'Colaborador da Loja 06',
-      role: 'captor',
+      role: 'manager',
       roleProfileId: 'system-captor',
       storeId: 'loja-06',
       storeIds: ['loja-02', 'loja-06'],

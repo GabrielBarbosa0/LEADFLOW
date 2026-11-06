@@ -12,11 +12,12 @@ import {
 import { db, isFirebaseConfigured } from '../firebase/client.js';
 import { calculateGoalProgress, GOAL_METRIC, validateGoal } from '../utils/goal.js';
 import { canAccessStore, profileStoreIds } from '../utils/permissions.js';
+import { hasPermission, isCollaboratorProfile } from '../utils/role-profile.js';
 
 export const GOALS_LEAD_LIMIT = 1000;
 
 function canManageGoals(profile) {
-  return ['manager', 'admin'].includes(profile?.role);
+  return hasPermission(profile, 'goals.manage');
 }
 
 function localDayStart(date) {
@@ -31,11 +32,11 @@ function localDayAfter(date) {
 
 async function loadGoals(profile) {
   const constraints = [];
-  if (profile.role === 'manager') {
+  if (canManageGoals(profile) && profile.role !== 'admin') {
     const storeIds = profileStoreIds(profile);
     constraints.push(where('storeId', storeIds.length === 1 ? '==' : 'in', storeIds.length === 1 ? storeIds[0] : storeIds));
   }
-  if (profile.role === 'captor') constraints.push(where('assigneeUid', '==', profile.uid));
+  if (!canManageGoals(profile)) constraints.push(where('assigneeUid', '==', profile.uid));
 
   const snapshot = await getDocs(query(collection(db, 'goals'), ...constraints));
   return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
@@ -51,7 +52,7 @@ async function loadMembers(profile) {
 
   return snapshot.docs
     .map((item) => ({ uid: item.id, ...item.data() }))
-    .filter((member) => member.active === true && member.role === 'captor')
+    .filter((member) => member.active === true && isCollaboratorProfile(member))
     .sort((a, b) => a.displayName.localeCompare(b.displayName, 'pt-BR'));
 }
 
@@ -66,11 +67,11 @@ async function loadProgressLeads(profile, goals) {
     limit(GOALS_LEAD_LIMIT + 1)
   ];
 
-  if (profile.role === 'manager') {
+  if (canManageGoals(profile) && profile.role !== 'admin') {
     const storeIds = profileStoreIds(profile);
     constraints.unshift(where('storeId', storeIds.length === 1 ? '==' : 'in', storeIds.length === 1 ? storeIds[0] : storeIds));
   }
-  if (profile.role === 'captor') constraints.unshift(where('capturedByUid', '==', profile.uid));
+  if (!canManageGoals(profile)) constraints.unshift(where('capturedByUid', '==', profile.uid));
 
   const snapshot = await getDocs(query(collection(db, 'leads'), ...constraints));
   return {
@@ -108,7 +109,7 @@ function validateGoalMembers(profile, values, members) {
       selectedMembers: []
     };
   }
-  if (profile.role === 'manager' && (
+  if (profile.role !== 'admin' && (
     !canAccessStore(profile, validation.data.storeId)
     || selectedMembers.some((member) => member.storeId !== validation.data.storeId)
   )) {

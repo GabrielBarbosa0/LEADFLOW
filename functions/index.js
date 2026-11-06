@@ -9,16 +9,19 @@ initializeApp();
 const PRIMARY_ADMIN_EMAIL = 'oticasfascinantes.financeiro@gmail.com';
 const PERMISSION_SCHEMA_VERSION = systemRoleConfig.permissionSchemaVersion;
 const SYSTEM_ROLE_PROFILES = new Map(systemRoleConfig.profiles.map((profile) => [profile.id, profile]));
+const LEGACY_ROLE_PROFILE_ALIASES = new Map(Object.entries(systemRoleConfig.legacyProfileAliases || {}));
+const DEFAULT_ROLE_PROFILE_IDS = { captor: 'system-external-leader', manager: 'system-manager', admin: 'system-admin' };
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
 function systemProfileForAccess(access = {}) {
-  const assigned = SYSTEM_ROLE_PROFILES.get(String(access.roleProfileId || ''));
+  const requestedId = String(access.roleProfileId || '');
+  const assigned = SYSTEM_ROLE_PROFILES.get(LEGACY_ROLE_PROFILE_ALIASES.get(requestedId) || requestedId);
   if (assigned) return assigned;
   if (access.roleProfileId) return null;
-  return systemRoleConfig.profiles.find((profile) => profile.baseRole === access.role) || null;
+  return SYSTEM_ROLE_PROFILES.get(DEFAULT_ROLE_PROFILE_IDS[access.role]) || null;
 }
 
 function sameStringArray(left, right) {
@@ -47,8 +50,8 @@ function canonicalAccessProfile(email, access, authUser) {
     email,
     displayName: access.displayName || authUser.displayName || 'Colaborador',
     photoUrl: authUser.photoURL || '',
-    role: access.role,
-    roleProfileId: access.roleProfileId || systemProfile?.id || '',
+    role: systemProfile?.baseRole || access.role,
+    roleProfileId: systemProfile?.id || access.roleProfileId || '',
     permissions: currentPermissions(access, systemProfile),
     permissionSchemaVersion: PERMISSION_SCHEMA_VERSION,
     storeId: access.storeId || storeIds[0] || '',
@@ -88,6 +91,7 @@ exports.syncCurrentAccess = onCall({ region: 'southamerica-east1' }, async (requ
   const canonical = canonicalAccessProfile(email, access, authUser);
   const currentUser = userSnapshot.data() || {};
   const accessNeedsUpdate = access.permissionSchemaVersion !== PERMISSION_SCHEMA_VERSION
+    || access.role !== canonical.role
     || access.roleProfileId !== canonical.roleProfileId
     || !sameStringArray(access.permissions, canonical.permissions);
   const userNeedsUpdate = !userSnapshot.exists || accessProfileChanged(currentUser, canonical);
@@ -96,6 +100,7 @@ exports.syncCurrentAccess = onCall({ region: 'southamerica-east1' }, async (requ
     const batch = firestore.batch();
     if (accessNeedsUpdate) {
       batch.set(accessRef, {
+        role: canonical.role,
         roleProfileId: canonical.roleProfileId,
         permissions: canonical.permissions,
         permissionSchemaVersion: PERMISSION_SCHEMA_VERSION,

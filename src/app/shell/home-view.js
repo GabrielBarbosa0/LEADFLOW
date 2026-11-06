@@ -1,7 +1,9 @@
+import { systemRoleProfileForId } from '../../utils/role-profile.js';
 import { escapeHtml, profileInitials, roleLabel } from '../shared/formatters.js';
 
 function profileCard(profile) {
-  return `<section class="profile-card"><div class="avatar">${escapeHtml(profileInitials(profile.displayName))}</div><div><strong>${escapeHtml(profile.displayName)}</strong><span>${escapeHtml(profile.roleProfileName || roleLabel(profile.role))}</span></div><i data-lucide="shield-check" class="profile-status"></i></section>`;
+  const roleName = systemRoleProfileForId(profile.roleProfileId)?.name || profile.roleProfileName || roleLabel(profile.role);
+  return `<section class="profile-card"><div class="avatar">${escapeHtml(profileInitials(profile.displayName))}</div><div><strong>${escapeHtml(profile.displayName)}</strong><span>${escapeHtml(roleName)}</span></div><i data-lucide="shield-check" class="profile-status"></i></section>`;
 }
 
 function actionCard(route, icon, title, description, extra = '') {

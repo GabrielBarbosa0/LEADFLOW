@@ -25,8 +25,8 @@ A funcao so grava quando encontra alguma diferenca, evitando ciclos no listener 
 ## Regras de leads
 
 - Administrador possui bypass direto para criar, editar e excluir leads.
-- Gestor loja e Atendente Balcao editam apenas leads das unidades permitidas quando possuem `leads.edit_all`.
-- Colaborador e MEI editam os proprios leads quando possuem `leads.edit_own`.
+- Gestor e Colaborador Interno editam apenas leads das unidades permitidas quando possuem `leads.edit_all`.
+- Colaborador Externo e MEI editam os proprios leads quando possuem `leads.edit_own`.
 - Autoria, loja, origem e datas originais permanecem imutaveis para perfis nao administrativos.
 - Comparecimento, retornos e agendamentos limitados continuam com verificacoes especificas.
 - Campos novos de formulario nao exigem inclusao em uma lista global nas regras.

@@ -1,10 +1,37 @@
 {
-  "permissionSchemaVersion": 5,
+  "permissionSchemaVersion": 6,
+  "legacyProfileAliases": {
+    "system-receptionist": "system-captor",
+    "system-telemarketing": "system-captor",
+    "system-supervisor": "system-manager"
+  },
   "profiles": [
     {
       "id": "system-captor",
-      "name": "Colaborador",
-      "scope": "own",
+      "name": "Colaborador Interno",
+      "scope": "stores",
+      "baseRole": "manager",
+      "permissions": [
+        "leads.create",
+        "leads.view_own",
+        "leads.edit_own",
+        "appointments.cancel",
+        "followups.own",
+        "goals.view_own",
+        "leads.view_stores",
+        "management.view",
+        "leads.edit_all",
+        "leads.clinical_update",
+        "appointments.view",
+        "appointments.attendance",
+        "walkins.manage",
+        "followups.team"
+      ]
+    },
+    {
+      "id": "system-external-leader",
+      "name": "Colaborador Externo",
+      "scope": "stores",
       "baseRole": "captor",
       "permissions": [
         "leads.create",
@@ -12,13 +39,14 @@
         "leads.edit_own",
         "appointments.cancel",
         "followups.own",
-        "goals.view_own"
+        "goals.view_own",
+        "external.operations.read"
       ]
     },
     {
       "id": "system-mei",
       "name": "MEI",
-      "scope": "own",
+      "scope": "stores",
       "baseRole": "captor",
       "permissions": [
         "leads.create",
@@ -26,12 +54,13 @@
         "leads.edit_own",
         "appointments.cancel",
         "followups.own",
-        "goals.view_own"
+        "goals.view_own",
+        "external.operations.read"
       ]
     },
     {
       "id": "system-manager",
-      "name": "Gestor loja",
+      "name": "Gestor",
       "scope": "stores",
       "baseRole": "manager",
       "permissions": [
@@ -51,57 +80,8 @@
         "followups.team",
         "goals.manage",
         "dashboard.view",
+        "external.operations.read",
         "leads.export"
-      ]
-    },
-    {
-      "id": "system-telemarketing",
-      "name": "Telemarketing",
-      "scope": "stores",
-      "baseRole": "manager",
-      "permissions": [
-        "leads.create",
-        "leads.view_own",
-        "leads.edit_own",
-        "followups.own",
-        "leads.view_stores",
-        "appointments.view",
-        "followups.team"
-      ]
-    },
-    {
-      "id": "system-receptionist",
-      "name": "Atendente Balcao",
-      "scope": "stores",
-      "baseRole": "manager",
-      "permissions": [
-        "leads.create",
-        "leads.view_own",
-        "leads.edit_own",
-        "followups.own",
-        "management.view",
-        "leads.edit_all",
-        "leads.clinical_update",
-        "appointments.view",
-        "appointments.attendance",
-        "appointments.cancel",
-        "walkins.manage",
-        "followups.team"
-      ]
-    },
-    {
-      "id": "system-external-leader",
-      "name": "Líder de Externa",
-      "scope": "stores",
-      "baseRole": "captor",
-      "permissions": [
-        "leads.create",
-        "leads.view_own",
-        "leads.edit_own",
-        "appointments.cancel",
-        "followups.own",
-        "goals.view_own",
-        "external.operations.read"
       ]
     },
     {

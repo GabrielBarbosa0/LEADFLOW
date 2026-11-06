@@ -1,6 +1,7 @@
 import systemRoleConfig from '../../functions/system-role-profiles.json';
 
 export const PERMISSION_SCHEMA_VERSION = systemRoleConfig.permissionSchemaVersion;
+export const LEGACY_ROLE_PROFILE_ALIASES = Object.freeze({ ...(systemRoleConfig.legacyProfileAliases || {}) });
 
 export const ROLE_SCOPES = [
   { id: 'own', label: 'Dados próprios', baseRole: 'captor' },
@@ -51,41 +52,54 @@ export const ALL_PERMISSION_IDS = PERMISSION_GROUPS.flatMap((group) => group.per
 
 export const SYSTEM_ROLE_PROFILES = systemRoleConfig.profiles.map((profile) => ({
   ...profile,
-  name: profile.id === 'system-receptionist' ? 'Atendente Balcão' : profile.name,
   permissions: profile.baseRole === 'admin' ? [...ALL_PERMISSION_IDS] : [...profile.permissions],
   permissionSchemaVersion: PERMISSION_SCHEMA_VERSION,
   system: true,
   active: true
 }));
 
+const DEFAULT_ROLE_PROFILE_IDS = {
+  captor: 'system-external-leader',
+  manager: 'system-manager',
+  admin: 'system-admin'
+};
+
+export function canonicalRoleProfileId(profileId = '') {
+  const id = String(profileId);
+  return LEGACY_ROLE_PROFILE_ALIASES[id] || id;
+}
+
+export function isCollaboratorProfile(profile) {
+  return profile?.role === 'captor' || canonicalRoleProfileId(profile?.roleProfileId) === 'system-captor';
+}
+
 export function systemRoleProfileForRole(role) {
-  return SYSTEM_ROLE_PROFILES.find((profile) => profile.baseRole === role) || SYSTEM_ROLE_PROFILES[0];
+  return systemRoleProfileForId(DEFAULT_ROLE_PROFILE_IDS[role]) || SYSTEM_ROLE_PROFILES[0];
 }
 
 export function systemRoleProfileForId(profileId) {
-  return SYSTEM_ROLE_PROFILES.find((profile) => profile.id === profileId) || null;
+  const canonicalId = canonicalRoleProfileId(profileId);
+  return SYSTEM_ROLE_PROFILES.find((profile) => profile.id === canonicalId) || null;
 }
 
 export function permissionsForProfile(profile) {
   if (profile?.role === 'admin') return [...ALL_PERMISSION_IDS];
+  const systemProfile = systemRoleProfileForId(profile?.roleProfileId);
+  if (systemProfile && Number(profile?.permissionSchemaVersion || 0) < PERMISSION_SCHEMA_VERSION) {
+    return [...systemProfile.permissions];
+  }
   if (Array.isArray(profile?.permissions)) return profile.permissions;
   return [...systemRoleProfileForRole(profile?.role).permissions];
 }
 
 export function hasPermission(profile, permission) {
   if (profile?.role === 'admin') return true;
-  if (profile?.roleProfileId === 'system-telemarketing') {
-    return [
-      'leads.create', 'leads.view_own', 'leads.edit_own', 'followups.own',
-      'leads.view_stores', 'appointments.view', 'followups.team'
-    ].includes(permission);
-  }
   if (permission === 'walkins.manage') {
-    return ['system-manager', 'system-receptionist'].includes(profile?.roleProfileId)
+    return ['system-manager', 'system-captor', 'system-receptionist', 'system-telemarketing'].includes(profile?.roleProfileId)
       || (profile?.role === 'manager' && !profile?.roleProfileId);
   }
   if (permission === 'appointments.cancel') {
-    return ['system-captor', 'system-mei', 'system-manager', 'system-receptionist'].includes(profile?.roleProfileId)
+    return ['system-captor', 'system-external-leader', 'system-mei', 'system-manager', 'system-receptionist', 'system-telemarketing'].includes(profile?.roleProfileId)
       || (['captor', 'manager'].includes(profile?.role) && !profile?.roleProfileId);
   }
   return permissionsForProfile(profile).includes(permission);

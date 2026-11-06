@@ -389,7 +389,7 @@ service cloud.firestore {
     function canManageWalkInStore(storeId) {
       return isAdmin() || (managerHasStore(storeId) && (
         (('roleProfileId' in userProfile())
-          && userProfile().roleProfileId in ['system-manager', 'system-receptionist'])
+          && userProfile().roleProfileId in ['system-manager', 'system-captor', 'system-receptionist', 'system-telemarketing'])
         || (!('roleProfileId' in userProfile()) && userProfile().role == 'manager')
       ));
     }
@@ -615,7 +615,11 @@ service cloud.firestore {
     function targetLeadOwnerIsActive(uid, storeId) {
       return exists(/databases/$(database)/documents/users/$(uid))
         && get(/databases/$(database)/documents/users/$(uid)).data.active == true
-        && get(/databases/$(database)/documents/users/$(uid)).data.role == 'captor'
+        && (
+          get(/databases/$(database)/documents/users/$(uid)).data.role == 'captor'
+          || get(/databases/$(database)/documents/users/$(uid)).data.roleProfileId
+            in ['system-captor', 'system-receptionist', 'system-telemarketing']
+        )
         && (
           get(/databases/$(database)/documents/users/$(uid)).data.storeId == storeId
           || (('storeIds' in get(/databases/$(database)/documents/users/$(uid)).data)
@@ -795,7 +799,7 @@ service cloud.firestore {
       return hasPermission('appointments.cancel')
         || (activeUser() && (
           (('roleProfileId' in userProfile()) && userProfile().roleProfileId in [
-            'system-captor', 'system-mei', 'system-manager', 'system-receptionist'
+            'system-captor', 'system-external-leader', 'system-mei', 'system-manager', 'system-receptionist', 'system-telemarketing'
           ])
           || (!('roleProfileId' in userProfile()) && userProfile().role in ['captor', 'manager'])
         ));
@@ -1223,10 +1227,7 @@ service cloud.firestore {
       allow create: if canManageGoals()
         && validGoal(request.resource.data)
         && request.resource.data.createdByUid == request.auth.uid
-        && exists(/databases/$(database)/documents/users/$(request.resource.data.assigneeUid))
-        && get(/databases/$(database)/documents/users/$(request.resource.data.assigneeUid)).data.active == true
-        && get(/databases/$(database)/documents/users/$(request.resource.data.assigneeUid)).data.role == 'captor'
-        && get(/databases/$(database)/documents/users/$(request.resource.data.assigneeUid)).data.storeId == request.resource.data.storeId
+        && targetLeadOwnerIsActive(request.resource.data.assigneeUid, request.resource.data.storeId)
         && (isAdmin() || managerHasStore(request.resource.data.storeId));
 
       allow update: if canManageGoals()
@@ -1236,10 +1237,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.groupId == resource.data.groupId
         && request.resource.data.assigneeUid == resource.data.assigneeUid
-        && exists(/databases/$(database)/documents/users/$(request.resource.data.assigneeUid))
-        && get(/databases/$(database)/documents/users/$(request.resource.data.assigneeUid)).data.active == true
-        && get(/databases/$(database)/documents/users/$(request.resource.data.assigneeUid)).data.role == 'captor'
-        && get(/databases/$(database)/documents/users/$(request.resource.data.assigneeUid)).data.storeId == request.resource.data.storeId
+        && targetLeadOwnerIsActive(request.resource.data.assigneeUid, request.resource.data.storeId)
         && (isAdmin() || (
           managerHasStore(resource.data.storeId)
           && managerHasStore(request.resource.data.storeId)

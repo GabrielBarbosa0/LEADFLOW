@@ -28,12 +28,12 @@ configuracoes, acessos da equipe, relatorios e operacoes administrativas.
 | --- | --- | --- | --- |
 | Administrador | `admin@leadflow.test` | `LeadFlow@123` | Todas |
 | Gestor | `gestor@leadflow.test` | `LeadFlow@123` | Lojas 02 e 06 |
-| Atendente Balcao | `balcao@leadflow.test` | `LeadFlow@123` | Loja 02 |
-| Atendente Balcao de outra unidade | `balcao.loja05@leadflow.test` | `LeadFlow@123` | Loja 05 |
-| Telemarketing | `telemarketing@leadflow.test` | `LeadFlow@123` | Todas |
-| Colaborador | `colaborador@leadflow.test` | `LeadFlow@123` | Loja 02 |
+| Colaborador Interno | `balcao@leadflow.test` | `LeadFlow@123` | Loja 02 |
+| Colaborador Interno de outra unidade | `balcao.loja05@leadflow.test` | `LeadFlow@123` | Loja 05 |
+| Colaborador Interno multi-loja | `telemarketing@leadflow.test` | `LeadFlow@123` | Todas |
+| Colaborador Interno | `colaborador@leadflow.test` | `LeadFlow@123` | Loja 02 |
 | MEI | `mei@leadflow.test` | `LeadFlow@123` | Lojas 02 e 05 |
-| Lider de Externa | `externa@leadflow.test` | `LeadFlow@123` | Lojas 02 e 06 |
+| Colaborador Externo | `externa@leadflow.test` | `LeadFlow@123` | Lojas 02 e 06 |
 | Usuario bloqueado | `bloqueado@leadflow.test` | `LeadFlow@123` | Loja 02 |
 
 ## Blocos para copiar
@@ -45,28 +45,28 @@ E-mail: gestor@leadflow.test
 Senha: LeadFlow@123
 ```
 
-### Atendente Balcao - Loja 02
+### Colaborador Interno - Loja 02
 
 ```text
 E-mail: balcao@leadflow.test
 Senha: LeadFlow@123
 ```
 
-### Atendente Balcao - Loja 05
+### Colaborador Interno - Loja 05
 
 ```text
 E-mail: balcao.loja05@leadflow.test
 Senha: LeadFlow@123
 ```
 
-### Telemarketing
+### Colaborador Interno - multi-loja
 
 ```text
 E-mail: telemarketing@leadflow.test
 Senha: LeadFlow@123
 ```
 
-### Colaborador
+### Colaborador Interno
 
 ```text
 E-mail: colaborador@leadflow.test
@@ -80,7 +80,7 @@ E-mail: mei@leadflow.test
 Senha: LeadFlow@123
 ```
 
-### Lider de Externa
+### Colaborador Externo
 
 ```text
 E-mail: externa@leadflow.test
@@ -102,12 +102,11 @@ O usuario bloqueado existe para validar a recusa de acesso e nao consegue entrar
 | --- | --- | --- |
 | Administrador | Fluxo completo e configuracao do sistema | Nenhuma limitacao de unidade |
 | Gestor | Gestao, agenda, comparecimento, encaixes, metas, dashboard e exportacao | Limitado as Lojas 02 e 06 |
-| Atendente Balcao | Cadastro, gestao operacional, agenda, comparecimento e encaixes | Sem exclusao, metas, dashboard, exportacao ou configuracoes |
-| Balcao Loja 05 | Validar isolamento entre unidades | Pode operar apenas a Loja 05 |
-| Telemarketing | Consultar unidades, agenda e retornos da equipe | Sem gestao operacional, comparecimento, encaixes ou exclusao |
-| Colaborador | Criar, consultar e editar os proprios cadastros | Sem acesso aos cadastros de outras pessoas ou a gestao |
-| MEI | Mesmo escopo pessoal do Colaborador em lojas permitidas | Sem acesso aos cadastros de outras pessoas ou a gestao |
-| Lider de Externa | Consultar rotas, transporte, acompanhantes e localizacao | Recebe apenas dados logisticos das Lojas 02 e 06 |
+| Colaborador Interno | Cadastro, gestao operacional, agenda, comparecimento e encaixes | Sem exclusao, metas da equipe, dashboard, exportacao ou configuracoes |
+| Colaborador Interno Loja 05 | Validar isolamento entre unidades | Pode operar apenas a Loja 05 |
+| Colaborador Interno multi-loja | Validar a mesma operacao interna em varias unidades | Limitado as unidades selecionadas no acesso |
+| Colaborador Externo | Criar e editar os proprios cadastros e consultar a Operacao Externa | Sem gestao dos cadastros de outras pessoas |
+| MEI | Mesmas permissoes do Colaborador Externo, com cotas proprias de agenda | Sem gestao dos cadastros de outras pessoas |
 | Usuario bloqueado | Validar bloqueio de autenticacao | Nao consegue entrar |
 
 As permissoes detalhadas e os resultados esperados de cada fluxo estao em

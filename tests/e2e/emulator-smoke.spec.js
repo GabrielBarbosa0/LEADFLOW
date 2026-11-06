@@ -22,20 +22,13 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   const externalCard = page.locator('.action-card-external');
   await expect(walkInCard).toBeVisible();
   await expect(externalCard).toBeVisible();
-  const { walkInBox, externalBox } = await page.locator('.action-grid').evaluate((grid) => {
-    const walkInRect = grid.querySelector('.action-card-walk-in').getBoundingClientRect();
-    const externalRect = grid.querySelector('.action-card-external').getBoundingClientRect();
-    return {
-      walkInBox: { y: walkInRect.y, width: walkInRect.width },
-      externalBox: { y: externalRect.y, width: externalRect.width }
-    };
-  });
-  if (page.viewportSize().width >= 720) {
-    expect(Math.abs(walkInBox.y - externalBox.y)).toBeLessThan(2);
-    expect(Math.abs(walkInBox.width - externalBox.width)).toBeLessThan(2);
-  } else {
-    expect(externalBox.y).toBeGreaterThan(walkInBox.y);
-  }
+  await expect.poll(async () => {
+    const [walkInBox, externalBox] = await Promise.all([walkInCard.boundingBox(), externalCard.boundingBox()]);
+    if (!walkInBox || !externalBox) return false;
+    return page.viewportSize().width >= 720
+      ? Math.abs(walkInBox.y - externalBox.y) < 2 && Math.abs(walkInBox.width - externalBox.width) < 2
+      : externalBox.y > walkInBox.y;
+  }).toBe(true);
 });
 
 test('fills the address from a complete CEP without changing the street number', async ({ page }) => {
@@ -68,7 +61,7 @@ test('fills the address from a complete CEP without changing the street number',
   await expect(page.getByText('Endereço preenchido automaticamente.')).toBeVisible();
 });
 
-test('loads store-scoped logistics for an external leader', async ({ page }) => {
+test('loads store-scoped logistics for an external collaborator', async ({ page }) => {
   await signIn(page, 'externa@leadflow.test');
 
   await page.getByRole('button', { name: /Operação externa/ }).click();
@@ -163,7 +156,7 @@ test('keeps the same account authenticated on multiple devices', async ({ browse
   }
 });
 
-test('loads the real appointment flow for a receptionist profile', async ({ page }) => {
+test('loads the real appointment flow for an internal collaborator', async ({ page }) => {
   await signIn(page, 'balcao@leadflow.test');
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
@@ -193,7 +186,7 @@ test('keeps the confirmation period beside a compact back button', async ({ page
   expect(layout.backWidth).toBe(54);
 });
 
-test('validates appointment cancellation reasons for a receptionist', async ({ page }) => {
+test('validates appointment cancellation reasons for an internal collaborator', async ({ page }) => {
   await signIn(page, 'balcao@leadflow.test');
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
@@ -214,7 +207,7 @@ test('validates appointment cancellation reasons for a receptionist', async ({ p
   await expect(dialog).toHaveCount(0);
 });
 
-test('requires formal confirmation when a receptionist reschedules an appointment', async ({ page }) => {
+test('requires formal confirmation when an internal collaborator reschedules an appointment', async ({ page }) => {
   await signIn(page, 'balcao@leadflow.test');
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
@@ -411,6 +404,11 @@ test('keeps team access cards compact on mobile', async ({ page }) => {
   await expect(firstCard).toBeVisible();
   const toggleWidths = await page.locator('.access-toggle').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().width));
   expect(new Set(toggleWidths).size).toBe(1);
+
+  await page.locator('[data-access-new]').click();
+  const roleOptions = await page.locator('#access-role-profile option').allTextContents();
+  expect(roleOptions).toEqual(['Colaborador Interno', 'Colaborador Externo', 'MEI', 'Gestor', 'Administrador']);
+  await page.locator('[data-access-editor-close]').first().click();
 
   if ((page.viewportSize()?.width || 0) <= 600) {
     const cardBox = await firstCard.boundingBox();

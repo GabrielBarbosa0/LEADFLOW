@@ -70,9 +70,6 @@ function syncAccessStorePicker(form, state, creatingAccess) {
   if (selected?.id === 'system-mei' && creatingAccess && new FormData(form).getAll('storeIds').length <= 1) {
     form.querySelectorAll('[name="storeIds"]').forEach((input) => { input.checked = true; });
   }
-  if (selected?.id === 'system-telemarketing') {
-    form.querySelectorAll('[name="storeIds"]').forEach((input) => { input.checked = true; });
-  }
   const selectedStoreIds = new FormData(form).getAll('storeIds');
   if (multiStore && !selectedStoreIds.length) {
     const primary = form.querySelector(`[name="storeIds"][value="${form.elements.storeId.value}"]`);
@@ -122,11 +119,6 @@ export function bindAccessEvents({ state, render, showToast }) {
     form.elements.roleProfileId.addEventListener('change', syncStorePicker);
     form.elements.storeId.addEventListener('change', syncStorePicker);
     form.querySelectorAll('[name="storeIds"]').forEach((input) => input.addEventListener('change', () => {
-      const selected = selectedRoleProfile(form, state);
-      if (selected?.id === 'system-telemarketing') {
-        form.querySelectorAll('[name="storeIds"]').forEach((storeInput) => { storeInput.checked = true; });
-        return;
-      }
       const selectedStoreIds = new FormData(form).getAll('storeIds');
       if (!selectedStoreIds.length) {
         input.checked = true;

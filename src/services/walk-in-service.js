@@ -14,7 +14,7 @@ import { createQuickLeadDocument } from '../utils/lead.js';
 import { getInstallationId } from '../utils/installation.js';
 import { createId } from '../utils/id.js';
 import { canAccessStore, profileStoreIds } from '../utils/permissions.js';
-import { hasPermission } from '../utils/role-profile.js';
+import { hasPermission, isCollaboratorProfile } from '../utils/role-profile.js';
 import { canTransitionWalkIn, validateWalkInDraft, WALK_IN_CLOSED_STATUSES } from '../utils/walk-in.js';
 
 function permissionError(message) {
@@ -87,7 +87,7 @@ export async function loadWalkInCaptors(profile) {
   const snapshot = await getDocs(usersQuery);
   return snapshot.docs
     .map((item) => ({ uid: item.id, ...item.data() }))
-    .filter((member) => member.active === true && member.role === 'captor')
+    .filter((member) => member.active === true && isCollaboratorProfile(member))
     .sort((left, right) => String(left.displayName || '').localeCompare(String(right.displayName || ''), 'pt-BR'));
 }
 

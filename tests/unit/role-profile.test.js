@@ -11,8 +11,15 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(5);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 5)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(6);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 6)).toBe(true);
+    expect(SYSTEM_ROLE_PROFILES.map((profile) => profile.name)).toEqual([
+      'Colaborador Interno',
+      'Colaborador Externo',
+      'MEI',
+      'Gestor',
+      'Administrador'
+    ]);
   });
 
   it('keeps the administrator profile with every permission', () => {
@@ -21,78 +28,61 @@ describe('role profiles', () => {
     expect(hasPermission({ role: 'admin', permissions: [] }, 'roles.manage')).toBe(true);
   });
 
-  it('provides a standard MEI profile with collaborator permissions', () => {
-    const collaborator = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-captor');
+  it('gives MEI the same permissions as an external collaborator', () => {
+    const external = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-external-leader');
     const mei = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-mei');
-    expect(mei).toMatchObject({ name: 'MEI', scope: 'own', baseRole: 'captor', system: true });
-    expect(mei.permissions).toEqual(collaborator.permissions);
+    expect(mei).toMatchObject({ name: 'MEI', scope: 'stores', baseRole: 'captor', system: true });
+    expect(mei.permissions).toEqual(external.permissions);
+    expect(mei.permissions).toContain('external.operations.read');
   });
 
-  it('provides a store-scoped external leader with only the logistical team permission', () => {
-    const externalLeader = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-external-leader');
+  it('provides a store-scoped external collaborator with logistical access', () => {
+    const external = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-external-leader');
 
-    expect(externalLeader).toMatchObject({ name: 'Líder de Externa', scope: 'stores', baseRole: 'captor', system: true });
-    expect(externalLeader.permissions).toContain('external.operations.read');
-    expect(externalLeader.permissions).not.toContain('management.view');
-    expect(externalLeader.permissions).not.toContain('leads.view_stores');
+    expect(external).toMatchObject({ name: 'Colaborador Externo', scope: 'stores', baseRole: 'captor', system: true });
+    expect(external.permissions).toContain('external.operations.read');
+    expect(external.permissions).not.toContain('management.view');
+    expect(external.permissions).not.toContain('leads.view_stores');
   });
 
-  it('gives the receptionist operational lead access without dashboard, export or deletion', () => {
-    const receptionist = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-receptionist');
+  it('consolidates collaborator, receptionist and telemarketing into the internal profile', () => {
+    const internal = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-captor');
 
-    expect(receptionist).toMatchObject({
-      name: 'Atendente Balcão',
+    expect(internal).toMatchObject({
+      name: 'Colaborador Interno',
       scope: 'stores',
       baseRole: 'manager',
       system: true
     });
-    expect(receptionist.permissions).toEqual([
-      'leads.create',
-      'leads.view_own',
-      'leads.edit_own',
-      'followups.own',
-      'management.view',
-      'leads.edit_all',
-      'leads.clinical_update',
-      'appointments.view',
-      'appointments.attendance',
-      'appointments.cancel',
-      'walkins.manage',
-      'followups.team'
-    ]);
-    expect(receptionist.permissions).not.toContain('dashboard.view');
-    expect(receptionist.permissions).not.toContain('leads.export');
-    expect(receptionist.permissions).not.toContain('leads.delete');
-    expect(systemRoleProfileForId('system-receptionist')).toBe(receptionist);
+    expect(internal.permissions).toEqual(expect.arrayContaining([
+      'leads.create', 'leads.view_stores', 'management.view', 'appointments.view',
+      'appointments.attendance', 'appointments.cancel', 'walkins.manage', 'followups.team'
+    ]));
+    expect(internal.permissions).not.toContain('dashboard.view');
+    expect(internal.permissions).not.toContain('leads.export');
+    expect(internal.permissions).not.toContain('leads.delete');
+    expect(systemRoleProfileForId('system-receptionist')).toBe(internal);
+    expect(systemRoleProfileForId('system-telemarketing')).toBe(internal);
     expect(systemRoleProfileForId('missing-profile')).toBeNull();
   });
 
-  it('keeps telemarketing read-only across stores without management, deletion or walk-ins', () => {
-    const telemarketing = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-telemarketing');
+  it('upgrades stale legacy profiles to the consolidated permissions', () => {
+    const legacyTelemarketing = {
+      role: 'manager',
+      roleProfileId: 'system-telemarketing',
+      permissionSchemaVersion: 5,
+      permissions: ['appointments.view']
+    };
 
-    expect(telemarketing).toMatchObject({
-      name: 'Telemarketing',
-      scope: 'stores',
-      baseRole: 'manager',
-      system: true
-    });
-    expect(telemarketing.permissions).toContain('leads.view_stores');
-    expect(telemarketing.permissions).toContain('appointments.view');
-    expect(telemarketing.permissions).not.toContain('management.view');
-    expect(telemarketing.permissions).not.toContain('dashboard.view');
-    expect(telemarketing.permissions).not.toContain('leads.delete');
-    expect(telemarketing.permissions).not.toContain('walkins.manage');
-    expect(telemarketing.permissions).not.toContain('appointments.cancel');
-    expect(hasPermission({
-      role: 'manager',
-      roleProfileId: 'system-telemarketing',
-      permissions: ['management.view', 'leads.delete', 'walkins.manage']
-    }, 'management.view')).toBe(false);
-    expect(hasPermission({
-      role: 'manager',
-      roleProfileId: 'system-telemarketing',
-      permissions: ['management.view', 'leads.delete', 'walkins.manage']
-    }, 'walkins.manage')).toBe(false);
+    expect(hasPermission(legacyTelemarketing, 'management.view')).toBe(true);
+    expect(hasPermission(legacyTelemarketing, 'walkins.manage')).toBe(true);
+    expect(hasPermission(legacyTelemarketing, 'external.operations.read')).toBe(false);
+  });
+
+  it('gives managers visibility into external operations', () => {
+    const manager = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-manager');
+    expect(manager).toMatchObject({ name: 'Gestor', baseRole: 'manager' });
+    expect(manager.permissions).toContain('external.operations.read');
   });
 
   it('creates an own-data profile without team permissions', () => {

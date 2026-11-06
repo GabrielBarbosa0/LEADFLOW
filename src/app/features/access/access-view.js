@@ -1,11 +1,13 @@
 import { DEFAULT_TEAM_PASSWORD, formatAccessStoreSummary } from '../../../utils/access.js';
 import { formatBrazilianPhone } from '../../../utils/phone.js';
-import { systemRoleProfileForRole } from '../../../utils/role-profile.js';
+import { canonicalRoleProfileId, systemRoleProfileForId, systemRoleProfileForRole } from '../../../utils/role-profile.js';
 import { STORES } from '../../../utils/stores.js';
 import { escapeHtml, profileInitials, roleLabel } from '../../shared/formatters.js';
 
 function roleProfileLabel(access, roleProfiles) {
-  return roleProfiles.find((profile) => profile.id === access.roleProfileId)?.name
+  const canonicalId = canonicalRoleProfileId(access.roleProfileId);
+  return roleProfiles.find((profile) => profile.id === canonicalId)?.name
+    || systemRoleProfileForId(canonicalId)?.name
     || roleLabel(access.role);
 }
 
@@ -43,7 +45,8 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
   const deletingAccess = accesses.find((item) => item.email === access.pendingDeleteEmail) || null;
   const editingCurrentUser = editingAccess?.email === profile.email?.toLowerCase();
   const selectedStoreId = editingAccess?.storeId || profile.storeId || STORES[0]?.id;
-  const selectedRoleProfileId = editingAccess?.roleProfileId || systemRoleProfileForRole(editingAccess?.role || 'captor').id;
+  const selectedRoleProfileId = canonicalRoleProfileId(editingAccess?.roleProfileId)
+    || systemRoleProfileForRole(editingAccess?.role || 'captor').id;
   const selectedStoreIds = editingAccess?.storeIds || [selectedStoreId];
   const storeOptions = STORES.map((store) => `<option value="${store.id}" ${selectedStoreId === store.id ? 'selected' : ''}>${store.displayLabel}</option>`).join('');
   const storeFilterOptions = STORES.map((store) => `<option value="${store.id}" ${storeFilter === store.id ? 'selected' : ''}>${store.displayLabel}</option>`).join('');

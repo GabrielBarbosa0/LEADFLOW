@@ -6,7 +6,7 @@ import { DEFAULT_STORE_SCHEDULE, appointmentBlockTimes } from '../src/utils/sche
 import { appointmentResourceId } from '../src/utils/stores.js';
 
 const PROJECT_ID = 'demo-leadflow';
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 const TEST_PASSWORD = 'LeadFlow@123';
 const resetRequested = process.argv.includes('--reset');
 const authHost = String(process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099');
@@ -270,7 +270,7 @@ async function writeSeed(db, roleConfig, users) {
     leadRecord({ id: 'lead-walkin-waiting', fullName: 'Cliente Encaixe Aguardando', phoneSearch: '81990000009' }),
     leadRecord({ id: 'lead-walkin-called', fullName: 'Cliente Encaixe Chamado', phoneSearch: '81990000010' }),
     leadRecord({ id: 'lead-external-store-02', fullName: 'Cliente Rota Loja 02', preferredName: 'Dona Lucia', phoneSearch: '81990000012', appointmentDate: dateInSaoPaulo(0), appointmentTime: '09:00', needsTransport: true, companionCount: 1, addressReference: 'Portao azul, ao lado da farmacia' }),
-    leadRecord({ id: 'lead-external-store-06', fullName: 'Cliente Rota Loja 06', preferredName: 'Seu Jose', phoneSearch: '81990000011', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Lider de Externa Teste', appointmentDate: dateInSaoPaulo(0), appointmentTime: '09:20', needsTransport: true, companionCount: 2, addressReference: 'Casa em frente ao posto de saude' })
+    leadRecord({ id: 'lead-external-store-06', fullName: 'Cliente Rota Loja 06', preferredName: 'Seu Jose', phoneSearch: '81990000011', storeId: 'loja-06', capturedByUid: 'test-external-leader', capturedByName: 'Colaborador Externo Teste', appointmentDate: dateInSaoPaulo(0), appointmentTime: '09:20', needsTransport: true, companionCount: 2, addressReference: 'Casa em frente ao posto de saude' })
   ];
 
   for (const lead of leads) {
@@ -352,6 +352,9 @@ async function writeSeed(db, roleConfig, users) {
 
 async function main() {
   assertLocalEnvironment();
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = authHost;
+  process.env.FIRESTORE_EMULATOR_HOST = firestoreHost;
+  process.env.GCLOUD_PROJECT = configuredProjectId;
   const app = initializeApp({ projectId: PROJECT_ID }, 'leadflow-seed');
   const db = getFirestore(app);
   const auth = getAuth(app);
@@ -368,13 +371,13 @@ async function main() {
     const users = [
       { uid: 'test-admin', email: 'admin@leadflow.test', displayName: 'Administrador Teste', role: 'admin', roleProfileId: 'system-admin', storeId: 'loja-02', storeIds: ['loja-02', 'loja-04', 'loja-05', 'loja-06'] },
       { uid: 'test-manager', email: 'gestor@leadflow.test', displayName: 'Gestor Teste', role: 'manager', roleProfileId: 'system-manager', storeId: 'loja-02', storeIds: ['loja-02', 'loja-06'] },
-      { uid: 'test-receptionist-02', email: 'balcao@leadflow.test', displayName: 'Atendente Balcao Teste', role: 'manager', roleProfileId: 'system-receptionist', storeId: 'loja-02', storeIds: ['loja-02'] },
-      { uid: 'test-receptionist-05', email: 'balcao.loja05@leadflow.test', displayName: 'Balcao Loja 05', role: 'manager', roleProfileId: 'system-receptionist', storeId: 'loja-05', storeIds: ['loja-05'] },
-      { uid: 'test-telemarketing', email: 'telemarketing@leadflow.test', displayName: 'Telemarketing Teste', role: 'manager', roleProfileId: 'system-telemarketing', storeId: 'loja-02', storeIds: ['loja-02', 'loja-04', 'loja-05', 'loja-06'] },
-      { uid: 'test-collaborator', email: 'colaborador@leadflow.test', displayName: 'Colaborador Teste', role: 'captor', roleProfileId: 'system-captor', storeId: 'loja-02', storeIds: ['loja-02'] },
+      { uid: 'test-receptionist-02', email: 'balcao@leadflow.test', displayName: 'Colaborador Interno Teste', role: 'manager', roleProfileId: 'system-captor', storeId: 'loja-02', storeIds: ['loja-02'] },
+      { uid: 'test-receptionist-05', email: 'balcao.loja05@leadflow.test', displayName: 'Colaborador Interno Loja 05', role: 'manager', roleProfileId: 'system-captor', storeId: 'loja-05', storeIds: ['loja-05'] },
+      { uid: 'test-telemarketing', email: 'telemarketing@leadflow.test', displayName: 'Colaborador Interno Multi-loja', role: 'manager', roleProfileId: 'system-captor', storeId: 'loja-02', storeIds: ['loja-02', 'loja-04', 'loja-05', 'loja-06'] },
+      { uid: 'test-collaborator', email: 'colaborador@leadflow.test', displayName: 'Colaborador Teste', role: 'manager', roleProfileId: 'system-captor', storeId: 'loja-02', storeIds: ['loja-02'] },
       { uid: 'test-mei', email: 'mei@leadflow.test', displayName: 'MEI Teste', role: 'captor', roleProfileId: 'system-mei', storeId: 'loja-02', storeIds: ['loja-02', 'loja-05'] },
-      { uid: 'test-external-leader', email: 'externa@leadflow.test', displayName: 'Lider de Externa Teste', role: 'captor', roleProfileId: 'system-external-leader', storeId: 'loja-02', storeIds: ['loja-02', 'loja-06'] },
-      { uid: 'test-blocked', email: 'bloqueado@leadflow.test', displayName: 'Usuario Bloqueado', role: 'captor', roleProfileId: 'system-captor', storeId: 'loja-02', storeIds: ['loja-02'], active: false }
+      { uid: 'test-external-leader', email: 'externa@leadflow.test', displayName: 'Colaborador Externo Teste', role: 'captor', roleProfileId: 'system-external-leader', storeId: 'loja-02', storeIds: ['loja-02', 'loja-06'] },
+      { uid: 'test-blocked', email: 'bloqueado@leadflow.test', displayName: 'Usuario Bloqueado', role: 'manager', roleProfileId: 'system-captor', storeId: 'loja-02', storeIds: ['loja-02'], active: false }
     ];
 
     await createAuthUsers(auth, users);

@@ -1,6 +1,7 @@
 import { collection, deleteDoc, doc, getDocs, limit, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase/client.js';
 import {
+  LEGACY_ROLE_PROFILE_ALIASES,
   PERMISSION_SCHEMA_VERSION,
   SYSTEM_ROLE_PROFILES,
   normalizeRolePermissions,
@@ -20,8 +21,9 @@ export async function loadRoleProfiles(profile) {
   assertAdmin(profile);
   const snapshot = await getDocs(collection(db, 'roleProfiles'));
   const records = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
-  const systemIds = new Set(SYSTEM_ROLE_PROFILES.map((item) => item.id));
-  const overrides = new Map(records.filter((item) => systemIds.has(item.id)).map((item) => [item.id, item]));
+  const canonicalSystemIds = new Set(SYSTEM_ROLE_PROFILES.map((item) => item.id));
+  const systemIds = new Set([...canonicalSystemIds, ...Object.keys(LEGACY_ROLE_PROFILE_ALIASES)]);
+  const overrides = new Map(records.filter((item) => canonicalSystemIds.has(item.id)).map((item) => [item.id, item]));
   const system = SYSTEM_ROLE_PROFILES.map((item) => {
     const override = item.baseRole === 'admin' ? null : overrides.get(item.id);
     if (!override) return { ...item, permissions: [...item.permissions] };

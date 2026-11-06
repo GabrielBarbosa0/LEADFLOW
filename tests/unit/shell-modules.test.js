@@ -3,7 +3,7 @@ import { appShellView, currentPageTitle, loginView } from '../../src/app/shell/a
 import { homeView } from '../../src/app/shell/home-view.js';
 import { bottomNavigation } from '../../src/app/shell/navigation.js';
 
-const profile = { displayName: 'Ana Silva', role: 'manager', roleProfileName: 'Gestor loja', storeId: 'loja-06', storeIds: ['loja-06'] };
+const profile = { displayName: 'Ana Silva', role: 'manager', roleProfileId: 'system-manager', roleProfileName: 'Gestor loja', storeId: 'loja-06', storeIds: ['loja-06'] };
 const state = { route: 'home', leads: [{ id: 'lead-1' }], profile };
 const hasAccess = (permission) => ['leads.create', 'leads.view_own', 'followups.own', 'goals.view_own'].includes(permission);
 
@@ -24,8 +24,8 @@ describe('application shell modules', () => {
     expect(markup).not.toContain('Acessos da equipe');
   });
 
-  it('shows walk-ins only to profiles with the dedicated permission', () => {
-    const receptionistMarkup = homeView({
+  it('shows walk-ins to the consolidated internal collaborator', () => {
+    const internalMarkup = homeView({
       state,
       hasAccess: (permission) => permission === 'walkins.manage',
       canManage: () => false,
@@ -33,18 +33,18 @@ describe('application shell modules', () => {
       isAdmin: () => false,
       pendingFollowUps: () => []
     });
-    const telemarketingMarkup = homeView({
+    const externalMarkup = homeView({
       state,
-      hasAccess: (permission) => ['leads.create', 'leads.view_stores', 'appointments.view'].includes(permission),
+      hasAccess: (permission) => ['leads.create', 'external.operations.read'].includes(permission),
       canManage: () => false,
       canManageGoals: () => false,
       isAdmin: () => false,
       pendingFollowUps: () => []
     });
 
-    expect(receptionistMarkup).toContain('Novo encaixe rápido');
-    expect(telemarketingMarkup).not.toContain('Novo encaixe rápido');
-    expect(telemarketingMarkup).not.toContain('Painel de gestão');
+    expect(internalMarkup).toContain('Novo encaixe rápido');
+    expect(externalMarkup).not.toContain('Novo encaixe rápido');
+    expect(externalMarkup).not.toContain('Painel de gestão');
   });
 
   it('shows external operations only with the dedicated permission', () => {

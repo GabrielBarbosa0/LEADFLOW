@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase/client.js';
 import { canAccessStore } from '../utils/permissions.js';
-import { hasPermission } from '../utils/role-profile.js';
+import { hasPermission, isCollaboratorProfile } from '../utils/role-profile.js';
 import { createId } from '../utils/id.js';
 import { appointmentBlockTimes, appointmentSlotId } from '../utils/schedule.js';
 
@@ -51,7 +51,7 @@ export async function loadAssignableLeadOwners(profile, lead) {
   return snapshot.docs
     .map((item) => ({ uid: item.id, ...item.data() }))
     .filter((member) => member.active === true
-      && member.role === 'captor'
+      && isCollaboratorProfile(member)
       && member.uid !== lead.capturedByUid
       && (member.storeId === lead.storeId || member.storeIds?.includes(lead.storeId)))
     .sort((left, right) => String(left.displayName || '').localeCompare(String(right.displayName || ''), 'pt-BR'));

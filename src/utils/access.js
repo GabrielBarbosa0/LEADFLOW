@@ -35,7 +35,6 @@ export function validateAccess(values, roleProfiles = [], options = {}) {
   const savwinCode = String(values.savwinCode || '').trim();
   const roleProfileId = String(values.roleProfileId || '');
   const selectedProfile = roleProfiles.find((profile) => profile.id === roleProfileId && profile.active !== false);
-  const isTelemarketing = selectedProfile?.id === 'system-telemarketing';
   const role = selectedProfile?.baseRole || String(values.role || '');
   const isCaptor = selectedProfile?.baseRole === 'captor';
   const password = options.requirePassword && role !== 'admin'
@@ -72,7 +71,7 @@ export function validateAccess(values, roleProfiles = [], options = {}) {
     errors.role = 'Escolha um perfil válido.';
   }
 
-  const storeIds = role === 'admin' || isTelemarketing
+  const storeIds = role === 'admin'
     ? [...STORE_IDS]
     : role === 'manager' || isCaptor
       ? normalizedRequestedStoreIds

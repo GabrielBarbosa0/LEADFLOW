@@ -73,17 +73,18 @@ describe('access validation', () => {
     expect(result.data.storeIds).toEqual(['loja-02', 'loja-06']);
   });
 
-  it('always grants telemarketing access to every store', () => {
+  it('limits an internal collaborator to the selected stores', () => {
     const result = validateAccess({
-      displayName: 'Equipe Telemarketing',
-      email: 'telemarketing@example.com',
-      roleProfileId: 'system-telemarketing',
+      displayName: 'Colaborador Interno',
+      email: 'interno@example.com',
+      roleProfileId: 'system-captor',
       storeId: 'loja-05',
-      storeIds: ['loja-06']
+      storeIds: ['loja-02', 'loja-05']
     }, SYSTEM_ROLE_PROFILES);
 
     expect(result.isValid).toBe(true);
-    expect(result.data.storeIds).toEqual(['loja-02', 'loja-04', 'loja-05', 'loja-06']);
+    expect(result.data.role).toBe('manager');
+    expect(result.data.storeIds).toEqual(['loja-02', 'loja-05']);
   });
 
   it('moves the manager primary store when only another permitted store remains', () => {
@@ -118,12 +119,12 @@ describe('access validation', () => {
   });
 
   it('preserves the selected primary store for a collaborator with multiple permitted stores', () => {
-    const roleProfiles = [{ id: 'system-captor', baseRole: 'captor', active: true }];
+    const roleProfiles = [{ id: 'system-external-leader', baseRole: 'captor', active: true }];
     const result = validateAccess({
       displayName: 'Colaborador Externo',
       email: 'colaborador@example.com',
       phone: '81999999999',
-      roleProfileId: 'system-captor',
+      roleProfileId: 'system-external-leader',
       storeId: 'loja-06',
       storeIds: ['loja-04', 'loja-06']
     }, roleProfiles);

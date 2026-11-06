@@ -27,11 +27,10 @@ aceita. A interface nunca deve ser tratada como barreira de seguranca.
 
 | Perfil | ID | Papel base | Escopo |
 | --- | --- | --- | --- |
-| Colaborador | `system-captor` | `captor` | Proprios dados |
-| MEI | `system-mei` | `captor` | Proprios dados |
-| Gestor de Unidades | `system-manager` | `manager` | Unidades permitidas |
-| Telemarketing | `system-telemarketing` | `manager` | Unidades permitidas |
-| Atendente Balcao | `system-receptionist` | `manager` | Unidades permitidas |
+| Colaborador Interno | `system-captor` | `manager` | Unidades permitidas |
+| Colaborador Externo | `system-external-leader` | `captor` | Unidades permitidas |
+| MEI | `system-mei` | `captor` | Unidades permitidas |
+| Gestor | `system-manager` | `manager` | Unidades permitidas |
 | Administrador | `system-admin` | `admin` | Todas as unidades |
 
 Todos os perfis precisam de usuario autenticado, e-mail verificado, documento
@@ -39,7 +38,7 @@ ativo em `users/{uid}` e unidades coerentes com `storeId` e `storeIds`.
 
 ## Permissoes padrao
 
-### Colaborador e MEI
+### Colaborador Externo e MEI
 
 - `leads.create`;
 - `leads.view_own`;
@@ -47,35 +46,25 @@ ativo em `users/{uid}` e unidades coerentes com `storeId` e `storeIds`.
 - `appointments.cancel` para agendamentos proprios;
 - `followups.own`;
 - `goals.view_own`.
+- `external.operations.read`.
 
-MEI usa as mesmas permissoes do Colaborador. As diferencas de agenda sao
+MEI usa as mesmas permissoes do Colaborador Externo. As diferencas de agenda sao
 configuracoes de dias e cotas, nao ampliacao de acesso aos dados.
 
-### Gestor de Unidades
+### Gestor
 
 - todas as permissoes pessoais do Colaborador;
 - `leads.edit_all` e `leads.delete`;
 - `management.view` e `leads.clinical_update`;
 - `appointments.view`, `appointments.attendance` e `appointments.cancel`;
 - `walkins.manage` e `followups.team`;
-- `goals.manage`, `dashboard.view` e `leads.export`.
+- `goals.manage`, `dashboard.view`, `external.operations.read` e `leads.export`.
 
-### Telemarketing
+### Colaborador Interno
 
 - `leads.create`, `leads.view_own` e `leads.edit_own`;
-- `followups.own`;
+- `followups.own`, `followups.team` e `goals.view_own`;
 - `leads.view_stores`;
-- `appointments.view`;
-- `followups.team`.
-
-As regras e a interface aplicam uma lista rigida para este perfil. Permissoes
-extras gravadas acidentalmente no usuario nao liberam gestao, exclusao ou
-encaixes.
-
-### Atendente Balcao
-
-- `leads.create`, `leads.view_own` e `leads.edit_own`;
-- `followups.own` e `followups.team`;
 - `management.view`, `leads.edit_all` e `leads.clinical_update`;
 - `appointments.view`, `appointments.attendance` e `appointments.cancel`;
 - `walkins.manage`.
@@ -98,27 +87,28 @@ Legenda:
 - `NAO`: comportamento negado ou ausente;
 - `PARCIAL`: existe suporte tecnico, mas o fluxo nao esta completo na interface.
 
-| Operacao | Colaborador | MEI | Gestor | Telemarketing | Balcao | Admin |
-| --- | --- | --- | --- | --- | --- | --- |
-| Criar cadastro | SIM | SIM | SIM | SIM | SIM | SIM |
-| Consultar cadastro proprio | SIM | SIM | SIM | SIM | SIM | SIM |
-| Corrigir cadastro proprio | SIM | SIM | SIM | SIM | SIM | SIM |
-| Consultar cadastros da unidade | NAO | NAO | UNIDADE | UNIDADE | UNIDADE | SIM |
-| Editar cadastro de outra pessoa | NAO | NAO | UNIDADE | NAO | UNIDADE | SIM |
-| Excluir lead | NAO | NAO | UNIDADE | NAO | NAO | SIM |
-| Agendar lead proprio | PROPRIO | PROPRIO | PROPRIO | PROPRIO | PROPRIO | SIM |
-| Agendar lead existente de outra pessoa | NAO | NAO | UNIDADE | NAO | UNIDADE | SIM |
-| Reagendar lead proprio | PROPRIO | PROPRIO | PROPRIO | PROPRIO | PROPRIO | SIM |
-| Reagendar lead de outra pessoa | NAO | NAO | UNIDADE | NAO | UNIDADE | SIM |
-| Cancelar agendamento regular com motivo | PROPRIO | PROPRIO | UNIDADE | NAO | UNIDADE | SIM |
-| Visualizar agenda da unidade | NAO | NAO | UNIDADE | UNIDADE | UNIDADE | SIM |
-| Marcar comparecimento ou falta | NAO | NAO | UNIDADE | NAO | UNIDADE | SIM |
-| Voltar comparecimento para pendente | NAO | NAO | PARCIAL | NAO | PARCIAL | PARCIAL |
-| Criar e operar encaixe | NAO | NAO | UNIDADE | NAO | UNIDADE | SIM |
-| Consultar retornos da equipe | NAO | NAO | UNIDADE | UNIDADE | UNIDADE | SIM |
-| Exportar CSV e acessar dashboard | NAO | NAO | UNIDADE | NAO | NAO | SIM |
-| Administrar metas da equipe | NAO | NAO | UNIDADE | NAO | NAO | SIM |
-| Configurar agenda, acessos e perfis | NAO | NAO | NAO | NAO | NAO | SIM |
+| Operacao | Interno | Externo | MEI | Gestor | Admin |
+| --- | --- | --- | --- | --- | --- |
+| Criar cadastro | SIM | SIM | SIM | SIM | SIM |
+| Consultar cadastro proprio | SIM | SIM | SIM | SIM | SIM |
+| Corrigir cadastro proprio | SIM | SIM | SIM | SIM | SIM |
+| Consultar cadastros da unidade | UNIDADE | NAO | NAO | UNIDADE | SIM |
+| Editar cadastro de outra pessoa | UNIDADE | NAO | NAO | UNIDADE | SIM |
+| Excluir lead | NAO | NAO | NAO | UNIDADE | SIM |
+| Agendar lead proprio | PROPRIO | PROPRIO | PROPRIO | PROPRIO | SIM |
+| Agendar lead existente de outra pessoa | UNIDADE | NAO | NAO | UNIDADE | SIM |
+| Reagendar lead proprio | PROPRIO | PROPRIO | PROPRIO | PROPRIO | SIM |
+| Reagendar lead de outra pessoa | UNIDADE | NAO | NAO | UNIDADE | SIM |
+| Cancelar agendamento regular com motivo | UNIDADE | PROPRIO | PROPRIO | UNIDADE | SIM |
+| Visualizar agenda da unidade | UNIDADE | NAO | NAO | UNIDADE | SIM |
+| Marcar comparecimento ou falta | UNIDADE | NAO | NAO | UNIDADE | SIM |
+| Voltar comparecimento para pendente | PARCIAL | NAO | NAO | PARCIAL | PARCIAL |
+| Criar e operar encaixe | UNIDADE | NAO | NAO | UNIDADE | SIM |
+| Consultar retornos da equipe | UNIDADE | NAO | NAO | UNIDADE | SIM |
+| Consultar Operacao Externa | NAO | UNIDADE | UNIDADE | UNIDADE | SIM |
+| Exportar CSV e acessar dashboard | NAO | NAO | NAO | UNIDADE | SIM |
+| Administrar metas da equipe | NAO | NAO | NAO | UNIDADE | SIM |
+| Configurar agenda, acessos e perfis | NAO | NAO | NAO | NAO | SIM |
 
 ## Observacoes que precisam permanecer visiveis
 
@@ -152,22 +142,21 @@ O cancelamento regular exige motivo e permite observacao opcional; em `Outro
 motivo`, a observacao e obrigatoria. O lead, a data e o horario originais sao
 preservados para auditoria, um evento `appointment_cancelled` e gravado no
 historico e os blocos de `appointmentSlots` sao liberados no mesmo lote atomico.
-Colaborador e MEI cancelam apenas agendamentos proprios; Gestor e Balcao atuam
-nas unidades permitidas; Telemarketing permanece sem essa permissao.
+Colaborador Externo e MEI cancelam apenas agendamentos proprios; Colaborador
+Interno e Gestor atuam nas unidades permitidas.
 
 ### Encaixes
 
 As regras de encaixe usam uma verificacao adicional de perfil. Administrador,
-`system-manager` e `system-receptionist` podem operar a fila. Telemarketing,
-Colaborador, MEI e perfis sem a combinacao reconhecida permanecem bloqueados,
-mesmo que um documento incorreto contenha `walkins.manage`.
+Gestor e Colaborador Interno podem operar a fila. Colaborador Externo, MEI e
+perfis sem a combinacao reconhecida permanecem bloqueados.
 
 ## Cobertura automatizada existente
 
 Ja existem testes para:
 
 - administracao de acessos e primeiro login autorizado;
-- permissoes padrao e protecao especial do Telemarketing;
+- consolidacao dos cargos antigos no Colaborador Interno;
 - criacao e correcao de lead pelo proprietario;
 - bloqueio de outro captador e de outra unidade;
 - cadastro offline sem agendamento;
@@ -180,12 +169,11 @@ Ja existem testes para:
 
 ## Lacunas que os proximos testes devem fechar
 
-1. Exercitar cada fluxo com os seis perfis padrao completos, incluindo seus
+1. Exercitar cada fluxo com os cinco perfis padrao completos, incluindo seus
    `roleProfileId`, `permissions`, `storeId` e `storeIds` reais.
-2. Cobrir Atendente Balcao em cadastro, edicao, agendamento, reagendamento,
+2. Cobrir Colaborador Interno em cadastro, edicao, agendamento, reagendamento,
    comparecimento e encaixe.
-3. Cobrir todas as negacoes do Telemarketing, mesmo quando o documento recebe
-   permissoes extras indevidas.
+3. Cobrir a conversao dos IDs antigos de Balcao e Telemarketing para Colaborador Interno.
 4. Cobrir operacoes iguais em unidade permitida e unidade proibida.
 5. Automatizar o ciclo offline: salvar, recarregar, reconectar, sincronizar e
    garantir ausencia de duplicacao.
@@ -199,11 +187,12 @@ Ja existem testes para:
 | --- | --- | --- | --- |
 | `admin@test.leadflow.local` | Administrador | Loja 02 | Todas |
 | `gestor@test.leadflow.local` | Gestor | Loja 02 | Loja 02 e Loja 06 |
-| `balcao@test.leadflow.local` | Atendente Balcao | Loja 02 | Loja 02 |
-| `telemarketing@test.leadflow.local` | Telemarketing | Loja 02 | Todas |
-| `colaborador@test.leadflow.local` | Colaborador | Loja 02 | Loja 02 |
+| `balcao@test.leadflow.local` | Colaborador Interno | Loja 02 | Loja 02 |
+| `telemarketing@test.leadflow.local` | Colaborador Interno | Loja 02 | Todas |
+| `colaborador@test.leadflow.local` | Colaborador Interno | Loja 02 | Loja 02 |
 | `mei@test.leadflow.local` | MEI | Loja 02 | Loja 02 e Loja 06 |
-| `outra-loja@test.leadflow.local` | Atendente Balcao | Loja 05 | Loja 05 |
+| `externa@test.leadflow.local` | Colaborador Externo | Loja 02 | Loja 02 e Loja 06 |
+| `outra-loja@test.leadflow.local` | Colaborador Interno | Loja 05 | Loja 05 |
 | `bloqueado@test.leadflow.local` | Usuario inativo | Loja 02 | Loja 02 |
 
 Essas contas pertencerao somente ao Firebase Authentication Emulator. Nenhuma

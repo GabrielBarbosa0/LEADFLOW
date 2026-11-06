@@ -51,11 +51,10 @@ O sistema permite cadastro rapido e oferece uma capacidade experimental de capta
 
 | Perfil | Responsabilidade | Permissoes iniciais |
 | --- | --- | --- |
-| Colaborador | Realizar abordagens na rua | Criar, consultar e corrigir os proprios cadastros; realizar retornos e acompanhar as proprias metas |
-| MEI | Atuar como captador externo | Mesmas permissoes iniciais do colaborador, com dias e cotas de agendamento configuraveis por loja e periodo do dia |
-| Atendente de balcao | Operar a agenda e encaixes da unidade | Criar e corrigir cadastros da unidade, consultar agenda, registrar comparecimento ou falta e gerenciar a fila de encaixes |
-| Telemarketing | Acompanhar clientes das unidades permitidas | Consultar cadastros, agenda e retornos da equipe em modo somente leitura; manter os proprios cadastros e retornos; sem exclusao, dashboard, gestao ou encaixes |
-| Gestor de Unidades | Acompanhar unidades permitidas | Consultar e exportar registros, administrar metas, agenda, relatorios e retornos conforme as permissoes ativas |
+| Colaborador Interno | Atuar no balcao, telemarketing e demais rotinas internas | Criar e corrigir cadastros das unidades permitidas, consultar agenda, registrar comparecimento ou falta e gerenciar encaixes |
+| Colaborador Externo | Realizar abordagens externas | Criar, consultar e corrigir os proprios cadastros; realizar retornos, acompanhar metas e consultar a Operacao Externa |
+| MEI | Atuar como colaborador externo contratado como MEI | Mesmas permissoes do Colaborador Externo, com dias e cotas de agendamento configuraveis por loja e periodo do dia |
+| Gestor | Acompanhar unidades permitidas | Consultar e exportar registros, administrar metas, agenda, relatorios, retornos e Operacao Externa |
 | Administrador | Administrar o FascinLead | Todas as permissoes sempre ativas; gerencia acessos, cargos, configuracoes, metas e todos os registros |
 
 Os perfis padrao podem ter permissoes restauradas ao padrao; perfis personalizados possuem nome, alcance (`own` ou `stores`) e permissoes editaveis. O perfil Administrador nao pode perder permissoes. As permissoes sao aplicadas pelas regras do Firestore; ocultar botoes na interface nao substitui a autorizacao no banco.
@@ -215,7 +214,7 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 - Cada item possui `Abrir WhatsApp`, que abre uma conversa individual com uma mensagem humanizada ja preenchida em nome do usuario conectado. O envio permanece manual e depende da confirmacao da pessoa responsavel pela agenda.
 - Depois do envio, a pessoa responsavel usa `Marcar como feito`. A tela separa `Pendentes` e `Feitos` e registra data, usuario e a chave do agendamento atual; um reagendamento futuro volta a ficar pendente automaticamente. Em caso de marcacao acidental, `Desfazer` remove somente essa conclusao e devolve o lembrete para `Pendentes`.
 - Esta primeira versao nao usa API oficial ou nao oficial do WhatsApp, nao dispara mensagens em lote e nao registra automaticamente que o cliente confirmou. A abertura do link tambem nao deve ser tratada como comprovante de envio.
-- O administrador configura, em `Acessos da equipe`, as unidades permitidas e uma unidade principal para cada acesso. A unidade principal sempre precisa pertencer a lista permitida; quando ela for removida, o sistema assume outra unidade permitida. Administradores e Telemarketing continuam com acesso a todas as unidades, mas tambem possuem uma unidade principal para contexto e valores padrao.
+- O administrador configura, em `Acessos da equipe`, as unidades permitidas e uma unidade principal para cada acesso. A unidade principal sempre precisa pertencer a lista permitida; quando ela for removida, o sistema assume outra unidade permitida. Somente Administradores recebem automaticamente todas as unidades.
 - A consulta e limitada a um mes e a 500 resultados para preservar as cotas gratuitas do Firestore.
 - Administradores configuram por loja o modo controlado ou livre, a duracao da consulta e o inicio e fim do expediente.
 - O modo controlado e o padrao e oferece ao captador somente intervalos livres que caibam integralmente no expediente.
@@ -271,11 +270,11 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 
 ### RF-15 - Perfis e permissoes
 
-- O sistema fornece os perfis padrao Colaborador, MEI, Gestor de Unidades, Telemarketing, Atendente Balcão e Administrador.
-- Colaborador e Atendente de balcao ficam vinculados a uma unidade operacional, usada automaticamente nos novos cadastros.
-- Todos os acessos possuem uma unidade principal, escolhida pela administracao e sempre contida em `storeIds`. Para perfis com uma unica unidade permitida, ela e usada automaticamente nos novos cadastros. Para perfis com mais de uma unidade permitida, incluindo Colaborador e MEI, a unidade principal define o contexto inicial e a pessoa escolhe a loja de destino quando o fluxo exigir essa decisao.
+- O sistema fornece os perfis padrao Colaborador Interno, Colaborador Externo, MEI, Gestor e Administrador.
+- Todo perfil operacional fica vinculado a uma ou mais unidades permitidas e possui uma unidade principal usada como contexto inicial.
+- Todos os acessos possuem uma unidade principal, escolhida pela administracao e sempre contida em `storeIds`. Para perfis com uma unica unidade permitida, ela e usada automaticamente nos novos cadastros. Para perfis com mais de uma unidade permitida, a pessoa escolhe a loja de destino quando o fluxo exigir essa decisao.
 - Gestores podem receber uma ou mais unidades permitidas; quando possuirem mais de uma, escolhem a loja de destino em cada captacao. Se a unidade principal for desmarcada, o sistema usa outra unidade permitida.
-- Administradores e Telemarketing possuem todas as unidades permitidas e tambem escolhem explicitamente a loja de destino ao cadastrar um lead; a unidade principal nao restringe esse alcance.
+- Administradores possuem todas as unidades permitidas. Os demais perfis usam somente as unidades selecionadas em seu acesso.
 - Todo lead conserva um unico `storeId`; o vinculo multi-loja pertence ao usuario e nunca torna o lead compartilhado entre lojas.
 - Perfis nao administrativos podem ter permissoes ativadas ou desativadas individualmente.
 - Perfis personalizados podem ser criados, editados e inativados com nome, alcance e permissoes proprias.
@@ -284,7 +283,7 @@ O cadastro e o bloqueio de acessos sao feitos na tela `Acessos da equipe`. Lojas
 
 ### RF-16 - Fila de encaixes
 
-- Gestores, administradores e Atendentes de Balcao podem acessar a fila de encaixes das unidades permitidas; Colaborador, MEI e Telemarketing nao possuem esse acesso.
+- Gestores, administradores e Colaboradores Internos podem acessar a fila de encaixes das unidades permitidas; Colaborador Externo e MEI nao possuem esse acesso.
 - A entrada e acessada pelo atalho `Novo encaixe rapido` na pagina inicial e representa somente clientes presenciais do dia, sem ocupar um horario regular da agenda.
 - A pessoa responsavel pode pesquisar pelo nome ou CPF, reutilizar um cadastro existente ou criar o cliente rapidamente sem sair da tela. O cadastro rapido exige nome e telefone; CPF e opcional, e dados clinicos permanecem incompletos ate a complementacao posterior.
 - Cada entrada registra unidade, servico, profissional, motivo, observacao opcional, chegada e responsavel pela criacao.
@@ -453,7 +452,7 @@ FASCINLEAD/
 11. `Retornos`: faltas vencidas, acesso do captador ao WhatsApp e acompanhamento da equipe pelo gestor.
 12. `Metas`: criacao em modal, edicao, duplicacao, exclusao e acompanhamento individual ou da equipe.
 13. `Configuracoes`: agenda, servicos, perfis e permissoes, restritos a administradores.
-14. `Encaixes`: fila diaria de clientes presenciais, separada da agenda regular e restrita a Gestor, Administrador e Atendente Balcao.
+14. `Encaixes`: fila diaria de clientes presenciais, separada da agenda regular e restrita a Colaborador Interno, Gestor e Administrador.
 
 ### 6.2 Navegacao mobile
 
@@ -555,7 +554,7 @@ O identificador do documento sera o e-mail normalizado em letras minusculas.
 
 Essa colecao resolve a autorizacao do primeiro acesso: o e-mail e liberado antes do login, e o usuario autenticado cria seu perfil somente se os dados coincidirem com a autorizacao.
 
-`storeIds` representa as unidades que o usuario pode acessar e usar como destino. `storeId` e a unidade principal de todos os acessos, sempre incluida em `storeIds`; para um acesso de unidade unica, os dois campos coincidem. Administradores e Telemarketing recebem todas as unidades em `storeIds`, sem que a unidade principal limite o alcance deles.
+`storeIds` representa as unidades que o usuario pode acessar e usar como destino. `storeId` e a unidade principal de todos os acessos, sempre incluida em `storeIds`; para um acesso de unidade unica, os dois campos coincidem. Administradores recebem todas as unidades em `storeIds`; os demais cargos recebem somente as unidades selecionadas.
 
 ### 7.4 Colecao `users`
 
@@ -689,7 +688,7 @@ Essa colecao evita aumentar a complexidade das regras de atualizacao de `leads`.
 
 ```json
 {
-  "name": "Supervisor de atendimento",
+  "name": "Analista regional",
   "scope": "stores",
   "baseRole": "manager",
   "permissions": ["management.view", "appointments.view"],
@@ -698,9 +697,9 @@ Essa colecao evita aumentar a complexidade das regras de atualizacao de `leads`.
 }
 ```
 
-Perfis do sistema usam IDs estaveis (`system-captor`, `system-mei`, `system-manager`, `system-telemarketing`, `system-receptionist` e `system-admin`). Perfis personalizados sao documentos do Firestore. O administrador sempre recebe todas as permissoes conhecidas independentemente do vetor salvo.
+Perfis do sistema usam IDs estaveis: `system-captor` para Colaborador Interno, `system-external-leader` para Colaborador Externo, `system-mei`, `system-manager` e `system-admin`. Os IDs antigos `system-telemarketing` e `system-receptionist` sao convertidos automaticamente para Colaborador Interno; `system-supervisor` e convertido para Gestor. Perfis personalizados sao documentos do Firestore. O administrador sempre recebe todas as permissoes conhecidas independentemente do vetor salvo.
 
-O esquema de permissoes atual e a versao 4. `walkins.manage` permite criar, consultar e transicionar a fila de encaixes das unidades permitidas e esta presente somente em Gestor, Atendente Balcao e Administrador. A permissao `appointments.cancel` permite a Colaborador e MEI cancelar somente os proprios agendamentos abertos; Gestor e Atendente Balcao cancelam nas unidades permitidas; Administrador possui acesso total. Telemarketing preserva os recursos proprios de captacao e retorno e recebe `leads.view_stores`, `appointments.view` e `followups.team` para consulta multi-loja, mas nao recebe `management.view`, `dashboard.view`, `leads.delete`, `walkins.manage` nem `appointments.cancel`. A interface aplica o mesmo conjunto de permissoes e as regras do Firestore limitam a colecao `appointmentWalkIns` aos perfis autorizados.
+O esquema de permissoes atual e a versao 6. `walkins.manage` permite criar, consultar e transicionar a fila de encaixes das unidades permitidas e esta presente em Colaborador Interno, Gestor e Administrador. Colaborador Externo e MEI compartilham as mesmas permissoes e podem consultar a Operacao Externa. Gestor e Administrador tambem possuem essa consulta. A interface aplica o mesmo conjunto de permissoes e as regras do Firestore limitam cada operacao ao cargo e as unidades autorizadas.
 
 A acao de excluir um lead e controlada pela permissao `leads.delete`, disponivel para perfis personalizados de dados proprios e de unidades, e nao pela rota usada para abrir o cadastro. Em qualquer tela de detalhes autorizada, o botao permanece logo abaixo de `Salvar alteracoes` e usa o mesmo modal de confirmacao. O alcance do perfil continua limitando quais leads podem ser visualizados e excluidos. A exclusao definitiva remove no mesmo lote o lead e os blocos reservados em `appointmentSlots`; cadastros ainda exclusivamente locais sao removidos da fila offline.
 

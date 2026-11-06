@@ -35,7 +35,7 @@ beforeEach(async () => {
         permissions: ['appointments.view'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
       }),
       setDoc(doc(db, 'users', 'telemarketing-uid'), {
-        displayName: 'Telemarketing Teste', email: 'telemarketing@example.com', role: 'manager',
+        displayName: 'Colaborador Interno Teste', email: 'telemarketing@example.com', role: 'manager',
         roleProfileId: 'system-telemarketing',
         permissions: [
           'leads.create', 'leads.view_own', 'leads.edit_own', 'followups.own',
@@ -143,15 +143,15 @@ describe('walk-in queue rules', () => {
     }));
   });
 
-  it('lets telemarketing consult store data but blocks walk-ins', async () => {
+  it('upgrades legacy telemarketing to the internal walk-in permissions', async () => {
     const db = authenticatedDb('telemarketing-uid', 'telemarketing@example.com');
 
     await assertSucceeds(getDoc(doc(db, 'leads', 'lead-1')));
     await assertFails(deleteDoc(doc(db, 'leads', 'lead-1')));
-    await assertFails(setDoc(doc(db, 'appointmentWalkIns', 'telemarketing-entry'), {
+    await assertSucceeds(setDoc(doc(db, 'appointmentWalkIns', 'telemarketing-entry'), {
       ...validWalkIn(),
       createdByUid: 'telemarketing-uid',
-      createdByName: 'Telemarketing Teste',
+      createdByName: 'Colaborador Interno Teste',
       updatedByUid: 'telemarketing-uid'
     }));
   });
