@@ -1296,6 +1296,10 @@ svg {
   gap: 12px;
 }
 
+.purchase-holder-details {
+  grid-template-columns: minmax(0, 1fr) 210px 150px;
+}
+
 .address-fields {
   grid-template-columns: minmax(0, 1.5fr) 92px minmax(0, 0.8fr) minmax(0, 0.8fr) 76px;
 }
@@ -6795,6 +6799,10 @@ svg {
 
   .field-row .field:first-child {
     grid-column: 1 / -1;
+  }
+
+  .purchase-holder-details {
+    grid-template-columns: minmax(0, 1fr) 140px;
   }
 
   .transport-fields {

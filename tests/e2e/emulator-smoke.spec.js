@@ -361,6 +361,15 @@ test('renders the compact registration fields and product payment options', asyn
   await purchaseHolder.getByLabel('Nome do titular').fill('Responsável Exemplo');
   await purchaseHolder.getByLabel('CPF do titular').fill('52998224725');
   await expect(purchaseHolder.getByLabel('CPF do titular')).toHaveValue('529.982.247-25');
+
+  const holderNameBox = await purchaseHolder.getByLabel('Nome do titular').boundingBox();
+  const holderCpfBox = await purchaseHolder.getByLabel('CPF do titular').boundingBox();
+  const holderRelationshipBox = await purchaseHolder.getByLabel('Vínculo').boundingBox();
+  expect(holderNameBox).not.toBeNull();
+  expect(holderCpfBox).not.toBeNull();
+  expect(holderRelationshipBox).not.toBeNull();
+  expect(holderCpfBox.width).toBeLessThan(holderNameBox.width);
+  expect(holderRelationshipBox.width).toBeGreaterThanOrEqual(135);
 });
 
 test('opens the lead archive workflow only from active management records', async ({ page }) => {
