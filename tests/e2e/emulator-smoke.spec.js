@@ -177,13 +177,14 @@ test('keeps the confirmation period beside a compact back button', async ({ page
   await expect(backButton).toBeVisible();
   await expect(backButton).toHaveAttribute('aria-label', 'Voltar ao início');
   await expect(backButton.locator('span')).toHaveCount(0);
-  const layout = await page.locator('.reminder-toolbar').evaluate((toolbar) => {
-    const periodRect = toolbar.querySelector('.reminder-period').getBoundingClientRect();
-    const backRect = toolbar.querySelector('.reminder-back-button').getBoundingClientRect();
-    return { periodY: periodRect.y, backY: backRect.y, backWidth: backRect.width };
-  });
-  expect(Math.abs(layout.periodY - layout.backY)).toBeLessThan(2);
-  expect(layout.backWidth).toBe(54);
+  await expect.poll(async () => {
+    const [periodBox, backBox] = await Promise.all([period.boundingBox(), backButton.boundingBox()]);
+    if (!periodBox || !backBox) return null;
+    return {
+      sameRow: Math.abs(periodBox.y - backBox.y) < 2,
+      backWidth: Math.round(backBox.width)
+    };
+  }).toEqual({ sameRow: true, backWidth: 54 });
 });
 
 test('validates appointment cancellation reasons for an internal collaborator', async ({ page }) => {
@@ -207,14 +208,24 @@ test('validates appointment cancellation reasons for an internal collaborator', 
   await expect(dialog).toHaveCount(0);
 });
 
-test('requires formal confirmation when an internal collaborator reschedules an appointment', async ({ page }) => {
+test('requires formal confirmation when an internal collaborator reschedules a cancelled appointment', async ({ page }) => {
   await signIn(page, 'balcao@leadflow.test');
 
-  await page.getByRole('button', { name: /Agenda de exames/ }).click();
-  await page.getByRole('button', { name: /Abrir cadastro de Cliente Pendente Hoje/ }).click();
+  await page.goto('/#/search');
+  await expect(page.getByLabel('Nome ou CPF')).toBeVisible();
+  await page.waitForTimeout(750);
+  await page.getByLabel('Nome ou CPF').fill('Cliente Cancelado');
+  await page.getByRole('button', { name: 'Pesquisar' }).click();
+  await expect(page.getByText('Cancelado', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Abrir cadastro de Cliente Cancelado' }).click();
+
   const form = page.locator('#edit-lead-form');
   await expect(form).toBeVisible();
-  await form.getByLabel('Data do pré-agendamento').fill('2026-11-06');
+  const dateInput = form.getByLabel('Data do pré-agendamento');
+  const currentDate = await dateInput.inputValue();
+  const targetDate = new Date(`${currentDate}T12:00:00.000Z`);
+  targetDate.setUTCDate(targetDate.getUTCDate() + 7);
+  await dateInput.fill(targetDate.toISOString().slice(0, 10));
   const time = form.getByLabel('Horário disponível');
   await expect(time).toBeEnabled();
   await time.selectOption({ index: 1 });
@@ -223,8 +234,8 @@ test('requires formal confirmation when an internal collaborator reschedules an 
   const dialog = page.locator('#appointment-reschedule-dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('heading', { name: 'Reagendar cliente?' })).toBeVisible();
-  await expect(dialog).toContainText('Cliente Pendente Hoje');
-  await expect(dialog).toContainText('08:00');
+  await expect(dialog).toContainText('Cliente Cancelado');
+  await expect(dialog).toContainText('11:20');
   await dialog.getByRole('button', { name: 'Confirmar reagendamento' }).click();
   await expect(dialog.getByText('Selecione o motivo do reagendamento.')).toBeVisible();
   await dialog.getByLabel('Motivo do reagendamento').selectOption('other');

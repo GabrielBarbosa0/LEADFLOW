@@ -737,10 +737,8 @@ service cloud.firestore {
           request.resource.data.appointmentDate != resource.data.appointmentDate
           || request.resource.data.appointmentTime != resource.data.appointmentTime
         )
-        && (!('appointmentStatus' in resource.data) || resource.data.appointmentStatus != 'cancelled')
         && (!('appointmentAttendance' in resource.data)
-          || (resource.data.appointmentAttendance != 'attended'
-            && resource.data.appointmentAttendance != 'cancelled'))
+          || resource.data.appointmentAttendance != 'attended')
         && request.resource.data.appointmentStatus == 'scheduled'
         && request.resource.data.appointmentAttendance == 'pending'
         && request.resource.data.appointmentRescheduledAtServer == request.time

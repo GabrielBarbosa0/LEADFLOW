@@ -158,6 +158,94 @@ describe('lead correction rules', () => {
     });
   });
 
+  it('lets a receptionist formally reactivate a cancelled appointment with new agenda blocks', async () => {
+    const newSlotIds = [
+      'slot-consultorio-surubim-2026-10-17-10:20',
+      'slot-consultorio-surubim-2026-10-17-10:30'
+    ];
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await Promise.all([
+        updateDoc(doc(db, 'users', 'manager-uid'), {
+          roleProfileId: 'system-receptionist',
+          permissions: ['management.view', 'appointments.view', 'appointments.attendance']
+        }),
+        updateDoc(doc(db, 'leads', 'lead-test'), {
+          appointmentStatus: 'cancelled',
+          appointmentAttendance: 'cancelled',
+          funnelStage: 'cancelled',
+          funnelReasonCode: 'client_withdrew'
+        })
+      ]);
+    });
+
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'leads', 'lead-test'), {
+      appointmentDate: '2026-10-17', appointmentTime: '10:20', appointmentSchedulingMode: 'controlled',
+      appointmentDurationMinutes: 20, appointmentServiceId: 'default-eye-exam',
+      appointmentServiceName: 'Exame de vista', appointmentStatus: 'scheduled', appointmentAttendance: 'pending',
+      appointmentRescheduledAtServer: serverTimestamp(), appointmentRescheduledByUid: 'manager-uid',
+      appointmentRescheduledByName: 'Gestor Teste', appointmentRescheduleReason: 'client_request',
+      appointmentRescheduleDetails: 'Cliente retomou o contato.', funnelStage: 'scheduled',
+      funnelReasonCode: 'client_request', funnelUpdatedAtClient: '2026-11-06T12:00:00.000Z',
+      funnelUpdatedAtServer: serverTimestamp(), updatedAtServer: serverTimestamp()
+    });
+    newSlotIds.forEach((slotId, index) => batch.set(doc(db, 'appointmentSlots', slotId), {
+      storeId: 'loja-06', appointmentDate: '2026-10-17', appointmentTime: '10:20',
+      blockTime: index ? '10:30' : '10:20', durationMinutes: 20,
+      leadId: 'lead-test', capturedByUid: 'captor-uid', createdAt: serverTimestamp()
+    }));
+    batch.set(doc(db, 'leads', 'lead-test', 'history', 'cancelled-appointment-rescheduled'), {
+      leadId: 'lead-test', storeId: 'loja-06', eventType: 'appointment_rescheduled', funnelStage: 'scheduled',
+      reasonCode: 'client_request', description: 'Agendamento cancelado reativado para 17/10/2026 10:20.',
+      actorUid: 'manager-uid', actorName: 'Gestor Teste', actorRole: 'manager',
+      occurredAtClient: '2026-11-06T12:00:00.000Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const verificationDb = context.firestore();
+      const leadSnapshot = await getDoc(doc(verificationDb, 'leads', 'lead-test'));
+      if (leadSnapshot.data().appointmentStatus !== 'scheduled'
+        || leadSnapshot.data().appointmentAttendance !== 'pending') {
+        throw new Error('O agendamento cancelado nao foi reativado corretamente.');
+      }
+      for (const slotId of newSlotIds) {
+        if (!(await getDoc(doc(verificationDb, 'appointmentSlots', slotId))).exists()) {
+          throw new Error('Um bloco do reagendamento nao foi reservado.');
+        }
+      }
+    });
+  });
+
+  it('does not let a receptionist reactivate a cancelled appointment without the formal metadata', async () => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await Promise.all([
+        updateDoc(doc(db, 'users', 'manager-uid'), {
+          roleProfileId: 'system-receptionist',
+          permissions: ['management.view', 'appointments.view', 'appointments.attendance']
+        }),
+        updateDoc(doc(db, 'leads', 'lead-test'), {
+          appointmentStatus: 'cancelled',
+          appointmentAttendance: 'cancelled',
+          funnelStage: 'cancelled',
+          funnelReasonCode: 'client_withdrew'
+        })
+      ]);
+    });
+
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertFails(updateDoc(doc(db, 'leads', 'lead-test'), {
+      appointmentDate: '2026-10-17',
+      appointmentTime: '10:20',
+      appointmentStatus: 'scheduled',
+      appointmentAttendance: 'pending',
+      updatedAtServer: serverTimestamp()
+    }));
+  });
+
   it('rejects formal rescheduling with invalid reason, unrelated fields or no appointment permission', async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {
