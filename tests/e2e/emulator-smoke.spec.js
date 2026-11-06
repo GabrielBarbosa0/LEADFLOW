@@ -361,4 +361,11 @@ test('keeps team access cards compact on mobile', async ({ page }) => {
     expect(Math.max(...detailBoxes.map((box) => box.y)) - Math.min(...detailBoxes.map((box) => box.y))).toBeLessThan(4);
     expect(actionsBox.y).toBeGreaterThan(detailBoxes[0].y + detailBoxes[0].height);
   }
+
+  const searchInput = page.locator('[data-access-search]');
+  await searchInput.evaluate((input) => { window.accessSearchInputBeforeTyping = input; });
+  await searchInput.pressSequentially('colaborador', { delay: 20 });
+  expect(await searchInput.evaluate((input) => input === window.accessSearchInputBeforeTyping)).toBe(true);
+  await expect(searchInput).toBeFocused();
+  await expect(searchInput).toHaveValue('colaborador');
 });

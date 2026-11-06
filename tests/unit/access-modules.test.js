@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { handleAccessClick } from '../../src/app/features/access/access-events.js';
+import { applyAccessListFilters, handleAccessClick } from '../../src/app/features/access/access-events.js';
 import { accessView, filterTeamAccesses } from '../../src/app/features/access/access-view.js';
 import { createDefaultRoleDraft, handleRoleProfileClick } from '../../src/app/features/access/role-profiles-events.js';
 import { roleProfilesView } from '../../src/app/features/access/role-profiles-view.js';
@@ -45,6 +45,31 @@ function clickEvent(elements) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('access feature modules', () => {
+  it('filters existing access rows without replacing the search field', () => {
+    const rows = [
+      { dataset: { accessSearchText: 'maria silva maria@example.com', accessStoreIds: 'loja-02' }, hidden: false },
+      { dataset: { accessSearchText: 'joao souza joao@example.com', accessStoreIds: 'loja-06' }, hidden: false }
+    ];
+    const count = { textContent: '' };
+    const empty = { hidden: true };
+    const clear = { disabled: true };
+    const root = {
+      querySelectorAll: () => rows,
+      querySelector: (selector) => ({
+        '[data-access-filter-count]': count,
+        '[data-access-filter-empty]': empty,
+        '[data-access-clear-filters]': clear
+      })[selector] || null
+    };
+
+    applyAccessListFilters({ access: { query: 'Maria', storeFilter: 'loja-02' } }, root);
+
+    expect(rows.map((row) => row.hidden)).toEqual([false, true]);
+    expect(count.textContent).toBe('1 de 2');
+    expect(empty.hidden).toBe(true);
+    expect(clear.disabled).toBe(false);
+  });
+
   it('blocks the access manager for non-administrators', () => {
     const markup = accessView({
       access: accessState(),

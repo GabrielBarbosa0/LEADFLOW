@@ -9,7 +9,7 @@ function roleProfileLabel(access, roleProfiles) {
     || roleLabel(access.role);
 }
 
-function normalizeSearchText(value = '') {
+export function normalizeSearchText(value = '') {
   return String(value)
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -37,6 +37,7 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
   const query = access.query || '';
   const storeFilter = access.storeFilter || '';
   const visibleAccesses = filterTeamAccesses(accesses, { query, storeId: storeFilter });
+  const visibleEmails = new Set(visibleAccesses.map((item) => item.email));
   const filtersActive = Boolean(query.trim() || storeFilter);
   const editingAccess = accesses.find((item) => item.email === access.editingEmail) || null;
   const deletingAccess = accesses.find((item) => item.email === access.pendingDeleteEmail) || null;
@@ -48,10 +49,13 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
   const storeFilterOptions = STORES.map((store) => `<option value="${store.id}" ${storeFilter === store.id ? 'selected' : ''}>${store.displayLabel}</option>`).join('');
   const storeChecks = STORES.map((store) => `<label class="access-store-option checkbox-label"><input type="checkbox" name="storeIds" value="${store.id}" ${selectedStoreIds.includes(store.id) ? 'checked' : ''} /><span>${store.label}</span></label>`).join('');
   const roleProfileOptions = roleProfiles.map((roleProfile) => `<option value="${escapeHtml(roleProfile.id)}" data-base-role="${escapeHtml(roleProfile.baseRole)}" ${selectedRoleProfileId === roleProfile.id ? 'selected' : ''}>${escapeHtml(roleProfile.name)}</option>`).join('');
-  const rows = visibleAccesses.map((item) => {
+  const rows = accesses.map((item) => {
     const isCurrentUser = item.email === profile.email?.toLowerCase();
     const storeSummary = formatAccessStoreSummary(item);
-    return `<article class="access-row ${item.active ? '' : 'is-inactive'}">
+    const itemStoreIds = item.role === 'admin'
+      ? STORES.map((store) => store.id)
+      : [...new Set(item.storeIds || [item.storeId].filter(Boolean))];
+    return `<article class="access-row ${item.active ? '' : 'is-inactive'}" data-access-filter-row data-access-search-text="${escapeHtml(normalizeSearchText(`${item.displayName || ''} ${item.email || ''}`))}" data-access-store-ids="${escapeHtml(itemStoreIds.join(','))}" ${visibleEmails.has(item.email) ? '' : 'hidden'}>
       <div class="access-identity">
         <span class="avatar access-avatar">${escapeHtml(profileInitials(item.displayName))}</span>
         <div class="access-identity-copy"><strong>${escapeHtml(item.displayName)}</strong><span>${escapeHtml(item.email)}</span>${item.phone ? `<small>${escapeHtml(formatBrazilianPhone(item.phone))}</small>` : ''}</div>
@@ -79,7 +83,7 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
       </div>
     </section>
     <section class="access-list-panel" aria-busy="${loading}">
-      <div class="access-list-heading"><div><strong>Acessos cadastrados</strong><span>${filtersActive ? `${visibleAccesses.length} de ${accesses.length}` : accesses.length} pessoa(s)</span></div></div>
+      <div class="access-list-heading"><div><strong>Acessos cadastrados</strong><span data-access-filter-count>${filtersActive ? `${visibleAccesses.length} de ${accesses.length}` : accesses.length} pessoa(s)</span></div></div>
       <div class="access-list-filters" role="search">
         <div class="field access-list-search"><label for="access-list-search">Nome ou e-mail</label><div class="access-filter-input"><i data-lucide="search"></i><input id="access-list-search" type="search" data-access-search value="${escapeHtml(query)}" placeholder="Pesquisar colaborador" autocomplete="off" /></div></div>
         <div class="field access-list-store-filter"><label for="access-list-store">Loja</label><select id="access-list-store" data-access-store-filter><option value="">Todas as lojas</option>${storeFilterOptions}</select></div>
@@ -88,7 +92,7 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
       ${error ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(error)}</span></div>` : ''}
       ${loading && !accesses.length ? '<div class="empty-state"><i data-lucide="refresh-cw"></i><strong>Carregando acessos...</strong></div>' : ''}
       ${!loading && !accesses.length ? '<div class="empty-state"><i data-lucide="users"></i><strong>Nenhum acesso cadastrado</strong><p>Crie o primeiro acesso da equipe.</p></div>' : `<div class="access-list">${rows}</div>`}
-      ${!loading && accesses.length && !visibleAccesses.length ? '<div class="empty-state access-filter-empty"><i data-lucide="search-x"></i><strong>Nenhum colaborador encontrado</strong><p>Revise o nome, o e-mail ou a loja selecionada.</p></div>' : ''}
+      ${!loading && accesses.length ? `<div class="empty-state access-filter-empty" data-access-filter-empty ${visibleAccesses.length ? 'hidden' : ''}><i data-lucide="search-x"></i><strong>Nenhum colaborador encontrado</strong><p>Revise o nome, o e-mail ou a loja selecionada.</p></div>` : ''}
     </section>
     ${access.editorOpen ? `<dialog id="access-editor-dialog" class="access-editor-dialog" aria-labelledby="access-editor-title">
       <form id="access-form" class="access-form" novalidate>

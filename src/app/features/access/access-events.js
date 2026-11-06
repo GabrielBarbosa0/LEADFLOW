@@ -5,6 +5,7 @@ import { DEFAULT_TEAM_PASSWORD, normalizeAccessEmail, validateAccess } from '../
 import { formatBrazilianPhone } from '../../../utils/phone.js';
 import { SYSTEM_ROLE_PROFILES } from '../../../utils/role-profile.js';
 import { setFieldErrors } from '../../shared/form-helpers.js';
+import { normalizeSearchText } from './access-view.js';
 
 export async function loadAccessData(state, { render }) {
   if (state.profile?.role !== 'admin' || state.access.loading) return;
@@ -82,22 +83,36 @@ function syncAccessStorePicker(form, state, creatingAccess) {
   }
 }
 
+export function applyAccessListFilters(state, root = document) {
+  const query = normalizeSearchText(state.access.query?.trim());
+  const storeId = state.access.storeFilter || '';
+  const rows = [...root.querySelectorAll('[data-access-filter-row]')];
+  let visibleCount = 0;
+  rows.forEach((row) => {
+    const storeIds = row.dataset.accessStoreIds?.split(',').filter(Boolean) || [];
+    const visible = (!query || row.dataset.accessSearchText.includes(query))
+      && (!storeId || storeIds.includes(storeId));
+    row.hidden = !visible;
+    if (visible) visibleCount += 1;
+  });
+  const filtersActive = Boolean(query || storeId);
+  const count = root.querySelector('[data-access-filter-count]');
+  if (count) count.textContent = filtersActive ? `${visibleCount} de ${rows.length}` : `${rows.length} pessoa(s)`;
+  const empty = root.querySelector('[data-access-filter-empty]');
+  if (empty) empty.hidden = visibleCount > 0;
+  const clear = root.querySelector('[data-access-clear-filters]');
+  if (clear) clear.disabled = !filtersActive;
+}
+
 export function bindAccessEvents({ state, render, showToast }) {
   const searchInput = document.querySelector('[data-access-search]');
   searchInput?.addEventListener('input', () => {
-    const selectionStart = searchInput.selectionStart;
-    const selectionEnd = searchInput.selectionEnd;
     state.access.query = searchInput.value;
-    render();
-    requestAnimationFrame(() => {
-      const nextInput = document.querySelector('[data-access-search]');
-      nextInput?.focus();
-      nextInput?.setSelectionRange(selectionStart, selectionEnd);
-    });
+    applyAccessListFilters(state);
   });
   document.querySelector('[data-access-store-filter]')?.addEventListener('change', (event) => {
     state.access.storeFilter = event.target.value;
-    render();
+    applyAccessListFilters(state);
   });
 
   const form = document.querySelector('#access-form');
