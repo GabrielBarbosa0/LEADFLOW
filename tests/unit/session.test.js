@@ -33,6 +33,7 @@ describe('core session', () => {
     expect(state.leads).toEqual([]);
     expect(state.management).toMatchObject({ loaded: false, records: [] });
     expect(state.appointments).toMatchObject({ loaded: false, records: [] });
+    expect(state.externalOperations.transportMode).toBe('with');
     expect(state.settings).toMatchObject({ loaded: false, services: [] });
     expect(state.settings.roleDraft).toEqual({ name: '', scope: 'own', permissions: ['leads.create'] });
     expect(state.goals).toMatchObject({ loaded: false, records: [], draft: { title: 'Meta de captações' } });

@@ -68,7 +68,7 @@ export function resetSessionState(state, {
     endDate: toLocalDateInput(new Date()),
     storeId: '',
     query: '',
-    transportMode: 'all',
+    transportMode: 'with',
     companionMode: 'all',
     detailLeadId: ''
   };

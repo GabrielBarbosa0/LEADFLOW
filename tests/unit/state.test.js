@@ -21,6 +21,7 @@ describe('core state', () => {
     expect(state.management).toMatchObject({ archiveOpen: false, archiveSelection: [], archiveSaving: false });
     expect(state.dashboardFilters).toEqual({ storeId: '' });
     expect(state.leadSearch).toEqual({ query: '', loading: false, searched: false, error: '', results: [] });
+    expect(state.externalOperations.transportMode).toBe('with');
     expect(state.settings.roleDraft).toEqual({ name: '', scope: 'own', permissions: ['leads.create'] });
     expect(state.access).toMatchObject({ loaded: false, accesses: [] });
   });

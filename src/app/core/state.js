@@ -130,7 +130,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       endDate: toLocalDateInput(new Date()),
       storeId: '',
       query: '',
-      transportMode: 'all',
+      transportMode: 'with',
       companionMode: 'all',
       detailLeadId: ''
     },
