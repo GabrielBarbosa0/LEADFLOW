@@ -58,7 +58,7 @@ export function leadDetailView({
     .map((service) => `<option value="${escapeHtml(service.id)}" ${service.id === selectedService.id ? 'selected' : ''}>${escapeHtml(service.name)} - ${service.durationMinutes} min</option>`)
     .join('');
   const heading = inDialog
-    ? `<header class="lead-detail-dialog-header"><div><p class="eyebrow">CADASTRO</p><h2>${escapeHtml(lead.fullName)}</h2></div><button class="icon-button" type="button" data-close-lead-detail title="Fechar" aria-label="Fechar cadastro"><i data-lucide="circle-x"></i></button></header>`
+    ? `<header class="lead-detail-dialog-header"><div><p class="eyebrow">CADASTRO</p><h2>${escapeHtml(lead.fullName)}</h2></div><button class="icon-button" type="button" data-close-lead-detail title="Fechar" aria-label="Fechar cadastro"><i data-lucide="x"></i></button></header>`
     : `<section class="page-toolbar detail-toolbar"><button class="back-button" type="button" data-route="${backRoute}" aria-label="Voltar"><i data-lucide="arrow-left"></i></button><h2>${escapeHtml(lead.fullName)}</h2></section>`;
   return `
     ${heading}

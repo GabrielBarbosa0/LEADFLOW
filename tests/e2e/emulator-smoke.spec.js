@@ -218,6 +218,9 @@ test('shows the simplified lead history without a duplicated funnel heading', as
   await expect(dialog.getByText('FUNIL', { exact: true })).toHaveCount(0);
   await expect(dialog.locator('.lead-history > header')).toHaveCount(0);
   await expect(dialog.locator('.lead-history-list li').first()).toBeVisible();
+  const closeButton = dialog.getByRole('button', { name: 'Fechar histórico' });
+  await expect(closeButton.locator('.lucide-x')).toBeVisible();
+  await expect(closeButton.locator('.lucide-circle-x')).toHaveCount(0);
 });
 
 test('lets another collaborator explicitly claim a cancelled lead', async ({ page }, testInfo) => {

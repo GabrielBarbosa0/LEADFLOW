@@ -98,7 +98,7 @@ export function followUpsView({
   const captorDialog = selectedCaptor ? `<dialog id="follow-up-captor-dialog" class="appointment-create-dialog follow-up-captor-dialog" aria-labelledby="follow-up-captor-title">
     <div class="appointment-create-header">
       <div><span>RETORNOS PENDENTES</span><h2 id="follow-up-captor-title">${escapeHtml(selectedCaptor.name)}</h2><p>${selectedCaptorPending.length} lead(s) aguardando contato</p></div>
-      <button class="icon-button" type="button" data-follow-up-captor-close aria-label="Fechar"><i data-lucide="circle-x"></i></button>
+      <button class="icon-button" type="button" data-follow-up-captor-close aria-label="Fechar"><i data-lucide="x"></i></button>
     </div>
     <div class="follow-up-captor-dialog-content follow-up-list">
       ${selectedCaptorPending.length

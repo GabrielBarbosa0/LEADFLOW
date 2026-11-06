@@ -39,7 +39,7 @@ export function dashboardView({ allowed, records, metrics, management, allowedSt
   const rankingDialog = ranking.open ? `<dialog id="dashboard-ranking-dialog" class="appointment-create-dialog dashboard-ranking-dialog" aria-labelledby="dashboard-ranking-title">
     <div class="appointment-create-header">
       <div><span>EQUIPE</span><h2 id="dashboard-ranking-title">Ranking completo</h2><p>Desempenho de todos os captadores no período analisado.</p></div>
-      <button class="icon-button" type="button" data-dashboard-ranking-close aria-label="Fechar ranking"><i data-lucide="circle-x"></i></button>
+      <button class="icon-button" type="button" data-dashboard-ranking-close aria-label="Fechar ranking"><i data-lucide="x"></i></button>
     </div>
     <div class="dashboard-ranking-dialog-toolbar">
       <div class="field"><label for="dashboard-ranking-store">Loja</label><select id="dashboard-ranking-store" data-dashboard-ranking-store><option value="">Todas as lojas permitidas</option>${rankingStoreOptions}</select></div>

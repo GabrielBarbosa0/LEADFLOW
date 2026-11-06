@@ -10,7 +10,7 @@ export function serviceDialogs(settings) {
 
   return `${serviceEditorOpen ? `<dialog id="service-editor-dialog" class="access-editor-dialog service-editor-dialog" aria-labelledby="service-editor-title">
     <form id="service-form" class="access-form" novalidate>
-      <header><div><span class="eyebrow">SERVIÇO DA AGENDA</span><h2 id="service-editor-title">${editing ? 'Editar serviço' : 'Novo serviço'}</h2><p>A duração será usada para calcular os horários disponíveis.</p></div><button class="icon-button" type="button" data-service-editor-close aria-label="Fechar"><i data-lucide="circle-x"></i></button></header>
+      <header><div><span class="eyebrow">SERVIÇO DA AGENDA</span><h2 id="service-editor-title">${editing ? 'Editar serviço' : 'Novo serviço'}</h2><p>A duração será usada para calcular os horários disponíveis.</p></div><button class="icon-button" type="button" data-service-editor-close aria-label="Fechar"><i data-lucide="x"></i></button></header>
       <div class="access-form-body">
         <div class="field service-name-field" data-field="name"><label for="service-name">Nome do serviço</label><input id="service-name" name="name" maxlength="80" value="${escapeHtml(editing?.name || '')}" placeholder="Ex.: Exame de vista" required /><small class="field-error"></small></div>
         <div class="field service-duration-field" data-field="durationMinutes"><label for="service-duration">Duração</label><div class="number-with-unit"><input id="service-duration" name="durationMinutes" type="number" min="10" max="180" step="10" value="${editing?.durationMinutes || 30}" required /><span>min</span></div><small class="field-error"></small></div>
