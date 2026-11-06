@@ -7712,7 +7712,6 @@ svg {
   }
 }
 
-.external-operations-heading,
 .external-operations-list > header {
   display: flex;
   align-items: center;
@@ -7720,17 +7719,17 @@ svg {
   gap: 18px;
 }
 
-.external-operations-heading {
+.external-operations-toolbar {
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 18px;
 }
 
-.external-operations-heading h2,
 .external-operations-list h2 {
   margin: 4px 0 0;
   font-size: 1.3rem;
 }
 
-.external-operations-heading p,
 .external-operations-list header p {
   margin: 5px 0 0;
   color: var(--muted);
@@ -8053,12 +8052,7 @@ svg {
 }
 
 @media (max-width: 560px) {
-  .external-operations-heading {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .external-operations-heading .button {
+  .external-operations-toolbar .button {
     width: 100%;
   }
 

@@ -74,7 +74,7 @@ export function externalOperationsView({ allowed, operations, allowedStores }) {
     : `<div class="empty-state external-operation-empty"><i data-lucide="${operations.loading ? 'refresh-cw' : 'map-pinned'}"></i><strong>${operations.loading ? 'Carregando operação' : 'Nenhum cliente encontrado'}</strong><p>${operations.loading ? 'Consultando as unidades permitidas.' : 'Ajuste o período ou os filtros para localizar clientes.'}</p></div>`;
   const detail = records.find((lead) => lead.id === operations.detailLeadId);
 
-  return `<section class="external-operations-heading"><div><span class="eyebrow">OPERAÇÃO EXTERNA</span><h2>Rotas e deslocamentos</h2><p>Organize clientes, transporte e acompanhantes por unidade.</p></div><button class="button button-secondary" type="button" data-route="home"><i data-lucide="arrow-left"></i><span>Voltar ao início</span></button></section>
+  return `<div class="external-operations-toolbar"><button class="button button-secondary" type="button" data-route="home"><i data-lucide="arrow-left"></i><span>Voltar ao início</span></button></div>
     ${operations.error ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(operations.error)}</span></div>` : ''}
     <section class="external-operations-filters" aria-label="Filtros da operação externa">
       <div class="field"><label for="external-operations-start-date">Data inicial</label><input id="external-operations-start-date" type="date" value="${escapeHtml(operations.startDate)}" /></div>

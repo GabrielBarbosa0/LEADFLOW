@@ -43,7 +43,7 @@ test('loads store-scoped logistics for an external leader', async ({ page }) => 
 
   await page.getByRole('button', { name: /Operação externa/ }).click();
   await expect(page).toHaveURL(/#\/external-operations$/);
-  await expect(page.getByRole('heading', { name: 'Rotas e deslocamentos' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Voltar ao início' })).toBeVisible();
   await expect(page.getByLabel('Transporte')).toBeVisible();
   await expect(page.getByLabel('Acompanhante')).toBeVisible();
   await expect(page.getByText('Dona Lucia').first()).toBeVisible();

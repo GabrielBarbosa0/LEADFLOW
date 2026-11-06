@@ -67,7 +67,9 @@ describe('external operations', () => {
       allowedStores: [{ id: 'loja-06', displayLabel: 'Loja 06 - Surubim' }]
     });
 
-    expect(markup).toContain('OPERAÇÃO EXTERNA');
+    expect(markup).not.toContain('Rotas e deslocamentos');
+    expect(markup).not.toContain('Organize clientes, transporte e acompanhantes por unidade.');
+    expect(markup).toContain('Voltar ao início');
     expect(markup).toContain('Transporte');
     expect(markup).toContain('Acompanhante');
     expect(markup).toContain('Dona Maria');
