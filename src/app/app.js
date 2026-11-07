@@ -71,7 +71,7 @@ import { handleFollowUpsClick } from './features/follow-ups/follow-ups-events.js
 import { initialFollowUpsState, startFollowUpsSubscriptions } from './features/follow-ups/follow-ups-subscriptions.js';
 import { followUpsView as renderFollowUpsView, pendingFollowUps as selectPendingFollowUps } from './features/follow-ups/follow-ups-view.js';
 import { appointmentCreateDialog as renderAppointmentCreateDialog, appointmentCreateSchedule as resolveAppointmentCreateSchedule, appointmentCreateService as resolveAppointmentCreateService, appointmentCreateTimeField as renderAppointmentCreateTimeField } from './features/appointments/appointment-dialog.js';
-import { handleAppointmentClick, initializeAppointmentCreateEvents, nextAppointmentAttendance } from './features/appointments/appointment-events.js';
+import { bindAppointmentListScroll, handleAppointmentClick, initializeAppointmentCreateEvents, nextAppointmentAttendance } from './features/appointments/appointment-events.js';
 import { appointmentsView as renderAppointmentsView } from './features/appointments/appointments-view.js';
 import { appointmentCancellationDialog, initializeAppointmentCancellationDialog } from './features/appointments/appointment-cancellation-dialog.js';
 import { appointmentRescheduleDialog, initializeAppointmentRescheduleDialog } from './features/appointments/appointment-reschedule-dialog.js';
@@ -659,6 +659,7 @@ function handleConnectivityChange() {
 
 function bindPageEvents() {
   initializeKanbanScrollbar();
+  bindAppointmentListScroll(document.querySelector('.appointment-list'), state.appointments);
   if (state.route === 'external-operations') {
     bindExternalOperationsEvents({ state, render, reload: loadExternalOperationsData, showToast });
   }
@@ -1477,6 +1478,7 @@ function bindPageEvents() {
   const appointmentsStore = document.querySelector('#appointments-store');
   appointmentsStore?.addEventListener('change', () => {
     state.appointments.storeId = appointmentsStore.value;
+    state.appointments.listScrollTop = 0;
     state.appointments.loaded = false;
     startAppointmentsSubscription();
   });
@@ -2046,6 +2048,7 @@ async function handleAction(action) {
     const today = new Date();
     const todayMonth = monthKeyFromDate(today);
     state.appointments.selectedDate = toLocalDateInput(today);
+    state.appointments.listScrollTop = 0;
     if (state.appointments.month !== todayMonth) {
       state.appointments.month = todayMonth;
       state.appointments.loaded = false;
@@ -2393,6 +2396,7 @@ export async function startApp() {
         const lead = appointmentRecords().find((item) => item.id === leadId);
         if (!lead) return;
         const nextAttendance = nextAppointmentAttendance(lead.appointmentAttendance || 'pending', attendance);
+        state.appointments.listScrollTop = document.querySelector('.appointment-list')?.scrollTop || 0;
         state.appointments.updatingId = lead.id;
         render();
         try {
@@ -2410,6 +2414,7 @@ export async function startApp() {
       },
       selectDate: (date) => {
         state.appointments.selectedDate = date;
+        state.appointments.listScrollTop = 0;
         render();
       },
       create: openAppointmentCreateDialog,
@@ -2417,6 +2422,7 @@ export async function startApp() {
         if (state.appointments.loading) return;
         state.appointments.month = shiftMonth(state.appointments.month, offset);
         state.appointments.selectedDate = monthRange(state.appointments.month).startDate;
+        state.appointments.listScrollTop = 0;
         state.appointments.loaded = false;
         startAppointmentsSubscription();
       }

@@ -156,7 +156,7 @@ test('keeps the same account authenticated on multiple devices', async ({ browse
   }
 });
 
-test('loads the real appointment flow for an internal collaborator', async ({ page }) => {
+test('loads the real appointment flow for an internal collaborator', async ({ page }, testInfo) => {
   await signIn(page, 'balcao@leadflow.test');
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
@@ -164,6 +164,23 @@ test('loads the real appointment flow for an internal collaborator', async ({ pa
   await expect(page.getByText('Agenda de exames')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Compareceu' }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Não compareceu' }).first()).toBeVisible();
+
+  if (testInfo.project.name === 'desktop-chrome') {
+    const appointmentList = page.locator('.appointment-list');
+    await expect(page.locator('.agenda-layout')).toHaveAttribute('aria-busy', 'false');
+    await expect(page.getByText('Joao Batista')).toBeAttached();
+    await appointmentList.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+    const scrollTop = await appointmentList.evaluate((element) => element.scrollTop);
+    expect(scrollTop).toBeGreaterThan(0);
+
+    await page.getByRole('group', { name: 'Comparecimento de Joao Batista' }).getByRole('button', { name: 'Compareceu', exact: true }).click();
+    await expect(page.getByText('Comparecimento registrado.')).toBeVisible();
+    await expect.poll(() => appointmentList.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(scrollTop - 2);
+
+    await page.getByRole('group', { name: 'Comparecimento de Joao Batista' }).getByRole('button', { name: 'Compareceu', exact: true }).click();
+    await expect(page.getByText('Comparecimento removido.')).toBeVisible();
+    await expect.poll(() => appointmentList.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(scrollTop - 2);
+  }
 });
 
 test('keeps the confirmation period beside a compact back button', async ({ page }) => {

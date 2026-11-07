@@ -84,6 +84,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       rescheduleError: '',
       backfillingMonth: '',
       backfilledMonths: [],
+      listScrollTop: 0,
       month: monthKeyFromDate(),
       storeId: '',
       selectedDate: toLocalDateInput(new Date())

@@ -8,6 +8,18 @@ export function initializeAppointmentCreateEvents(form, handlers) {
   form.addEventListener('submit', (event) => { event.preventDefault(); handlers.submit(form); });
 }
 
+export function bindAppointmentListScroll(list, appointments, schedule = globalThis.requestAnimationFrame) {
+  if (!list) return;
+  const savedScrollTop = Number(appointments.listScrollTop);
+  const restoreScrollTop = Number.isFinite(savedScrollTop) ? Math.max(0, savedScrollTop) : 0;
+  schedule(() => schedule(() => {
+    if (list.isConnected !== false) list.scrollTop = restoreScrollTop;
+  }));
+  list.addEventListener('scroll', () => {
+    if (list.isConnected !== false) appointments.listScrollTop = list.scrollTop;
+  }, { passive: true });
+}
+
 export async function handleAppointmentClick(event, handlers) {
   const cancellationButton = event.target.closest('[data-cancel-appointment]');
   if (cancellationButton && !cancellationButton.disabled) { handlers.requestCancellation(cancellationButton.dataset.cancelAppointment); return true; }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { appointmentCreateDialog, appointmentCreateSchedule, appointmentCreateTimeField } from '../../src/app/features/appointments/appointment-dialog.js';
-import { handleAppointmentClick, nextAppointmentAttendance } from '../../src/app/features/appointments/appointment-events.js';
+import { bindAppointmentListScroll, handleAppointmentClick, nextAppointmentAttendance } from '../../src/app/features/appointments/appointment-events.js';
 import { startAppointmentsLiveSubscription, startConfirmationsLiveSubscription } from '../../src/app/features/appointments/appointment-subscriptions.js';
 import { appointmentsView } from '../../src/app/features/appointments/appointments-view.js';
 import { handleConfirmationClick } from '../../src/app/features/appointments/confirmation-events.js';
@@ -89,6 +89,24 @@ describe('appointments feature modules', () => {
     expect(nextAppointmentAttendance('attended', 'attended')).toBe('pending');
     expect(nextAppointmentAttendance('missed', 'missed')).toBe('pending');
     expect(nextAppointmentAttendance('attended', 'missed')).toBe('missed');
+  });
+
+  it('restores and tracks the appointment list scroll position', () => {
+    let scrollHandler;
+    const list = {
+      scrollTop: 0,
+      addEventListener: vi.fn((eventName, handler) => {
+        if (eventName === 'scroll') scrollHandler = handler;
+      })
+    };
+    const appointments = { listScrollTop: 240 };
+
+    bindAppointmentListScroll(list, appointments, (callback) => callback());
+    expect(list.scrollTop).toBe(240);
+
+    list.scrollTop = 410;
+    scrollHandler();
+    expect(appointments.listScrollTop).toBe(410);
   });
 
   it('renders pending and completed confirmation states', () => {
