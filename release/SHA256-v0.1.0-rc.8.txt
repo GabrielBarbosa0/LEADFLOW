@@ -1,0 +1,3 @@
+e2ffe3d90d083de5e7e5d86e91fc7483b423adf5a09e6e63e8064dd0607363de  LeadFlow-Hostinger-v0.1.0-rc.8.zip
+e79b2cc574bdf63b702688392e57f50c612ae04e5797076f49419ae3f9fcf0e1  firestore-v0.1.0-rc.8.rules
+0f4a7d65e7614741dde6b51da000f080681cd6a830cde0d12a41e5eb740638fb  RELEASE-v0.1.0-rc.8.md
