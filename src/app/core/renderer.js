@@ -38,6 +38,6 @@ export function renderApplication({ state, appView, loginView, canAccessRoute, b
   if (state.toast) root.insertAdjacentHTML('beforeend', toastMarkup(state.toast));
 
   renderIcons();
-  bindPageEvents();
   requestAnimationFrame(syncAgendaHeight);
+  bindPageEvents();
 }

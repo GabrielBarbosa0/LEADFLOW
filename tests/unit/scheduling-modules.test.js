@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ensureAppointmentData, startConfirmationsSubscription, stopAppointmentsSubscription, stopConfirmationsSubscription } from '../../src/app/features/scheduling/appointment-subscriptions.js';
+import { ensureAppointmentData, startAppointmentsSubscription, startConfirmationsSubscription, stopAppointmentsSubscription, stopConfirmationsSubscription } from '../../src/app/features/scheduling/appointment-subscriptions.js';
 import { stopNewLeadScheduleSubscriptions } from '../../src/app/features/scheduling/new-lead-schedule-controller.js';
 
 describe('scheduling controllers', () => {
@@ -45,5 +45,31 @@ describe('scheduling controllers', () => {
 
     expect(subscribe).toHaveBeenCalledWith(state.profile, '2026-10-29', '2026-11-11', expect.any(Function), expect.any(Function));
     vi.useRealTimers();
+  });
+
+  it('keeps the current appointment list mounted during an attendance update', () => {
+    let emitAppointments;
+    const render = vi.fn();
+    const subscribe = vi.fn((profile, month, storeId, onData) => {
+      emitAppointments = onData;
+      return vi.fn();
+    });
+    const shouldRender = vi.fn(() => false);
+    const state = {
+      route: 'appointments',
+      profile: { uid: 'manager-1' },
+      appointments: {
+        month: '2026-10', storeId: '', updatingId: 'lead-1', loading: false, loaded: true,
+        error: '', records: [], truncated: false, backfilledMonths: [], backfillingMonth: ''
+      },
+      unsubscribeAppointments: null
+    };
+
+    startAppointmentsSubscription({ state, render, hasAccess: () => true, isAdmin: () => false, subscribe, shouldRender });
+    emitAppointments({ records: [{ id: 'lead-1', appointmentAttendance: 'attended' }], truncated: false });
+
+    expect(render).toHaveBeenCalledOnce();
+    expect(shouldRender).toHaveBeenCalledWith(state.appointments.records);
+    expect(state.appointments.records[0].appointmentAttendance).toBe('attended');
   });
 });

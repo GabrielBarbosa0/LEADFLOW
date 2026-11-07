@@ -71,7 +71,7 @@ import { handleFollowUpsClick } from './features/follow-ups/follow-ups-events.js
 import { initialFollowUpsState, startFollowUpsSubscriptions } from './features/follow-ups/follow-ups-subscriptions.js';
 import { followUpsView as renderFollowUpsView, pendingFollowUps as selectPendingFollowUps } from './features/follow-ups/follow-ups-view.js';
 import { appointmentCreateDialog as renderAppointmentCreateDialog, appointmentCreateSchedule as resolveAppointmentCreateSchedule, appointmentCreateService as resolveAppointmentCreateService, appointmentCreateTimeField as renderAppointmentCreateTimeField } from './features/appointments/appointment-dialog.js';
-import { bindAppointmentListScroll, handleAppointmentClick, initializeAppointmentCreateEvents, nextAppointmentAttendance } from './features/appointments/appointment-events.js';
+import { bindAppointmentListScroll, handleAppointmentClick, initializeAppointmentCreateEvents, nextAppointmentAttendance, updateAppointmentAttendanceControls } from './features/appointments/appointment-events.js';
 import { appointmentsView as renderAppointmentsView } from './features/appointments/appointments-view.js';
 import { appointmentCancellationDialog, initializeAppointmentCancellationDialog } from './features/appointments/appointment-cancellation-dialog.js';
 import { appointmentRescheduleDialog, initializeAppointmentRescheduleDialog } from './features/appointments/appointment-reschedule-dialog.js';
@@ -1617,7 +1617,7 @@ function subscribeProfileLeads() {
     (leads) => {
       state.leads = leads;
       state.dataError = '';
-      render();
+      if (!consumeAttendanceSubscriptionUpdate(leads, 'profile')) render();
       ensureLeadDetailSchedule();
     },
     () => {
@@ -1676,7 +1676,8 @@ function startFollowUpScheduleSubscription() {
     patchState: (patch) => {
       state.followUps = { ...state.followUps, ...patch };
     },
-    render
+    render,
+    shouldRender: () => ['home', 'follow-ups'].includes(state.route)
   });
 }
 
@@ -1708,6 +1709,21 @@ async function loadManagementData() {
   render();
   ensureLeadDetailSchedule();
   ensureLeadDetailHistory();
+}
+
+function consumeAttendanceSubscriptionUpdate(records, source) {
+  const update = state.appointments.attendanceUpdate;
+  if (state.route !== 'appointments' || !update) return false;
+  const lead = records.find((item) => item.id === update.leadId);
+  if ((lead?.appointmentAttendance || 'pending') !== update.attendance) return false;
+
+  update[`${source}Synced`] = true;
+  if (update.profileSynced && update.appointmentsSynced) {
+    queueMicrotask(() => {
+      if (state.appointments.attendanceUpdate === update) state.appointments.attendanceUpdate = null;
+    });
+  }
+  return true;
 }
 
 function openManagementArchive() {
@@ -1866,7 +1882,14 @@ function startConfirmationsSubscription() {
 }
 
 function startAppointmentsSubscription() {
-  return startAppointmentsLive({ state, render, hasAccess, isAdmin, subscribe: subscribeToAppointments });
+  return startAppointmentsLive({
+    state,
+    render,
+    hasAccess,
+    isAdmin,
+    subscribe: subscribeToAppointments,
+    shouldRender: (records) => !consumeAttendanceSubscriptionUpdate(records, 'appointments')
+  });
 }
 
 function openAppointmentCreateDialog() {
@@ -2395,21 +2418,33 @@ export async function startApp() {
       markAttendance: async (leadId, attendance) => {
         const lead = appointmentRecords().find((item) => item.id === leadId);
         if (!lead) return;
-        const nextAttendance = nextAppointmentAttendance(lead.appointmentAttendance || 'pending', attendance);
+        const previousAttendance = lead.appointmentAttendance || 'pending';
+        const nextAttendance = nextAppointmentAttendance(previousAttendance, attendance);
         state.appointments.listScrollTop = document.querySelector('.appointment-list')?.scrollTop || 0;
         state.appointments.updatingId = lead.id;
-        render();
+        const attendanceUpdate = { leadId: lead.id, attendance: nextAttendance, appointmentsSynced: false, profileSynced: false };
+        state.appointments.attendanceUpdate = attendanceUpdate;
+        state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: nextAttendance } : item);
+        state.leads = state.leads.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: nextAttendance } : item);
+        updateAppointmentAttendanceControls(lead.id, nextAttendance, true);
         try {
           await setAppointmentAttendance(state.profile, lead, nextAttendance);
-          state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: nextAttendance } : item);
           showToast(nextAttendance === 'pending'
             ? 'Comparecimento removido.'
             : nextAttendance === 'attended' ? 'Comparecimento registrado.' : 'Falta registrada.');
         } catch (error) {
+          state.appointments.records = state.appointments.records.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: previousAttendance } : item);
+          state.leads = state.leads.map((item) => item.id === lead.id ? { ...item, appointmentAttendance: previousAttendance } : item);
+          if (state.appointments.attendanceUpdate === attendanceUpdate) state.appointments.attendanceUpdate = null;
+          updateAppointmentAttendanceControls(lead.id, previousAttendance, false);
           showToast(error?.code === 'permission-denied' ? 'Seu perfil não pode alterar este agendamento.' : 'Não foi possível salvar o comparecimento.', 'danger', 'circle-alert');
         } finally {
           state.appointments.updatingId = '';
-          render();
+          const savedAttendance = state.appointments.records.find((item) => item.id === lead.id)?.appointmentAttendance || 'pending';
+          updateAppointmentAttendanceControls(lead.id, savedAttendance, false);
+          setTimeout(() => {
+            if (state.appointments.attendanceUpdate === attendanceUpdate) state.appointments.attendanceUpdate = null;
+          }, 2000);
         }
       },
       selectDate: (date) => {

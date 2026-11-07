@@ -172,14 +172,19 @@ test('loads the real appointment flow for an internal collaborator', async ({ pa
     await appointmentList.evaluate((element) => { element.scrollTop = element.scrollHeight; });
     const scrollTop = await appointmentList.evaluate((element) => element.scrollTop);
     expect(scrollTop).toBeGreaterThan(0);
+    await page.evaluate(() => {
+      window.__appointmentListBeforeAttendance = document.querySelector('.appointment-list');
+    });
 
     await page.getByRole('group', { name: 'Comparecimento de Joao Batista' }).getByRole('button', { name: 'Compareceu', exact: true }).click();
     await expect(page.getByText('Comparecimento registrado.')).toBeVisible();
     await expect.poll(() => appointmentList.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(scrollTop - 2);
+    expect(await page.evaluate(() => document.querySelector('.appointment-list') === window.__appointmentListBeforeAttendance)).toBe(true);
 
     await page.getByRole('group', { name: 'Comparecimento de Joao Batista' }).getByRole('button', { name: 'Compareceu', exact: true }).click();
     await expect(page.getByText('Comparecimento removido.')).toBeVisible();
     await expect.poll(() => appointmentList.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(scrollTop - 2);
+    expect(await page.evaluate(() => document.querySelector('.appointment-list') === window.__appointmentListBeforeAttendance)).toBe(true);
   }
 });
 

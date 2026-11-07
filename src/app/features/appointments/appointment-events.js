@@ -12,12 +12,23 @@ export function bindAppointmentListScroll(list, appointments, schedule = globalT
   if (!list) return;
   const savedScrollTop = Number(appointments.listScrollTop);
   const restoreScrollTop = Number.isFinite(savedScrollTop) ? Math.max(0, savedScrollTop) : 0;
-  schedule(() => schedule(() => {
+  schedule(() => {
     if (list.isConnected !== false) list.scrollTop = restoreScrollTop;
-  }));
+  });
   list.addEventListener('scroll', () => {
     if (list.isConnected !== false) appointments.listScrollTop = list.scrollTop;
   }, { passive: true });
+}
+
+export function updateAppointmentAttendanceControls(leadId, attendance, disabled, root = document) {
+  const buttons = [...root.querySelectorAll('[data-attendance-lead]')]
+    .filter((button) => button.dataset.attendanceLead === leadId);
+  buttons.forEach((button) => {
+    const active = attendance !== 'pending' && button.dataset.attendanceStatus === attendance;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+    button.disabled = disabled;
+  });
 }
 
 export async function handleAppointmentClick(event, handlers) {

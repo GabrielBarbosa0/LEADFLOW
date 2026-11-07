@@ -100,6 +100,31 @@ describe('follow-ups feature modules', () => {
     expect(stopTeam).toHaveBeenCalledOnce();
   });
 
+  it('updates follow-up data without rendering an unrelated route', () => {
+    const patchState = vi.fn();
+    const render = vi.fn();
+    startFollowUpsSubscriptions({
+      profile: { role: 'manager' },
+      canViewTeam: true,
+      storeIds: ['loja-06'],
+      loadSchedules: vi.fn(),
+      subscribeSchedule: (_profile, onData) => {
+        onData({ noShowGraceMinutes: 20 });
+        return vi.fn();
+      },
+      subscribeTeam: (_profile, onData) => {
+        onData({ records: [sampleLead()], truncated: false });
+        return vi.fn();
+      },
+      patchState,
+      render,
+      shouldRender: () => false
+    });
+
+    expect(patchState).toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
+  });
+
   it('preserves the active filter when resetting follow-up state', () => {
     expect(initialFollowUpsState({ filter: 'contacted' }, {
       role: 'captor',

@@ -47,7 +47,7 @@ export function startConfirmationsSubscription({ state, render, hasAccess, subsc
   });
 }
 
-export function startAppointmentsSubscription({ state, render, hasAccess, isAdmin, subscribe }) {
+export function startAppointmentsSubscription({ state, render, hasAccess, isAdmin, subscribe, shouldRender = () => true }) {
   if (!hasAccess('appointments.view') || state.route !== 'appointments') return;
   stopAppointmentsSubscription(state);
   state.appointments.loading = true;
@@ -61,7 +61,7 @@ export function startAppointmentsSubscription({ state, render, hasAccess, isAdmi
     storeId: state.appointments.storeId,
     onData: (result) => {
       Object.assign(state.appointments, { records: result.records, truncated: result.truncated, loaded: true, loading: false });
-      render();
+      if (shouldRender(result.records)) render();
       if (isAdmin() && !state.appointments.backfilledMonths.includes(state.appointments.month) && state.appointments.backfillingMonth !== state.appointments.month) {
         const month = state.appointments.month;
         state.appointments.backfillingMonth = month;

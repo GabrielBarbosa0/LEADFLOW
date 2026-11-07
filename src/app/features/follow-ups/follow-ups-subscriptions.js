@@ -19,7 +19,8 @@ export function startFollowUpsSubscriptions({
   subscribeSchedule,
   subscribeTeam,
   patchState,
-  render
+  render,
+  shouldRender = () => true
 }) {
   let active = true;
   let unsubscribeSchedule = null;
@@ -27,7 +28,7 @@ export function startFollowUpsSubscriptions({
   const update = (patch) => {
     if (!active) return;
     patchState(patch);
-    render();
+    if (shouldRender()) render();
   };
 
   if (!['captor', 'manager', 'admin'].includes(profile?.role)) return () => { active = false; };

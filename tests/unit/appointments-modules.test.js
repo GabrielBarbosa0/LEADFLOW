@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { appointmentCreateDialog, appointmentCreateSchedule, appointmentCreateTimeField } from '../../src/app/features/appointments/appointment-dialog.js';
-import { bindAppointmentListScroll, handleAppointmentClick, nextAppointmentAttendance } from '../../src/app/features/appointments/appointment-events.js';
+import { bindAppointmentListScroll, handleAppointmentClick, nextAppointmentAttendance, updateAppointmentAttendanceControls } from '../../src/app/features/appointments/appointment-events.js';
 import { startAppointmentsLiveSubscription, startConfirmationsLiveSubscription } from '../../src/app/features/appointments/appointment-subscriptions.js';
 import { appointmentsView } from '../../src/app/features/appointments/appointments-view.js';
 import { handleConfirmationClick } from '../../src/app/features/appointments/confirmation-events.js';
@@ -107,6 +107,23 @@ describe('appointments feature modules', () => {
     list.scrollTop = 410;
     scrollHandler();
     expect(appointments.listScrollTop).toBe(410);
+  });
+
+  it('updates attendance controls without replacing the appointment list', () => {
+    const controls = ['attended', 'missed'].map((status) => ({
+      dataset: { attendanceLead: 'lead-1', attendanceStatus: status },
+      classList: { toggle: vi.fn() },
+      setAttribute: vi.fn(),
+      disabled: false
+    }));
+    const root = { querySelectorAll: vi.fn(() => controls) };
+
+    updateAppointmentAttendanceControls('lead-1', 'attended', true, root);
+
+    expect(controls[0].classList.toggle).toHaveBeenCalledWith('is-active', true);
+    expect(controls[0].setAttribute).toHaveBeenCalledWith('aria-pressed', 'true');
+    expect(controls[1].classList.toggle).toHaveBeenCalledWith('is-active', false);
+    expect(controls.every((control) => control.disabled)).toBe(true);
   });
 
   it('renders pending and completed confirmation states', () => {
