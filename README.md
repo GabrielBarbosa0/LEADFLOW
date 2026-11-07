@@ -1,342 +1,300 @@
+<p align="center">
+  <img src="docs/assets/readme/banner-leadflow.png" alt="LeadFlow" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/GabrielBarbosa0/LEADFLOW/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/release-v0.1.0-003070" alt="Release v0.1.0"></a>
+  <img src="https://img.shields.io/badge/status-em%20producao-087f5b" alt="Status em producao">
+  <img src="https://img.shields.io/badge/PWA-offline%20controlado-0b7285" alt="PWA com operacao offline controlada">
+  <img src="https://img.shields.io/badge/Firebase-Authentication%20%2B%20Firestore-f59f00" alt="Firebase Authentication e Firestore">
+</p>
+
 # LeadFlow
 
-Cadastro offline para as equipes de captacao das **Oticas Fascinante**.
+O **LeadFlow** e uma Progressive Web App para captacao, agendamento e
+acompanhamento operacional de clientes das **Oticas Fascinante**. O sistema
+substitui fichas em papel por um fluxo digital responsivo, instalavel e preparado
+para equipes externas, colaboradores internos, gestores e administradores.
 
-> **Status:** fundacao tecnica e primeiro fluxo de captacao em desenvolvimento.
+A aplicacao centraliza o cadastro do cliente, a disponibilidade da agenda, a
+operacao de transporte, os retornos e os indicadores de desempenho sem perder a
+capacidade de trabalhar em locais com conexao instavel.
 
-O LeadFlow sera uma Progressive Web App (PWA) para substituir as fichas de papel usadas por colaboradores durante abordagens na rua. O usuario podera registrar um potencial cliente mesmo sem internet, consultar os cadastros no proprio aparelho e sincroniza-los com a nuvem quando a conexao voltar.
+> **Versao oficial em producao:**
+> [`v0.1.0`](https://github.com/GabrielBarbosa0/LEADFLOW/releases/tag/v0.1.0)
 
-O projeto tem um foco deliberadamente pequeno: facilitar a captacao. Ele nao pretende ser um CRM completo.
+## Interface
 
-## Objetivos
+### Inicio
 
-- tornar o cadastro rapido e simples no celular;
-- funcionar em locais com conexao instavel ou inexistente;
-- evitar perda, rasura e redigitacao de fichas em papel;
-- identificar o colaborador, a loja e a data de cada captacao;
-- centralizar os registros na nuvem depois da sincronizacao;
-- operar inicialmente apenas com recursos gratuitos do Firebase.
+![Tela inicial do LeadFlow](docs/assets/readme/tela-inicio.png)
 
-## Fluxo principal
+### Agenda de exames
 
-1. O colaborador entra com uma conta Google autorizada.
-2. Inicia uma nova abordagem pelo celular.
-3. Informa nome, telefone e os dados opcionais relevantes.
-4. O cadastro e salvo localmente, mesmo sem internet.
-5. O sistema mostra o registro como pendente.
-6. Quando a conexao retorna, o registro e sincronizado com o Firestore.
-7. O gestor consulta ou exporta os registros autorizados da sua loja.
+![Agenda de exames do LeadFlow](docs/assets/readme/tela-agenda.png)
 
-## Funcionalidades do MVP
+## Principais destaques
 
-- login com Google;
-- autorizacao por e-mail, perfil e loja;
-- formulario curto de cadastro;
-- funcionamento offline depois do primeiro acesso;
-- armazenamento persistente de registros pendentes;
-- sincronizacao automatica e manual;
-- estados `Pendente`, `Sincronizando`, `Sincronizado` e `Erro`;
-- listagem e pesquisa dos cadastros do colaborador;
-- detalhamento e correcao dos proprios cadastros, inclusive offline;
-- pre-agendamento opcional com data e horario;
-- alerta local de possivel telefone duplicado;
-- consulta gerencial por loja, colaborador e periodo;
+- **Operacao offline controlada:** permite captar e preservar dados no aparelho
+  quando uma loja estiver autorizada a trabalhar sem conexao.
+- **Agenda com reserva por blocos:** considera servicos, duracao, expediente,
+  escalas, cotas e compartilhamento de recursos entre unidades.
+- **Permissoes granulares:** cada perfil recebe apenas as unidades, telas e acoes
+  necessarias para sua funcao.
+- **Gestao operacional completa:** dashboards, filtros, exportacao, metas,
+  ranking, retornos e acompanhamento por unidade e colaborador.
+- **PWA responsiva:** funciona no navegador e pode ser instalada em celulares e
+  computadores.
+- **Seguranca em duas camadas:** autenticacao pelo Firebase e autorizacao
+  aplicada pelas Security Rules do Firestore.
+
+## Funcionalidades
+
+### Captacao e cadastro
+
+- cadastro de clientes com dados pessoais, endereco, estrategia e interesse;
+- consulta de CEP quando existe conexao, mantendo preenchimento manual offline;
+- triagem para encaminhamento a optometrista ou oftalmologista;
+- registro de exame pago ou cortesia, transporte e acompanhantes;
+- selecao de unidade, servico, data e horario disponiveis;
+- verificacao de agendamento ativo por CPF;
+- historico do lead com eventos e responsaveis;
+- transferencia de responsabilidade entre colaboradores autorizados;
+- pesquisa e filtros por nome, telefone, unidade e periodo.
+
+### Agenda e atendimento
+
+- calendario mensal por unidade;
+- servicos com duracoes diferentes e reserva atomica dos horarios;
+- escalas, expedientes e limites configuraveis por loja;
+- agendas compartilhadas entre unidades que utilizam o mesmo recurso;
+- marcacao de comparecimento ou falta sem perder a posicao da lista;
+- reagendamento, cancelamento e registro dos motivos;
+- confirmacoes individuais por WhatsApp, sempre iniciadas manualmente;
+- fila de retornos para faltas e agendamentos pendentes;
+- encaixe rapido para clientes presenciais.
+
+### Operacao externa
+
+- visao diaria dos clientes com transporte;
+- controle de acompanhantes e quantidade de assentos;
+- filtros por data, unidade, transporte e acompanhamento;
+- busca por cliente ou localizacao;
+- organizacao da operacao sem alterar a agenda de exames.
+
+### Gestao e equipe
+
+- dashboard com indicadores de captacao, agendamento e comparecimento;
+- desempenho por unidade e ranking de captadores;
+- metas individuais de captacao e acompanhamento da equipe;
+- estatisticas de perfil, estrategia, interesse, transporte e pagamentos;
+- analise de cancelamentos, reagendamentos e patologias informadas;
 - exportacao detalhada para CSV;
-- visualizacao, correcao e exclusao de leads por administradores;
-- metas individuais de quantidade de leads, com acompanhamento restrito por usuario e equipe;
-- agenda mensal dos pre-agendamentos para gestores e administradores;
-- atualizacao dinamica da agenda enquanto novos pre-agendamentos sao sincronizados;
-- registro direto de comparecimento ou falta pela equipe gerencial;
-- retorno de faltas para o captador responsavel, com tolerancia por loja, automacao opcional e mensagem pronta no WhatsApp;
-- acompanhamento gerencial dos retornos por colaborador, diferenciando contatos aguardando acao e ja iniciados; gestores veem a propria loja e administradores veem todas as unidades;
-- hierarquia de acesso por perfil: administradores acessam todas as unidades, gestores acessam as unidades permitidas e captadores ficam restritos a operacao basica da loja principal;
-- configuracao administrativa da duracao e do expediente de exames por loja;
-- oferta de horarios livres no cadastro, com bloqueio dos intervalos ja ocupados;
-- instalacao como PWA em celular e desktop.
-- consulta experimental somente leitura ao SavWin por proxy local durante o desenvolvimento.
-- API local versionada e somente leitura para integracao futura com sistemas de CRM.
+- administracao de acessos, cargos e unidades permitidas;
+- configuracao de servicos, agenda, escalas e preferencias por loja.
 
-## Fora do escopo
+## Operacao offline
 
-O FascinLead nao tera, no MVP:
+O modo offline e uma capacidade controlada por loja. Quando habilitado, o
+LeadFlow permite criar o cadastro sem internet e o apresenta imediatamente em
+**Meus cadastros** como aguardando agendamento.
 
-- funil de vendas ou CRM completo;
-- atendimento e campanhas pelo WhatsApp;
-- confirmacoes automaticas ou lembretes de consultas e exames;
-- anamnese ou recomendacao de lentes;
-- provador virtual;
-- metas de vendas, comissoes ou conciliacao de vendas;
-- ranking, premiacoes ou gamificacao na primeira versao das metas de captacao;
-- integracao SavWin publicada para uso em producao;
-- integracao com AppOk;
-- aplicativo nativo para Android ou iOS.
+Os dados permanecem no armazenamento persistente do Firestore no navegador e
+sao sincronizados quando a conexao retorna. Cada registro utiliza um
+identificador criado no dispositivo para que novas tentativas nao gerem
+duplicidade.
 
-## Telas previstas
+Data e horario nao sao reservados offline. A agenda depende de uma resposta
+atual do servidor para evitar conflitos de horario, ultrapassar cotas ou usar
+uma escala desatualizada. O selo de conectividade e apenas um indicador visual;
+operacoes criticas aguardam confirmacao real do Firebase.
 
-| Tela | Finalidade |
+## Perfis e autorizacao
+
+| Perfil | Escopo principal |
 | --- | --- |
-| Login | Autenticar a conta Google e validar o acesso |
-| Inicio | Exibir atalhos, loja, conectividade e pendencias |
-| Novo | Registrar rapidamente um potencial cliente |
-| Cadastros | Consultar e pesquisar os registros do colaborador |
-| Sincronizacao | Exibir contagens, erros e acao de envio manual |
-| Gestao | Filtrar, acompanhar e exportar registros autorizados |
-| Agenda | Visualizar por mes os pre-agendamentos autorizados para o perfil |
-| Retornos | Captadores iniciam o reagendamento pelo WhatsApp; gestores acompanham o andamento por colaborador |
-| Configuracoes | Definir agenda, expediente, tolerancia e retorno automatico por loja |
-| Metas | Criar metas de captacao e acompanhar o progresso permitido ao perfil |
+| Colaborador Externo | Captacao, propria carteira, retornos, metas e operacao externa |
+| MEI | Operacao externa com unidades, dias e cotas configuraveis |
+| Colaborador Interno | Cadastro, agenda, comparecimento, encaixes e rotinas internas |
+| Gestor | Unidades permitidas, equipe, indicadores, agenda, metas e exportacoes |
+| Administrador | Acesso global, configuracoes, cargos, unidades e administracao do sistema |
+
+Os perfis podem receber permissoes personalizadas. Ocultar uma acao na
+interface nao e considerado controle de seguranca: as permissoes tambem sao
+validadas pelas regras do Firestore e pelas funcoes protegidas.
 
 ## Arquitetura
 
 ```text
-Celular / navegador
+Celular ou navegador
   |
-  |-- HTML + CSS + JavaScript
+  |-- Vite + JavaScript ES Modules
   |-- PWA + Service Worker
-  |-- Firestore SDK + IndexedDB
+  |-- Cache persistente do Firestore em IndexedDB
   |
-  `---- HTTPS, quando online ----> Hostinger (frontend estatico)
-                                      |
-                                      `-------------> Firebase
-                                      |-- Authentication
-                                      |-- Cloud Firestore
-                                      |-- Security Rules
-                                      `-- Cloud Functions
+  |---> Hostinger
+  |       `-- frontend estatico em HTTPS
+  |
+  `---> Firebase
+          |-- Authentication
+          |-- Cloud Firestore
+          |-- Security Rules
+          `-- Callable Functions protegidas
 ```
 
-### Tecnologias planejadas
+### Tecnologias
 
-- HTML5, CSS3 e JavaScript com ES Modules;
+- HTML5, CSS3 e JavaScript moderno;
 - Vite;
-- Web App Manifest e Service Worker;
-- Firebase Authentication com Google e E-mail/Senha;
-- Cloud Firestore com persistencia offline;
-- Hostinger para hospedagem do frontend estatico;
+- Firebase Authentication, Firestore e Functions;
 - Firebase Emulator Suite;
-- Vitest;
+- PWA, Web App Manifest e Service Worker;
+- Lucide Icons;
+- Vitest e Firebase Rules Unit Testing;
 - Playwright;
-- Lucide Icons.
+- Hostinger para o frontend estatico de producao.
 
-Cloud Run e Storage nao fazem parte do MVP. As Callable Functions atendem operacoes administrativas e consultas protegidas de agendamento; sua publicacao exige aprovacao de faturamento, controle de acesso e alerta de custo.
+## Integracoes
 
-## SavWin local
+### SavWin local
 
-Durante o desenvolvimento, o servidor do Vite disponibiliza um proxy local somente leitura para consultas por produtos/OS e vendas por CPF. As credenciais permanecem no processo Node e nao sao enviadas no bundle do navegador.
+O ambiente de desenvolvimento possui um proxy local e somente leitura para
+consultas autorizadas ao SavWin. As credenciais permanecem no processo Node e
+nao sao enviadas ao navegador nem fazem parte do build publicado na Hostinger.
 
-Configure no `.env.local`:
+O contrato esta documentado em
+[`docs/savwin-local-proxy.openapi.yaml`](docs/savwin-local-proxy.openapi.yaml).
 
-```text
-SAVWIN_API_BASE_URL=https://cliapi.savwinweb.com.br
-SAVWIN_IDENTIFICADOR=
-SAVWIN_AUTHORIZATION=
-SAVWIN_TIMEOUT_SECONDS=30
-```
+### CRM
 
-Inicie pelo `INICIAR-FASCINLEAD.bat`, entre como gestor ou administrador e use **Consultar SavWin** no Dashboard. Esse recurso existe apenas no servidor de desenvolvimento e nao e publicado no GitHub Pages.
+O LeadFlow **nao possui integracao com CRM em producao atualmente**. O
+repositorio contem um contrato de API somente leitura e uma implementacao local
+que servem como base tecnica para uma possivel integracao futura.
 
-Endpoints locais:
+Publicar essa API exigira uma decisao especifica sobre infraestrutura,
+autenticacao por parceiro, auditoria, limite de requisicoes, protecao de
+segredos e custos. Essa preparacao nao transforma o LeadFlow em um CRM e nao
+envia dados para sistemas externos na operacao atual.
 
-- `POST /api/savwin/products-by-os`;
-- `POST /api/savwin/sales-by-cpf`.
-
-O contrato completo esta em [`docs/savwin-local-proxy.openapi.yaml`](docs/savwin-local-proxy.openapi.yaml).
-
-## API de integracao com CRM
-
-Durante o desenvolvimento, o Vite expoe uma API servidor-a-servidor somente leitura em `/api/v1`. Ela nao e incluida no GitHub Pages e nao altera o funcionamento offline do aplicativo.
-
-Endpoints iniciais:
-
-- `GET /api/v1/health`;
-- `GET /api/v1/leads` com `updated_since`, `store_id`, `limit` e `cursor`;
-- `GET /api/v1/leads/{leadId}`.
-
-As rotas de leads exigem `Authorization: Bearer <token>`. Configure `FASCINLEAD_API_TOKEN` com pelo menos 32 caracteres e restrinja as unidades em `FASCINLEAD_API_ALLOWED_STORES`. Use credenciais administrativas somente no processo Node. Para desenvolvimento sem custo, a API pode apontar para o Firestore Emulator por meio de `FASCINLEAD_API_FIRESTORE_EMULATOR_HOST=127.0.0.1:8180`. Para consultar o projeto remoto localmente, use Application Default Credentials ou uma conta de servico em `FASCINLEAD_API_SERVICE_ACCOUNT_JSON`; nunca use prefixo `VITE_` nem versione esse valor.
-
-CPF, RG, nascimento, sexo, ametropias e condicoes de saude ficam fora da resposta padrao. Eles somente sao retornados quando `FASCINLEAD_API_SENSITIVE_FIELDS=true` e a requisicao inclui `include_sensitive=true`. O contrato completo esta em [`docs/fascinlead-api.openapi.yaml`](docs/fascinlead-api.openapi.yaml).
-
-A versao `v1` usa consulta ativa do CRM (polling) e nao oferece webhooks nem eventos de exclusao. O consumidor deve guardar `updatedAt` e o `cursor` para continuar a sincronizacao sem reler toda a base. Webhooks, credenciais separadas por parceiro e tombstones de exclusao ficam previstos para a etapa de hospedagem da API.
-
-O indice de todas as interfaces, incluindo as Callable Functions, dependencias externas e fronteiras que nao sao APIs publicas, esta em [`docs/API-CATALOG.md`](docs/API-CATALOG.md).
-
-## Operacao offline controlada
-
-O cadastro offline e um recurso experimental configurado por loja e permanece desativado por padrao. Com o recurso desligado, novos cadastros exigem internet e a pagina **Sync** fica oculta.
-
-Quando um administrador ativa o recurso em **Configuracoes > Agenda > Cadastro offline**, o aplicativo permite salvar somente os dados do lead sem conexao. Data e horario continuam bloqueados, pois o agendamento depende da disponibilidade atual da loja, do transporte, das cotas e das escalas. Os dados pendentes sao mantidos pelo cache persistente do SDK do Firestore e enviados quando a conexao retorna.
-
-Cada cadastro tera um UUID criado no dispositivo. Novas tentativas usarao o mesmo identificador para evitar duplicacao.
-
-O sistema nao depende de sincronizacao em segundo plano com o aplicativo fechado, pois navegadores moveis nao garantem essa execucao.
+Consulte [`docs/fascinlead-api.openapi.yaml`](docs/fascinlead-api.openapi.yaml)
+e [`docs/API-CATALOG.md`](docs/API-CATALOG.md) para conhecer essa fronteira.
 
 ## Seguranca e privacidade
 
-- login Google nao substitui a autorizacao interna;
-- somente e-mails previamente autorizados poderao acessar o sistema;
-- captadores acessarao apenas os proprios registros;
-- gestores acessarao apenas a loja vinculada;
-- regras do Firestore validarao acesso, tipos e campos permitidos;
-- dados pessoais nao deverao aparecer em URLs, logs ou fixtures de teste;
-- o MVP coletara apenas os dados necessarios ao contato;
-- CPF, dados de saude, fotos e geolocalizacao exata nao serao coletados inicialmente;
-- o formulario coletara somente os dados necessarios para a captacao e o pre-agendamento.
-
-## Estrutura planejada
-
-```text
-FASCINLEAD/
-|-- docs/
-|   `-- TDD.md
-|-- public/
-|   |-- icons/
-|   `-- manifest.webmanifest
-|-- src/
-|   |-- app/
-|   |-- components/
-|   |-- firebase/
-|   |-- pages/
-|   |-- services/
-|   |-- styles/
-|   `-- utils/
-|-- tests/
-|   |-- e2e/
-|   |-- rules/
-|   `-- unit/
-|-- AGENTS.md
-|-- firestore.indexes.json
-|-- firestore.rules
-|-- firebase.json
-|-- index.html
-|-- package.json
-`-- vite.config.js
-```
-
-A estrutura sera criada durante a fundacao do projeto e podera receber pequenos ajustes conforme a implementacao real.
+- acesso permitido somente a contas cadastradas e ativas;
+- autorizacao por perfil, permissao e unidade;
+- regras do Firestore testadas no emulador;
+- isolamento dos registros conforme o alcance de cada usuario;
+- ausencia de credenciais administrativas no frontend;
+- minimizacao de dados pessoais e sensiveis;
+- nenhuma informacao pessoal em URLs ou logs tecnicos;
+- HTTPS obrigatorio em producao;
+- scripts administrativos em modo `dry-run` por padrao.
 
 ## Documentacao
 
 | Documento | Conteudo |
 | --- | --- |
-| [Technical Design Document](docs/TDD.md) | Escopo, arquitetura, requisitos, modelo de dados, seguranca, testes e implantacao |
-| [Plano futuro de pre-atendimento clinico](docs/PLANO-PRE-ATENDIMENTO-CLINICO.md) | Separacao entre captacao, recepcao e atendimento medico; agenda clinica, alertas e privacidade |
-| [Plano futuro de evolucoes operacionais](docs/PLANO-EVOLUCOES-OPERACIONAIS.md) | Historico do lead, duplicidades, confirmacoes, lista de espera, alertas e busca global |
-| [Plano da fila de encaixes](docs/PLANO-FILA-DE-ENCAIXES.md) | Atendimento presencial no mesmo dia, fila operacional, auditoria, permissoes e indicadores |
-| [Guia para agentes](AGENTS.md) | Contexto e regras obrigatorias para pessoas e agentes de IA que alterarem o repositorio |
-
-Leia o `AGENTS.md` e o TDD antes de iniciar qualquer desenvolvimento.
+| [`AGENTS.md`](AGENTS.md) | Regras permanentes para manutencao do repositorio |
+| [`docs/TDD.md`](docs/TDD.md) | Arquitetura, requisitos, modelo de dados e decisoes tecnicas |
+| [`docs/API-CATALOG.md`](docs/API-CATALOG.md) | Catalogo de APIs, funcoes e integracoes |
+| [`docs/PERMISSOES-FIREBASE.md`](docs/PERMISSOES-FIREBASE.md) | Modelo de permissoes e operacao no Firebase |
+| [`docs/HOSTINGER.md`](docs/HOSTINGER.md) | Publicacao e diagnostico do frontend em producao |
+| [`docs/MATRIZ-PERFIS-E-FLUXOS-HOMOLOGACAO.md`](docs/MATRIZ-PERFIS-E-FLUXOS-HOMOLOGACAO.md) | Matriz de perfis e fluxos de validacao |
+| [`docs/DADOS-HOMOLOGACAO-LOCAL.md`](docs/DADOS-HOMOLOGACAO-LOCAL.md) | Dados ficticios e preparacao do ambiente local |
 
 ## Desenvolvimento local
 
-Requisitos:
+### Requisitos
 
 - Node.js 20.19 ou superior;
 - npm 10 ou superior;
-- Java para executar a Firebase Emulator Suite.
+- Java para a Firebase Emulator Suite;
+- Firebase CLI para testes de regras e operacoes administrativas.
 
-Instale as dependencias e inicie o servidor:
+### Instalacao
 
 ```bash
+git clone https://github.com/GabrielBarbosa0/LEADFLOW.git
+cd LEADFLOW
 npm install
+```
+
+Copie `.env.example` para `.env.local` e informe a configuracao web do projeto
+Firebase. Nunca versione credenciais administrativas, tokens, contas de servico
+ou variaveis locais preenchidas.
+
+Para iniciar o frontend:
+
+```bash
 npm run dev
 ```
 
-No Windows, tambem e possivel iniciar com dois cliques em `INICIAR-FASCINLEAD.bat`. O arquivo instala as dependencias quando necessario, inicia o servidor e abre o navegador automaticamente. Para desligar, pressione `Ctrl+C` na janela do terminal.
+Para trabalhar com os emuladores:
 
-Comandos disponiveis:
+```bash
+npm run emulators
+npm run dev:emulator
+```
+
+No Windows, os arquivos `INICIAR-LEADFLOW.bat` e
+`INICIAR-LEADFLOW-EMULADORES.bat` simplificam a inicializacao dos ambientes.
+
+## Testes e verificacoes
 
 | Comando | Finalidade |
 | --- | --- |
-| `npm start` | Iniciar o sistema e abrir o navegador automaticamente |
-| `npm run dev` | Iniciar o servidor Vite |
-| `npm run build` | Gerar o build de producao |
-| `npm run build:pages` | Gerar o build para o GitHub Pages |
-| `npm run preview` | Servir o build localmente |
-| `npm test` | Executar os testes unitarios |
-| `npm run test:watch` | Executar testes em modo continuo |
-| `npm run test:e2e` | Executar os fluxos de interface no Chrome mobile e desktop |
-| `npm run emulators` | Iniciar os emuladores Firebase |
-| `npm run deploy` | Gerar o build e publicar no Firebase Hosting |
+| `npm test` | Executar testes unitarios |
+| `npm run test:rules` | Validar as Security Rules no emulador |
+| `npm run test:e2e` | Executar fluxos de interface com Playwright |
+| `npm run build` | Gerar o frontend de producao |
+| `npm run verify:firebase` | Testar regras e validar as Functions |
+| `npm run verify:docker` | Validar testes, regras e build de homologacao |
 
-## Publicacao no GitHub Pages
+## Publicacao
 
-O ambiente inicial pode ser publicado pelo workflow `Deploy GitHub Pages` em:
+O frontend de producao e estatico e fica hospedado na Hostinger. Authentication,
+Firestore, Security Rules e Functions permanecem no Firebase.
+
+1. Execute os testes aplicaveis e `npm run build`.
+2. Empacote o conteudo de `dist/` com caminhos internos usando `/`.
+3. Extraia o pacote diretamente em `public_html`.
+4. Confirme `index.html`, `.htaccess`, `sw.js` e a pasta real `assets/` na raiz.
+5. Publique regras ou funcoes separadamente quando elas tiverem sido alteradas.
+6. Limpe o cache da hospedagem e valide a atualizacao em janela anonima.
+
+As candidatas e versoes oficiais ficam preservadas em [`release/`](release/).
+O procedimento completo e os diagnosticos de cache estao em
+[`docs/HOSTINGER.md`](docs/HOSTINGER.md).
+
+## Estrutura do repositorio
 
 ```text
-https://gabrielbarbosa0.github.io/FASCINLEAD/
+LEADFLOW/
+|-- docs/          documentacao tecnica e operacional
+|-- functions/     Callable Functions do Firebase
+|-- public/        manifesto, icones e arquivos publicos
+|-- release/       pacotes congelados para publicacao
+|-- scripts/       migracoes e rotinas administrativas
+|-- server/        APIs e proxies disponiveis no ambiente local
+|-- src/           aplicacao, funcionalidades, servicos e estilos
+|-- tests/         testes unitarios, regras e ponta a ponta
+|-- firestore.rules
+|-- package.json
+`-- vite.config.js
 ```
-
-Antes da primeira publicacao:
-
-1. Em `Settings > Secrets and variables > Actions`, crie o segredo `VITE_FIREBASE_API_KEY`.
-2. Em `Settings > Pages`, selecione `GitHub Actions` como origem da publicacao.
-3. No Firebase Authentication, adicione `gabrielbarbosa0.github.io` aos dominios autorizados.
-4. Envie as alteracoes para a branch `main` ou execute manualmente o workflow na aba `Actions`.
-
-O build do GitHub Pages usa o caminho `/FASCINLEAD/`. O desenvolvimento local continua usando a raiz `/`.
-
-Copie `.env.example` para `.env.local` e preencha a configuracao web do projeto Firebase. Para usar os emuladores, defina `VITE_USE_FIREBASE_EMULATORS=true`.
-
-Sem configuracao Firebase, o acesso ao sistema permanece bloqueado. Testes locais autenticados devem usar o Firebase Emulator Suite.
-
-## Plano de entrega
-
-### 1. Fundacao
-
-- inicializar Vite e estrutura modular;
-- definir identidade visual e componentes basicos;
-- configurar PWA e app shell offline;
-- configurar Firebase e Emulator Suite;
-- implementar login e autorizacao;
-- criar e testar as primeiras Security Rules.
-
-### 2. Captacao offline
-
-- implementar o formulario;
-- salvar e consultar registros offline;
-- exibir estados de sincronizacao;
-- sincronizar sem duplicacao;
-- cobrir o fluxo critico com testes.
-
-### 3. Gestao
-
-- adicionar filtros e totais simples;
-- restringir dados por perfil e loja;
-- implementar exportacao CSV;
-- administrar acessos de colaboradores, gestores e administradores.
-- criar metas individuais em massa e acompanhar o desempenho por loja e captador.
-- exibir os pre-agendamentos em calendario mensal por loja.
-
-## Cadastro de acessos
-
-Um administrador pode abrir `Gestao` e selecionar `Gerenciar acessos`, ou usar o atalho `Acessos da equipe` na tela inicial.
-
-1. Informe o nome e o e-mail da conta Google do colaborador.
-2. Escolha `Colaborador`, `Gestor` ou `Administrador`.
-3. Escolha entre `Loja 02`, `Loja 04`, `Loja 05` e `Loja 06`.
-4. Selecione `Salvar acesso`.
-
-O e-mail fica autorizado imediatamente. No primeiro login com Google, o FascinLead cria o perfil do usuario. Salvar novamente um e-mail existente atualiza seu perfil e sua loja; `Bloquear` impede novos acessos sem excluir o historico de captacoes.
-
-### 4. Piloto
-
-- testar com um grupo pequeno de colaboradores;
-- validar Android e iPhone reais;
-- simular perda e retorno de conexao;
-- acompanhar cotas gratuitas do Firebase;
-- corrigir problemas antes da liberacao para todas as lojas.
 
 ## Contribuicao
 
-Antes de alterar o repositorio:
+Antes de alterar o projeto:
 
-1. Leia o [AGENTS.md](AGENTS.md).
-2. Leia o [TDD](docs/TDD.md).
-3. Verifique o estado atual do Git.
-4. Preserve alteracoes existentes que nao pertencem a sua tarefa.
-5. Avalie impactos em operacao offline, seguranca, privacidade e cotas do Firebase.
-6. Implemente testes proporcionais ao risco da mudanca.
-7. Atualize a documentacao quando uma decisao permanente mudar.
+1. Leia [`AGENTS.md`](AGENTS.md) e [`docs/TDD.md`](docs/TDD.md).
+2. Preserve mudancas locais que nao pertencem a sua tarefa.
+3. Avalie impactos em operacao offline, permissoes e dados pessoais.
+4. Implemente testes proporcionais ao risco da alteracao.
+5. Atualize a documentacao afetada.
+6. Valide o fluxo em viewport mobile e desktop.
 
 ## Licenca
 
-Consulte o arquivo [LICENSE](LICENSE) deste repositorio.
+Consulte o arquivo [`LICENSE`](LICENSE).
