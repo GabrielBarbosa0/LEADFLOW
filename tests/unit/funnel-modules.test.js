@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { appointmentChangeEvent, funnelStageLabel, initialFunnelStage, leadCreationEvents } from '../../src/app/features/funnel/funnel-model.js';
-import { leadHistoryView } from '../../src/app/features/funnel/lead-history-view.js';
+import { leadHistoryEventIcon, leadHistoryView } from '../../src/app/features/funnel/lead-history-view.js';
 
 describe('funnel feature modules', () => {
   it('derives the initial funnel stage from the appointment', () => {
@@ -56,8 +56,20 @@ describe('funnel feature modules', () => {
 
     expect(markup).toContain('Agendamento realizado');
     expect(markup).toContain('Agendado');
+    expect(markup).toContain('data-lucide="calendar-plus"');
     expect(markup).not.toContain('<header>');
     expect(markup).not.toContain('FUNIL');
     expect(markup).not.toContain('<h3>Histórico do lead</h3>');
+  });
+
+  it('uses distinct icons for common history events and a safe fallback', () => {
+    expect(leadHistoryEventIcon('lead_created')).toBe('user-plus');
+    expect(leadHistoryEventIcon('appointment_scheduled')).toBe('calendar-plus');
+    expect(leadHistoryEventIcon('appointment_rescheduled')).toBe('calendar-sync');
+    expect(leadHistoryEventIcon('appointment_cancelled')).toBe('calendar-x');
+    expect(leadHistoryEventIcon('appointment_attended')).toBe('badge-check');
+    expect(leadHistoryEventIcon('appointment_missed')).toBe('calendar-minus');
+    expect(leadHistoryEventIcon('lead_reassigned')).toBe('user-round-cog');
+    expect(leadHistoryEventIcon('future_event')).toBe('clock-3');
   });
 });

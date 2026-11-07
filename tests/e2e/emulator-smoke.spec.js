@@ -310,6 +310,7 @@ test('lets a MEI schedule an unscheduled lead transferred by a store manager', a
   await page.getByText('Ver histórico', { exact: true }).click();
   const history = page.locator('#lead-history-dialog');
   await expect(history.getByText('Responsável transferido')).toBeVisible();
+  await expect(history.locator('svg.lucide-user-round-cog')).toBeVisible();
   await expect(history).toContainText('Colaborador Teste para MEI Teste');
   await history.getByRole('button', { name: 'Fechar histórico' }).click();
 
@@ -332,6 +333,11 @@ test('lets a MEI schedule an unscheduled lead transferred by a store manager', a
   await form.getByRole('button', { name: 'Salvar alterações' }).click();
 
   await expect(page.getByText('Agendamento salvo com sucesso.')).toBeVisible();
+  await page.getByRole('button', { name: 'Ver cadastro de Cliente Sem Agendamento' }).click();
+  await page.getByText('Ver histórico', { exact: true }).click();
+  const updatedHistory = page.locator('#lead-history-dialog');
+  await expect(updatedHistory.getByText('Agendamento realizado')).toBeVisible();
+  await expect(updatedHistory.locator('svg.lucide-calendar-plus')).toBeVisible();
 });
 
 test('renders the compact registration fields and product payment options', async ({ page }) => {
