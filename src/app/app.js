@@ -57,7 +57,7 @@ import { captureView } from './features/capture/capture-view.js';
 import { bindCpfAppointmentWarning, confirmDuplicateCpfAppointment } from './features/capture/cpf-appointment-warning.js';
 import { bindProductPaymentFields } from './features/capture/product-payment.js';
 import { bindPurchaseHolderFields } from './features/capture/purchase-holder.js';
-import { initializeLeadDetailForm, leadDetailSubmissionValues } from './features/leads/lead-detail-events.js';
+import { initializeLeadDetailForm, leadDetailHasNonAppointmentChanges, leadDetailSubmissionValues } from './features/leads/lead-detail-events.js';
 import { leadDetailAppointmentTimeField as renderLeadDetailAppointmentTimeField, selectedLeadDetailService as resolveLeadDetailService } from './features/leads/lead-appointment.js';
 import { leadDetailView as renderLeadDetailView } from './features/leads/lead-detail-view.js';
 import { leadAssignmentDialog as renderLeadAssignmentDialog } from './features/leads/lead-assignment-dialog.js';
@@ -915,8 +915,9 @@ function bindPageEvents() {
       const values = leadDetailSubmissionValues(editLeadForm, existingLead, state.leadDetailSchedule.settings, {
         managerReschedule: managementEdit && state.profile?.role === 'manager'
       });
+      const scheduleChanged = hasAppointmentScheduleChanged(existingLead, values);
       const appointmentChanged = existingLead?.appointmentDate && existingLead?.appointmentTime
-        && hasAppointmentScheduleChanged(existingLead, values);
+        && scheduleChanged;
       if (appointmentChanged
         && existingLead.appointmentAttendance !== 'attended') {
         const scheduleValidation = validateRescheduleSchedule(values);
@@ -968,7 +969,8 @@ function bindPageEvents() {
           render();
         }
       }, existingLead, {
-        appointmentOnly: !hasAccess('leads.edit_own'),
+        appointmentOnly: !hasAccess('leads.edit_own')
+          || (scheduleChanged && !leadDetailHasNonAppointmentChanges(editLeadForm)),
         profile: state.profile
       });
       setFieldErrors(editLeadForm, result.errors || {});

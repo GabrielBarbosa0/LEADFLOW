@@ -1049,8 +1049,8 @@ service cloud.firestore {
             ))
             || (!isAppointmentRescheduleUpdate() && !isAppointmentCancellationUpdate() && (
               isManagerAttendanceUpdate()
-              || isOwnerLeadUpdate()
               || isOwnerAppointmentUpdate()
+              || isOwnerLeadUpdate()
               || isCaptorFollowUpContactUpdate()
               || isManagerLeadUpdate()
             ))

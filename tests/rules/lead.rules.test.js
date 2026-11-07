@@ -1736,6 +1736,128 @@ describe('appointment slot reservations', () => {
     await assertSucceeds(batch.commit());
   });
 
+  it('lets a MEI schedule a complete unscheduled lead after a manager transfer', async () => {
+    const leadId = 'transferred-unscheduled-lead';
+    const result = createLeadDocument({
+      fullName: 'Cliente transferido sem agendamento',
+      phone: '(81) 99999-5678',
+      customerRg: '',
+      customerCpf: '',
+      birthDate: '1985-04-12',
+      sex: 'female',
+      preferredName: '',
+      strategyType: 'external',
+      street: 'Rua de Teste',
+      streetNumber: '100',
+      neighborhood: 'Centro',
+      city: 'Surubim',
+      state: 'PE',
+      interestId: 'eye-exam',
+      ametropiaIds: [],
+      pathologyIds: ['none'],
+      eyeSurgeryStatus: 'no',
+      eyeSurgeryType: '',
+      eyeSurgeryDetails: '',
+      careRouteOverride: 'automatic',
+      careRouteReasons: [],
+      examPaymentMethods: ['pix'],
+      needsTransport: 'false',
+      hasCompanion: 'false',
+      appointmentDate: '',
+      appointmentTime: '',
+      appointmentServiceId: 'eye-exam',
+      appointmentServiceName: 'Exame de vista',
+      appointmentDurationMinutes: 20,
+      schedulingMode: 'controlled',
+      notes: ''
+    }, {
+      uid: 'captor-uid',
+      displayName: 'Captador Teste',
+      storeId: 'loja-02'
+    }, 'installation-test', new Date('2026-11-06T12:00:00.000Z'));
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'leads', leadId), {
+        ...result.data,
+        createdAtServer: Timestamp.now(),
+        updatedAtServer: Timestamp.now(),
+        funnelUpdatedAtServer: Timestamp.now()
+      });
+    });
+
+    const managerDb = authenticatedDb('manager-uid', 'manager@example.com');
+    const transferBatch = writeBatch(managerDb);
+    transferBatch.update(doc(managerDb, 'leads', leadId), {
+      capturedByUid: 'mei-uid',
+      capturedByName: 'Captador MEI',
+      originalCapturedByUid: 'captor-uid',
+      originalCapturedByName: 'Captador Teste',
+      ownershipUpdatedAtServer: serverTimestamp(),
+      ownershipUpdatedByUid: 'manager-uid',
+      ownershipUpdatedByName: 'Gestor Teste',
+      ownershipChangeType: 'reassign',
+      updatedAtServer: serverTimestamp()
+    });
+    transferBatch.set(doc(managerDb, 'leads', leadId, 'history', 'reassigned'), {
+      leadId,
+      storeId: 'loja-02',
+      eventType: 'lead_reassigned',
+      funnelStage: 'awaiting_appointment',
+      reasonCode: 'reassign',
+      actorUid: 'manager-uid',
+      actorName: 'Gestor Teste',
+      actorRole: 'manager',
+      occurredAtClient: '2026-11-06T13:00:00.000Z',
+      occurredAtServer: serverTimestamp(),
+      schemaVersion: 1
+    });
+    await assertSucceeds(transferBatch.commit());
+
+    const meiDb = authenticatedDb('mei-uid', 'mei@example.com');
+    const scheduleBatch = writeBatch(meiDb);
+    scheduleBatch.update(doc(meiDb, 'leads', leadId), {
+      appointmentDate: '2026-11-14',
+      appointmentTime: '08:00',
+      appointmentSchedulingMode: 'controlled',
+      appointmentDurationMinutes: 20,
+      appointmentServiceId: 'eye-exam',
+      appointmentServiceName: 'Exame de vista',
+      appointmentAttendance: 'pending',
+      funnelStage: 'scheduled',
+      funnelReasonCode: '',
+      funnelUpdatedAtClient: '2026-11-06T14:00:00.000Z',
+      funnelUpdatedAtServer: serverTimestamp(),
+      appointmentCycle: 1,
+      updatedAtServer: serverTimestamp()
+    });
+    ['08:00', '08:10'].forEach((blockTime) => {
+      scheduleBatch.set(doc(meiDb, 'appointmentSlots', `slot-consultorio-surubim-2026-11-14-${blockTime}`), {
+        storeId: 'loja-02',
+        appointmentDate: '2026-11-14',
+        appointmentTime: '08:00',
+        blockTime,
+        durationMinutes: 20,
+        leadId,
+        capturedByUid: 'mei-uid',
+        createdAt: serverTimestamp()
+      });
+    });
+    scheduleBatch.set(doc(meiDb, 'leads', leadId, 'history', 'scheduled'), {
+      leadId,
+      storeId: 'loja-02',
+      eventType: 'appointment_scheduled',
+      funnelStage: 'scheduled',
+      reasonCode: '',
+      actorUid: 'mei-uid',
+      actorName: 'Captador MEI',
+      actorRole: 'captor',
+      occurredAtClient: '2026-11-06T14:00:00.000Z',
+      occurredAtServer: serverTimestamp(),
+      schemaVersion: 1
+    });
+    await assertSucceeds(scheduleBatch.commit());
+  });
+
   it('lets the owner reschedule an existing appointment without general edit permission', async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const adminDb = context.firestore();

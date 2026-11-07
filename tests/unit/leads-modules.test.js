@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { leadDetailSubmissionValues } from '../../src/app/features/leads/lead-detail-events.js';
+import { leadDetailHasNonAppointmentChanges, leadDetailSubmissionValues } from '../../src/app/features/leads/lead-detail-events.js';
 import { leadDetailAppointmentTimeField, selectedLeadDetailService } from '../../src/app/features/leads/lead-appointment.js';
 import { leadDetailView } from '../../src/app/features/leads/lead-detail-view.js';
 import { filterLeadRecords, leadsView } from '../../src/app/features/leads/leads-view.js';
@@ -61,6 +61,18 @@ function scheduleState(overrides = {}) {
 }
 
 describe('leads feature modules', () => {
+  it('distinguishes schedule-only edits from changes to lead data', () => {
+    const input = (name, value, defaultValue = value) => ({
+      name, value, defaultValue, disabled: false, type: 'text', tagName: 'INPUT'
+    });
+    const appointmentDate = input('appointmentDate', '2026-11-14', '');
+    const fullName = input('fullName', 'Maria Silva');
+    expect(leadDetailHasNonAppointmentChanges({ elements: [fullName, appointmentDate] })).toBe(false);
+
+    fullName.value = 'Maria Silva Santos';
+    expect(leadDetailHasNonAppointmentChanges({ elements: [fullName, appointmentDate] })).toBe(true);
+  });
+
   it('filters the lead list by name and phone', () => {
     const leads = [sampleLead(), sampleLead({ id: 'lead-2', fullName: 'João Santos', phoneSearch: '81988887777' })];
     expect(filterLeadRecords(leads, { query: 'maria' }).map((lead) => lead.id)).toEqual(['lead-1']);

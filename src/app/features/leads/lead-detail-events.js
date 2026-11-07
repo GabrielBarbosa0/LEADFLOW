@@ -6,6 +6,36 @@ import { bindProductPaymentFields } from '../capture/product-payment.js';
 import { bindPurchaseHolderFields } from '../capture/purchase-holder.js';
 import { bindTransportFields } from '../capture/capture-transport.js';
 
+const APPOINTMENT_FIELD_NAMES = new Set([
+  'appointmentDate',
+  'appointmentTime',
+  'appointmentServiceId',
+  'appointmentServiceName',
+  'appointmentDurationMinutes',
+  'schedulingMode'
+]);
+
+function controlChanged(control) {
+  if (control.type === 'checkbox' || control.type === 'radio') {
+    return control.checked !== control.defaultChecked;
+  }
+  if (control.tagName === 'SELECT') {
+    const current = [...control.options].filter((option) => option.selected).map((option) => option.value);
+    const initial = [...control.options].filter((option) => option.defaultSelected).map((option) => option.value);
+    return current.length !== initial.length || current.some((value, index) => value !== initial[index]);
+  }
+  return control.value !== control.defaultValue;
+}
+
+export function leadDetailHasNonAppointmentChanges(form) {
+  return [...form.elements].some((control) => (
+    control.name
+    && !control.disabled
+    && !APPOINTMENT_FIELD_NAMES.has(control.name)
+    && controlChanged(control)
+  ));
+}
+
 export function initializeLeadDetailForm(form, options) {
   const phoneInput = form.elements.phone;
   const notesInput = form.elements.notes;

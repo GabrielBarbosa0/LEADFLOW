@@ -225,6 +225,7 @@ test('requires formal confirmation when an internal collaborator reschedules a c
   const currentDate = await dateInput.inputValue();
   const targetDate = new Date(`${currentDate}T12:00:00.000Z`);
   targetDate.setUTCDate(targetDate.getUTCDate() + 7);
+  if (targetDate.getUTCDay() === 0) targetDate.setUTCDate(targetDate.getUTCDate() + 1);
   await dateInput.fill(targetDate.toISOString().slice(0, 10));
   const time = form.getByLabel('Horário disponível');
   await expect(time).toBeEnabled();
@@ -288,7 +289,7 @@ test('lets another collaborator explicitly claim a cancelled lead', async ({ pag
   await expect(form.getByRole('button', { name: /Salvar altera/ })).toBeVisible();
 });
 
-test('lets a store manager transfer a lead with an audited history entry', async ({ page }, testInfo) => {
+test('lets a MEI schedule an unscheduled lead transferred by a store manager', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
   await signIn(page, 'gestor@leadflow.test');
 
@@ -302,14 +303,35 @@ test('lets a store manager transfer a lead with an audited history entry', async
 
   const dialog = page.locator('#lead-assignment-dialog');
   await expect(dialog.getByRole('heading', { name: 'Transferir responsável' })).toBeVisible();
-  await dialog.getByLabel('Novo responsável').selectOption({ label: 'Colaborador Interno Multi-loja' });
+  await dialog.getByLabel('Novo responsável').selectOption({ label: 'MEI Teste' });
   await dialog.getByRole('button', { name: 'Confirmar transferência' }).click();
   await expect(dialog).toHaveCount(0);
 
   await page.getByText('Ver histórico', { exact: true }).click();
   const history = page.locator('#lead-history-dialog');
   await expect(history.getByText('Responsável transferido')).toBeVisible();
-  await expect(history).toContainText('Colaborador Teste para Colaborador Interno Multi-loja');
+  await expect(history).toContainText('Colaborador Teste para MEI Teste');
+  await history.getByRole('button', { name: 'Fechar histórico' }).click();
+
+  await page.getByRole('button', { name: 'Sair' }).click();
+  await page.getByLabel('E-mail').fill('mei@leadflow.test');
+  await page.getByLabel('Senha').fill(password);
+  await page.getByRole('button', { name: 'Entrar com e-mail' }).click();
+  await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible();
+  await page.goto('/#/leads');
+  await page.getByRole('button', { name: 'Ver cadastro de Cliente Sem Agendamento' }).click();
+
+  const form = page.locator('#edit-lead-form');
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + 7);
+  if (targetDate.getDay() === 0) targetDate.setDate(targetDate.getDate() + 1);
+  await form.getByLabel('Data do pré-agendamento').fill(targetDate.toISOString().slice(0, 10));
+  const time = form.getByLabel('Horário disponível');
+  await expect(time).toBeEnabled();
+  await time.selectOption({ index: 1 });
+  await form.getByRole('button', { name: 'Salvar alterações' }).click();
+
+  await expect(page.getByText('Agendamento salvo com sucesso.')).toBeVisible();
 });
 
 test('renders the compact registration fields and product payment options', async ({ page }) => {
