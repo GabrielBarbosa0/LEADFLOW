@@ -92,7 +92,6 @@ export function eyeTriageFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
       <div class="field" data-field="eyeSurgeryStatus">
         <label for="${idPrefix}-surgery-status">Já realizou cirurgia nos olhos? <span aria-hidden="true">*</span></label>
         <select id="${idPrefix}-surgery-status" name="eyeSurgeryStatus">${eyeSurgeryStatusOptions(values.eyeSurgeryStatus || '')}</select>
-        <small class="field-help">Informacao obrigatoria para todos os clientes.</small>
         <small class="field-error"></small>
       </div>
       <div class="field eye-surgery-dependent ${showSurgeryType ? '' : 'is-disabled'}" data-field="eyeSurgeryType" data-eye-surgery-type>

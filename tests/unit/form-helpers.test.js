@@ -99,7 +99,7 @@ describe('shared form helpers', () => {
     postalCode.dispatch('input');
 
     expect(lookup).not.toHaveBeenCalled();
-    expect(status.textContent).toContain('Preencha o endereço manualmente');
+    expect(status.textContent).toBe('');
   });
 
   it('updates the birth age hint', () => {

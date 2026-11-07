@@ -59,7 +59,7 @@ export function bindPostalCodeLookup(form, {
       return;
     }
     if (!online()) {
-      setStatus('Sem internet. Preencha o endereço manualmente.');
+      setStatus('');
       return;
     }
 

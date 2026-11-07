@@ -44,7 +44,6 @@ export function captureView({
         <select id="capture-store" name="storeId" required ${storeChoice ? '' : 'aria-disabled="true" tabindex="-1"'}>
           ${storeChoice ? '<option value="">Selecione a loja</option>' : ''}${storeOptions}
         </select>
-        <small>${storeChoice ? 'Os serviços, horários e limites serão carregados para esta unidade.' : 'Unidade definida no acesso deste colaborador.'}</small>
         <small class="field-error"></small>
       </div>
       ${selectedStoreId && !scheduleState.loaded ? '<div class="notice notice-info" data-schedule-loading><i data-lucide="refresh-cw"></i><span>Carregando agenda, transporte e horários desta loja...</span></div>' : ''}

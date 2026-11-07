@@ -223,6 +223,9 @@ describe('capture feature modules', () => {
     expect(markup).toContain('value="external">Externa</option>');
     expect(markup).toContain('value="after-sales">Pós-venda</option>');
     expect(markup).toContain('value="spontaneous-visit">Visita espontânea</option>');
+    expect(markup).not.toContain('Os serviços, horários e limites serão carregados para esta unidade.');
+    expect(markup).not.toContain('Unidade definida no acesso deste colaborador.');
+    expect(markup).not.toContain('Informacao obrigatoria para todos os clientes.');
     expect(markup).toContain('class="field-row document-fields"');
     expect(markup).toContain('class="field-row demographic-fields"');
     expect(markup).toContain('class="field-row preferred-postal-fields"');
