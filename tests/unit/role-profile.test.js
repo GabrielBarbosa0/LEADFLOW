@@ -11,8 +11,8 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(6);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 6)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(7);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 7)).toBe(true);
     expect(SYSTEM_ROLE_PROFILES.map((profile) => profile.name)).toEqual([
       'Colaborador Interno',
       'Colaborador Externo',
@@ -83,6 +83,7 @@ describe('role profiles', () => {
     const manager = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-manager');
     expect(manager).toMatchObject({ name: 'Gestor', baseRole: 'manager' });
     expect(manager.permissions).toContain('external.operations.read');
+    expect(manager.permissions).toContain('savwin.review');
   });
 
   it('creates an own-data profile without team permissions', () => {

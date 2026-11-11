@@ -31,6 +31,106 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   }).toBe(true);
 });
 
+test('loads store-scoped SavWin aggregates for an authorized manager', async ({ page }) => {
+  await signIn(page, 'gestor@leadflow.test');
+  await page.goto('/#/dashboard');
+
+  const storeFilter = page.locator('#dashboard-store');
+  await expect(storeFilter).toBeVisible();
+  await expect(storeFilter.locator('option')).toHaveText([
+    'Todas as lojas permitidas',
+    /Loja 02/,
+    /Loja 06/
+  ]);
+  await expect(storeFilter.locator('option[value="loja-04"]')).toHaveCount(0);
+  await expect(storeFilter.locator('option[value="loja-05"]')).toHaveCount(0);
+  await expect(page.getByText('Selecione uma loja para consultar os indicadores de vendas.')).toBeVisible();
+
+  const applyFilters = page.getByRole('button', { name: 'Aplicar filtros' });
+  await expect(applyFilters).toBeEnabled();
+  await storeFilter.selectOption('loja-02');
+  await applyFilters.click();
+
+  const salesSection = page.locator('.dashboard-sales-stats');
+  await expect(salesSection.getByRole('heading', { name: 'Resultados de vendas' })).toBeVisible();
+  await expect(salesSection).toContainText('Loja 02');
+  await expect(salesSection).toContainText('Vendas conciliadas');
+  await expect(salesSection).toContainText('Dados atualizados');
+  await expect(salesSection).toContainText('Cobertura completa');
+  await expect(salesSection).toContainText(/Recebidas\s*4/);
+  await expect(salesSection).toContainText(/Eleg.veis\s*4/);
+  await expect(salesSection).toContainText(/Conciliadas\s*4/);
+  await expect(salesSection).toContainText('4');
+  await expect(salesSection).toContainText(/R\$\s*3\.500,00/);
+  await expect(salesSection).toContainText(/Ticket m.dio/);
+  await expect(salesSection).toContainText('41,67%');
+  await expect(salesSection).not.toContainText(/CPF|numero da OS|n.mero da OS/i);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
+test('loads only store-scoped SavWin review cases for an authorized manager', async ({ page }) => {
+  await signIn(page, 'gestor@leadflow.test');
+  await page.goto('/#/savwin-review');
+
+  const storeFilter = page.locator('#savwin-review-store');
+  await expect(storeFilter).toBeVisible();
+  await expect(storeFilter.locator('option')).toHaveText([/Loja 02/, /Loja 06/]);
+  await expect(storeFilter.locator('option[value="loja-04"]')).toHaveCount(0);
+  await expect(storeFilter.locator('option[value="loja-05"]')).toHaveCount(0);
+  await expect(page.locator('.savwin-review-metrics > div').first()).toContainText(/Pendentes\s*2/);
+  await expect(page.locator('[data-review-case]:visible')).toHaveCount(2);
+  await expect(page.locator('body')).not.toContainText(/52998224725|4257|review_case_04_c61a9b30/i);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
+test('records a justified SavWin review decision in homologation', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
+  await signIn(page, 'gestor@leadflow.test');
+  await page.goto('/#/savwin-review');
+
+  await expect(page.locator('[data-review-case]:visible')).toHaveCount(2);
+  await page.locator('[data-review-case]:visible').first().click();
+  const dialog = page.locator('#savwin-review-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Justificativa').fill('Conferido no ambiente local de homologacao.');
+  await dialog.getByRole('button', { name: 'Registrar decisao' }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.savwin-review-metrics > div').first()).toContainText(/Pendentes\s*1/);
+  await expect(page.locator('.savwin-review-metrics > div').nth(1)).toContainText(/Resolvidos\s*2/);
+  await expect(page.locator('[data-review-case]:visible')).toHaveCount(1);
+});
+
+test('loads personal SavWin aggregates without sale details for a captor', async ({ page }) => {
+  await signIn(page, 'colaborador@leadflow.test');
+  await page.goto('/#/goals');
+
+  const summary = page.locator('.personal-sales-summary');
+  await expect(summary.getByRole('heading', { name: 'Meus resultados de vendas' })).toBeVisible();
+  await expect(summary).toContainText('37,5%');
+  await expect(summary).toContainText('3');
+  await expect(summary).toContainText(/R\$\s*2\.400,00/);
+  await expect(summary).toContainText(/R\$\s*800,00/);
+  await expect(summary).toContainText('Dados atualizados');
+  await expect(summary).toContainText('Cobertura completa');
+  await expect(summary).toContainText(/Recebidas\s*4/);
+  await expect(summary).not.toContainText(/CPF|numero da OS|n.mero da OS/i);
+  const cards = await summary.locator('.personal-sales-grid > div').evaluateAll((nodes) => nodes.map((node) => {
+    const box = node.getBoundingClientRect();
+    return { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+  }));
+  for (let index = 0; index < cards.length; index += 1) {
+    for (let compare = index + 1; compare < cards.length; compare += 1) {
+      const overlaps = cards[index].left < cards[compare].right
+        && cards[index].right > cards[compare].left
+        && cards[index].top < cards[compare].bottom
+        && cards[index].bottom > cards[compare].top;
+      expect(overlaps).toBe(false);
+    }
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
 test('fills the address from a complete CEP without changing the street number', async ({ page }) => {
   await page.route('https://viacep.com.br/ws/50000123/json/', async (route) => {
     await route.fulfill({

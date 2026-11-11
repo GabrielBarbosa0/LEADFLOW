@@ -28,6 +28,13 @@ export function resetSessionState(state, {
     filters: createDefaultManagementFilters()
   };
   state.savwin = { loading: false, error: '', result: null };
+  state.salesStats = {
+    loading: false, loaded: false, error: '', records: [], period: '', storeId: ''
+  };
+  state.savwinReview = {
+    loading: false, loaded: false, saving: false, error: '', records: [], activeId: '',
+    filters: { storeId: '', period: monthKeyFromDate(), status: 'pending' }
+  };
   state.appointments = {
     loading: false,
     loaded: false,
@@ -168,6 +175,14 @@ export function resetSessionState(state, {
     editingGroupId: '',
     duplicatingGroupId: '',
     pendingDeleteGroupId: '',
+    salesStats: {
+      enabled: false,
+      loading: false,
+      loaded: false,
+      error: '',
+      record: null,
+      period: ''
+    },
     draft: createDefaultGoalDraft()
   };
 }

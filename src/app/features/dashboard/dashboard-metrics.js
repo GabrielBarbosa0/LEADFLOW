@@ -49,3 +49,34 @@ export function dashboardMetrics(records, upcomingRecords, storeLabel, now = new
   const activeStoreCount = new Set(records.map((lead) => lead.storeId).filter(Boolean)).size;
   return { summary, attended, missed, pending, attendanceRate, daily, stores, captors, activeStoreCount, appointmentDistribution: appointmentDistribution(records) };
 }
+
+export function salesStatsSummary(records = []) {
+  const summary = records.reduce((total, record) => ({
+    capturedLeads: total.capturedLeads + Number(record.capturedLeads || 0),
+    convertedCapturedLeads: total.convertedCapturedLeads + Number(record.convertedCapturedLeads || 0),
+    salesCount: total.salesCount + Number(record.salesCount || 0),
+    netRevenue: total.netRevenue + Number(record.netRevenue || 0),
+    conversionDays: total.conversionDays
+      + (Number(record.averageDaysToFirstConversion || 0) * Number(record.firstConversionsMeasured || 0)),
+    firstConversionsMeasured: total.firstConversionsMeasured + Number(record.firstConversionsMeasured || 0)
+  }), {
+    capturedLeads: 0,
+    convertedCapturedLeads: 0,
+    salesCount: 0,
+    netRevenue: 0,
+    conversionDays: 0,
+    firstConversionsMeasured: 0
+  });
+  return {
+    ...summary,
+    conversionRate: summary.capturedLeads
+      ? Math.round((summary.convertedCapturedLeads / summary.capturedLeads) * 10000) / 100
+      : null,
+    averageTicket: summary.salesCount
+      ? Math.round((summary.netRevenue / summary.salesCount) * 100) / 100
+      : null,
+    averageDaysToFirstConversion: summary.firstConversionsMeasured
+      ? Math.round((summary.conversionDays / summary.firstConversionsMeasured) * 100) / 100
+      : null
+  };
+}

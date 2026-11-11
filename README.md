@@ -200,6 +200,7 @@ e [`docs/API-CATALOG.md`](docs/API-CATALOG.md) para conhecer essa fronteira.
 | [`docs/API-CATALOG.md`](docs/API-CATALOG.md) | Catalogo de APIs, funcoes e integracoes |
 | [`docs/PERMISSOES-FIREBASE.md`](docs/PERMISSOES-FIREBASE.md) | Modelo de permissoes e operacao no Firebase |
 | [`docs/HOSTINGER.md`](docs/HOSTINGER.md) | Publicacao e diagnostico do frontend em producao |
+| [`docs/PLANO-INTEGRACAO-SAVWIN-E-METAS.md`](docs/PLANO-INTEGRACAO-SAVWIN-E-METAS.md) | Descoberta da API SavWin, arquitetura n8n e evolucao planejada das metas |
 | [`docs/MATRIZ-PERFIS-E-FLUXOS-HOMOLOGACAO.md`](docs/MATRIZ-PERFIS-E-FLUXOS-HOMOLOGACAO.md) | Matriz de perfis e fluxos de validacao |
 | [`docs/DADOS-HOMOLOGACAO-LOCAL.md`](docs/DADOS-HOMOLOGACAO-LOCAL.md) | Dados ficticios e preparacao do ambiente local |
 

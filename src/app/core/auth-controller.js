@@ -183,6 +183,8 @@ export async function startAuthenticationController(dependencies) {
         state.management.activeLead = null;
         state.dashboardUpcoming.loaded = false;
         state.dashboardUpcoming.records = [];
+        state.salesStats.loaded = false;
+        state.salesStats.records = [];
         state.externalOperations.loaded = false;
         state.externalOperations.records = [];
         state.access.loaded = false;

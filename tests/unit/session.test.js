@@ -7,6 +7,8 @@ function dirtyState() {
     leads: [{ id: 'lead-1' }],
     management: { loaded: true },
     savwin: { result: { id: 'sale-1' } },
+    salesStats: { loaded: true, records: [{ id: 'stats-1' }] },
+    savwinReview: { loaded: true, saving: true, records: [{ id: 'review-1' }], activeId: 'review-1' },
     appointments: { loaded: true },
     confirmations: { loaded: true },
     appointmentCreate: { saving: true },
@@ -35,6 +37,11 @@ describe('core session', () => {
     expect(state.profile).toBeNull();
     expect(state.leads).toEqual([]);
     expect(state.management).toMatchObject({ loaded: false, records: [] });
+    expect(state.salesStats).toMatchObject({ loaded: false, records: [], period: '', storeId: '' });
+    expect(state.savwinReview).toMatchObject({
+      loaded: false, saving: false, records: [], activeId: '',
+      filters: { storeId: '', status: 'pending' }
+    });
     expect(state.appointments).toMatchObject({ loaded: false, records: [] });
     expect(state.externalOperations.transportMode).toBe('with');
     expect(state.leadHistory).toEqual({
@@ -45,5 +52,6 @@ describe('core session', () => {
     expect(state.settings).toMatchObject({ loaded: false, services: [] });
     expect(state.settings.roleDraft).toEqual({ name: '', scope: 'own', permissions: ['leads.create'] });
     expect(state.goals).toMatchObject({ loaded: false, records: [], draft: { title: 'Meta de captações' } });
+    expect(state.goals.salesStats).toMatchObject({ enabled: false, loaded: false, record: null, period: '' });
   });
 });

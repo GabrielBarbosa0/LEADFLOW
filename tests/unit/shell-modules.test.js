@@ -94,4 +94,11 @@ describe('application shell modules', () => {
     expect(kanbanMarkup).toContain('app-main layout-wide layout-kanban');
     expect(managementMarkup).not.toContain('layout-kanban');
   });
+
+  it('uses the wide management layout for the SavWin review route', () => {
+    const markup = appShellView({ state: { ...state, route: 'savwin-review' }, page: '<section>Review</section>', canManage: () => true, hasAccess, pendingFollowUps: () => [] });
+
+    expect(markup).toContain('app-main layout-wide');
+    expect(currentPageTitle({ route: 'savwin-review' }, () => true)).toContain('SavWin');
+  });
 });

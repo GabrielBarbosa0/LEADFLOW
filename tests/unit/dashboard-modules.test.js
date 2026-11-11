@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { dashboardDistributionRows, performanceTableRows, reportDistributionPanel, statusRows } from '../../src/app/features/dashboard/dashboard-components.js';
 import { filterDashboardRecords, loadDashboardUpcomingRecords } from '../../src/app/features/dashboard/dashboard-data.js';
-import { appointmentDistribution, dashboardCaptorStats, dashboardGroupStats, dashboardMetrics } from '../../src/app/features/dashboard/dashboard-metrics.js';
+import { appointmentDistribution, dashboardCaptorStats, dashboardGroupStats, dashboardMetrics, salesStatsSummary } from '../../src/app/features/dashboard/dashboard-metrics.js';
 import { dashboardView } from '../../src/app/features/dashboard/dashboard-view.js';
 
 const records = [
@@ -44,6 +44,21 @@ describe('dashboard feature modules', () => {
     ]);
   });
 
+  it('summarizes store sales without averaging averages', () => {
+    expect(salesStatsSummary([
+      { capturedLeads: 2, convertedCapturedLeads: 1, salesCount: 2, netRevenue: 300, averageDaysToFirstConversion: 4, firstConversionsMeasured: 1 },
+      { capturedLeads: 3, convertedCapturedLeads: 2, salesCount: 1, netRevenue: 300, averageDaysToFirstConversion: 10, firstConversionsMeasured: 2 }
+    ])).toMatchObject({
+      capturedLeads: 5,
+      convertedCapturedLeads: 3,
+      conversionRate: 60,
+      salesCount: 3,
+      netRevenue: 600,
+      averageTicket: 200,
+      averageDaysToFirstConversion: 8
+    });
+  });
+
   it('renders reusable distribution and table components', () => {
     const items = [{ label: 'Optometrista', count: 1, percentage: 50 }];
     expect(dashboardDistributionRows(items)).toContain('50% dos cadastros');
@@ -67,12 +82,37 @@ describe('dashboard feature modules', () => {
         stores: [{ id: 'loja-06', displayLabel: 'Loja 06 - Surubim' }]
       },
       upcoming: { loading: false, loaded: true, error: '', truncated: false },
+      salesStats: {
+        loading: false,
+        loaded: true,
+        error: '',
+        period: '2026-10',
+        storeId: 'loja-06',
+        records: [{
+          capturedLeads: 2,
+          convertedCapturedLeads: 1,
+          salesCount: 2,
+          netRevenue: 500,
+          firstConversionsMeasured: 1,
+          averageDaysToFirstConversion: 5,
+          coverageStartDate: '2026-10-01', coverageEndDate: '2026-10-29',
+          salesReceived: 3, salesEligible: 3, salesReconciled: 2,
+          lastSuccessfulSyncAt: new Date()
+        }]
+      },
       savwin: { loading: false, error: '', result: null },
       savwinEnabled: false,
       managementLimit: 500,
       appointmentsLimit: 500
     });
     expect(markup).toContain('Taxa de agendamento');
+    expect(markup).toContain('Resultados de vendas');
+    expect(markup).toContain('HOMOLOGACAO');
+    expect(markup).toContain('Vendas conciliadas');
+    expect(markup).toContain('Cobertura completa');
+    expect(markup).toContain('Recebidas');
+    expect(markup).toContain('500,00');
+    expect(markup).toContain('50%');
     expect(markup).toContain('id="dashboard-store"');
     expect(markup).toContain('value="loja-06" selected');
     expect(markup).toContain('Desempenho por unidade');
@@ -102,5 +142,20 @@ describe('dashboard feature modules', () => {
     expect(markup).not.toContain('data-dashboard-ranking-close>Fechar</button>');
     expect(markup).toContain('<dt>Cadastros</dt><dd>1</dd>');
     expect(markup).toContain('Loja 06 - Surubim');
+  });
+
+  it('does not imply a broad query when no dashboard store is selected', () => {
+    const metrics = dashboardMetrics([], [], (id) => id);
+    const markup = dashboardView({
+      allowed: true,
+      records: [],
+      metrics,
+      management: { filters: { startDate: '2026-10-01', endDate: '2026-10-31', storeId: '' }, loading: false, error: '', truncated: false },
+      upcoming: { loading: false, loaded: true, error: '', truncated: false },
+      savwin: { loading: false, error: '', result: null },
+      salesStats: { loading: false, loaded: true, error: '', records: [], period: '2026-10', storeId: '' },
+      savwinEnabled: false
+    });
+    expect(markup).toContain('Selecione uma loja');
   });
 });

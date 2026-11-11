@@ -35,6 +35,7 @@ service cloud.firestore {
         || (userProfile().role == 'manager' && permission in [
           'management.view', 'appointments.view', 'appointments.attendance', 'appointments.cancel',
           'followups.team', 'goals.manage', 'dashboard.view', 'leads.export',
+          'savwin.review',
           'leads.clinical_update', 'leads.edit_all', 'leads.delete'
         ]);
     }
@@ -1135,6 +1136,55 @@ service cloud.firestore {
         && request.resource.data.createdByUid == resource.data.createdByUid
         && request.resource.data.createdAt == resource.data.createdAt;
       allow delete: if isAdmin();
+    }
+
+    // Dados individuais do SavWin permanecem inacessiveis ao cliente.
+    match /savwinSales/{saleId} {
+      allow read, write: if false;
+    }
+
+    match /leadSaleAttributions/{saleId} {
+      allow read, write: if false;
+    }
+
+    match /savwinSyncRuns/{runId} {
+      allow read, write: if false;
+    }
+
+    match /savwinReviewCases/{caseId} {
+      allow get, list: if isAdmin()
+        || (activeUser()
+          && hasPermission('savwin.review')
+          && managerHasStore(resource.data.storeId));
+      allow create, delete: if false;
+      allow update: if (isAdmin() || (activeUser()
+          && hasPermission('savwin.review')
+          && managerHasStore(resource.data.storeId)))
+        && resource.data.reviewStatus == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['reviewStatus', 'reviewReason', 'reviewedByUid', 'reviewedAt'])
+        && request.resource.data.reviewStatus in ['resolved', 'dismissed']
+        && request.resource.data.reviewReason is string
+        && request.resource.data.reviewReason.size() >= 5
+        && request.resource.data.reviewReason.size() <= 500
+        && request.resource.data.reviewedByUid == request.auth.uid
+        && request.resource.data.reviewedAt == request.time;
+    }
+
+    match /captorSalesStats/{statsId} {
+      allow get, list: if isAdmin()
+        || (activeUser()
+          && hasPermission('goals.view_own')
+          && resource.data.captorUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /storeCaptorSalesStats/{statsId} {
+      allow get, list: if isAdmin()
+        || (activeUser()
+          && hasPermission('dashboard.view')
+          && managerHasStore(resource.data.storeId));
+      allow create, update, delete: if false;
     }
 
     match /appointmentSlots/{slotId} {

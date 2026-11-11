@@ -31,6 +31,7 @@ services:
     init: true
     environment:
       GCLOUD_PROJECT: demo-leadflow
+      SAVWIN_N8N_HOMOLOG_TOKEN: ${SAVWIN_N8N_HOMOLOG_TOKEN:-}
     ports:
       - "127.0.0.1:4000:4000"
       - "127.0.0.1:5001:5001"

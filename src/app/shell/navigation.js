@@ -10,7 +10,7 @@ export function bottomNavigation({ state, hasAccess, canManage, pendingFollowUps
   const followUpCount = pendingFollowUps().length;
   const itemCountClass = items.length === 5 ? 'has-five-items' : items.length === 6 ? 'has-six-items' : '';
   return `<nav class="bottom-nav ${itemCountClass}" aria-label="Navegação principal">${items.map(([route, icon, label]) => {
-    const active = state.route === route || (route === 'leads' && state.route === 'lead') || (route === 'management' && ['management-lead', 'kanban', 'dashboard', 'appointments', 'confirmations', 'settings', 'follow-ups'].includes(state.route));
+    const active = state.route === route || (route === 'leads' && state.route === 'lead') || (route === 'management' && ['management-lead', 'kanban', 'dashboard', 'savwin-review', 'appointments', 'confirmations', 'settings', 'follow-ups'].includes(state.route));
     return `<button type="button" data-route="${route}" class="${active ? 'is-active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${icon}"></i><span>${label}</span>${route === 'follow-ups' && followUpCount ? `<strong class="nav-notification-count">${followUpCount > 99 ? '99+' : followUpCount}</strong>` : ''}</button>`;
   }).join('')}</nav>`;
 }

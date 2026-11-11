@@ -4,9 +4,9 @@
 | --- | --- |
 | Documento | Technical Design Document (TDD) |
 | Projeto | FascinLead |
-| Versao | 3.2 |
+| Versao | 3.3 |
 | Status | Em implementacao |
-| Data | 06/11/2026 |
+| Data | 08/11/2026 |
 | Responsavel | Oticas Fascinante |
 
 ### Manutencao deste documento
@@ -41,7 +41,7 @@ O sistema permite cadastro rapido e oferece uma capacidade experimental de capta
 - Atendimento ou campanhas pelo WhatsApp.
 - Confirmacoes automaticas antes de consultas e exames. O pre-agendamento pode ser consultado na agenda, e faltas confirmadas geram retorno interno para o captador.
 - Anamnese, recomendacao de lentes ou provador virtual.
-- Metas de vendas, comissoes, faturamento ou conciliacao de vendas. Metas de quantidade de leads captados estao no escopo.
+- Metas de vendas, comissoes, faturamento ou conciliacao de vendas permanecem fora da versao atual. A evolucao aprovada para descoberta e implementacao faseada de conversoes e faturamento esta documentada em `docs/PLANO-INTEGRACAO-SAVWIN-E-METAS.md` e nao deve ser tratada como funcionalidade entregue.
 - Integracoes de escrita com SavWin, AppOk ou CRMs externos.
 - Automacoes, funis e operacao de CRM dentro do FascinLead; a API de saida de leads e uma fronteira de integracao aprovada.
 - Envio de notificacoes push na primeira versao.
@@ -377,7 +377,29 @@ O inventario completo das interfaces de rede esta em `docs/API-CATALOG.md`. O pr
 
 A publicacao do frontend nao publica automaticamente regras, indices ou Functions. Cada artefato deve ser implantado e validado de forma explicita no ambiente correto.
 
-### 5.4 Estrutura atual de diretorios
+### 5.4 Ponte SavWin de homologacao
+
+A primeira fronteira n8n -> LeadFlow e a Function HTTP `savwinDryRunMatch`. No
+estado atual ela e exclusivamente local, somente leitura e aceita apenas
+`mode = dry_run`. A execucao exige Firebase Emulator Suite, projeto
+`demo-leadflow`, `FIRESTORE_EMULATOR_HOST` e token local; qualquer ambiente
+remoto e recusado antes da inicializacao de uma consulta ao Firestore.
+O export da rota tambem e condicional ao emulador, portanto ela nao aparece no
+manifesto de Functions publicaveis fora desse ambiente.
+
+O contrato recebe no maximo 200 OSs previamente consolidadas pelo n8n. A
+Function procura leads por CPF, aplica data, janela e unidade, nao resolve
+ambiguidades automaticamente e devolve somente identificadores internos,
+estado da correspondencia e totais. Nome e CPF nao aparecem na resposta. Nao
+ha escrita, modo `apply`, fallback para projeto remoto ou deploy aprovado.
+
+Como o n8n Cloud nao consegue acessar o emulador em `127.0.0.1`, a validacao
+ponta a ponta depende de uma decisao posterior entre tunel temporario
+autenticado e projeto separado de homologacao. O projeto de producao nao pode
+ser usado como substituto. O contrato operacional e os passos estao em
+`docs/PLANO-INTEGRACAO-SAVWIN-E-METAS.md` e `docs/API-CATALOG.md`.
+
+### 5.5 Estrutura atual de diretorios
 
 ```text
 FASCINLEAD/
@@ -738,6 +760,123 @@ O repositorio possui servico e regras para associar, por lead, um CPF e uma vend
 
 Antes de ligar esse recurso a uma tela, devem ser aprovados escopo, base legal, permissao granular, retencao, relatorios e o impacto na afirmacao de que o FascinLead nao realiza conciliacao de vendas.
 
+O modelo de um documento por lead nao comporta adequadamente varias OSs para o mesmo cliente. A evolucao planejada deve consolidar as linhas do SavWin por loja e OS, manter a atribuicao separada da venda e gerar agregados autorizados para leitura. O contrato observado, as regras propostas e as etapas de migracao estao em `docs/PLANO-INTEGRACAO-SAVWIN-E-METAS.md`.
+
+#### 7.8.1 Modelo SavWin protegido de homologacao
+
+Os nomes `savwinSales`, `leadSaleAttributions`, `savwinSyncRuns`,
+`captorSalesStats`, `storeCaptorSalesStats` e `savwinReviewCases` ficam reservados para o modelo v1
+da integracao. Nao ha endpoint de escrita nem importacao no frontend. Vendas,
+atribuicoes e execucoes permanecem integralmente bloqueadas para clientes.
+
+Cada OS usa um ID deterministico derivado de loja e numero da OS. O mesmo ID e
+usado na atribuicao, permitindo reprocessar uma venda sem criar duplicatas e
+permitindo que um lead receba varias OSs distintas. `savwinSales` nao armazena o
+CPF integral: apenas HMAC-SHA-256 com chave externa ao repositorio. A venda e a
+decisao de atribuicao permanecem separadas, e resultados sem correspondencia nao
+geram documentos de atribuicao.
+
+O gerador puro em `functions/savwin-persistence-plan.js` produz um plano de
+escrita para testes e homologacao, mas nao executa o plano. Qualquer futura
+fronteira de aplicacao deve continuar restrita ao emulador ate a aprovacao de
+retencao, acesso, cancelamentos, reprocessamento e conciliacao financeira.
+
+O executor em `functions/savwin-persistence-executor.js` ainda nao e exportado
+como Function ou rota. Ele exige simultaneamente o projeto `demo-leadflow`, um
+`FIRESTORE_EMULATOR_HOST` e `SAVWIN_PERSISTENCE_APPLY_MODE=emulator_only`. Cada
+execucao possui uma assinatura; repetir o mesmo `runId` e a mesma assinatura e
+um `no-op`, enquanto reutilizar o `runId` para outro plano e rejeitado. Uma nova
+execucao pode atualizar a mesma OS sem duplica-la. Se uma atribuicao automatica
+deixar de ser valida, o documento e marcado como inativo e revogado, preservando
+o historico em vez de ser excluido.
+
+Os agregados mensais separam duas bases temporais. `capturedLeads`,
+`convertedCapturedLeads` e `conversionRate` usam a coorte de leads captados no
+mes; `convertedLeads`, `salesCount`, `netRevenue` e `averageTicket` usam as OSs
+vendidas no mes. `averageDaysToFirstConversion` considera somente a primeira OS
+ativa de cada lead. Os campos `captureCohortBasis = lead_capture_month` e
+`salesBasis = sale_month` tornam essa diferenca explicita no documento.
+
+O calculador e o reconstrutor em `functions/savwin-stats.js` continuam sem rota
+publica e exigem as mesmas travas de emulador do executor. Os agregados sao uma
+projecao reconstruivel: repetir o calculo substitui o mesmo ID deterministico e
+remove apenas agregados obsoletos do periodo recalculado.
+
+`captorSalesStats` e a projecao pessoal, agregada por captador e periodo. Sua
+leitura exige usuario ativo, `goals.view_own` e `captorUid` igual ao UID
+autenticado; administradores tambem podem ler. Como esse documento pode reunir
+mais de uma unidade, ele nunca e usado para a visao gerencial.
+
+`storeCaptorSalesStats` e a projecao gerencial, particionada por `storeId`,
+captador e periodo. A coorte de captacao usa `capture_store`, enquanto vendas e
+receita usam `sale_store`; os campos `captureStoreBasis` e `salesStoreBasis`
+registram essa semantica. Gestores precisam de `dashboard.view` e acesso a
+`storeId`; administradores tambem podem ler. Toda escrita nas duas projecoes e
+negada pelas Security Rules e permanece exclusiva do reconstrutor protegido.
+
+O SDK cliente consulta essas projecoes somente por
+`src/services/sales-stats-service.js`. A consulta pessoal sempre combina
+`captorUid == profile.uid`, `period == YYYY-MM` e limite de um documento. A
+consulta gerencial sempre combina um unico `storeId` previamente autorizado e
+`period == YYYY-MM`. O normalizador devolve apenas os campos publicos do
+agregado e descarta qualquer campo inesperado.
+
+O dashboard gerencial integra `storeCaptorSalesStats` apenas quando o filtro
+seleciona uma unidade explicita e as datas pertencem ao mesmo mes. Sem loja ou
+com intervalo entre meses, a interface exibe orientacao e nao consulta o
+Firestore. A secao de homologacao mostra somente vendas conciliadas, receita
+liquida, ticket medio e conversao da coorte; nenhum documento individual e
+carregado. Mudancas de sessao, permissao, rota, loja ou periodo invalidam o
+estado local antes de uma nova consulta autorizada.
+
+O seed local v9 cria exclusivamente no projeto `demo-leadflow` agregados
+ficticios por loja para o mes corrente. O smoke E2E autenticado valida que um
+gestor consulta somente unidades autorizadas, recebe os totais agregados e nao
+ve CPF nem identificadores individuais de OS. Esse caminho usa Auth e Firestore
+Emulator; nao possui fallback para projeto Firebase remoto.
+
+As projecoes publicas tambem carregam somente metadados agregados de cobertura:
+`coverageStartDate`, `coverageEndDate`, `salesReceived`, `salesEligible`,
+`salesReconciled` e `lastSuccessfulSyncAt`. O cliente usa esses campos para
+classificar atualidade e completude sem ler `savwinSyncRuns`, que permanece
+privada. A interface apresenta a mesma faixa de confiabilidade nas visoes
+pessoal e gerencial, sem expor CPF, OS ou itens de venda.
+
+`savwinReviewCases` e uma projecao operacional separada das vendas protegidas.
+Cada documento contem apenas `storeId`, `period`, data e valor liquido da venda,
+estados de correspondencia e conciliacao, estado da revisao, justificativa,
+identidade do revisor, timestamps e versao do esquema. CPF integral, hash de
+CPF e numero de OS nao fazem parte desse contrato. Resultados sem atribuicao
+criam ou atualizam o caso; uma correspondencia posterior remove a pendencia.
+Uma decisao ja concluida e preservada em reprocessamentos enquanto o tipo da
+pendencia permanecer igual.
+
+A leitura exige perfil administrador ou gestor ativo com `savwin.review` e
+acesso a `storeId`. O servico cliente sempre combina uma loja autorizada,
+`period == YYYY-MM` e limite de 200 documentos. A interface oferece filtros por
+loja, mes e estado e usa uma representacao responsiva para tabela e cartoes. O
+cliente pode alterar somente `reviewStatus`, `reviewReason`, `reviewedByUid` e
+`reviewedAt` de um caso `pending`; a decisao deve ser `resolved` ou `dismissed`,
+a justificativa deve ter entre 5 e 500 caracteres, o revisor deve ser o usuario
+autenticado e o horario deve vir do servidor. Criacao, exclusao, segunda decisao
+e alteracao dos campos de origem sao negadas pelas Security Rules.
+
+Os testes de regras, persistencia e navegador usam somente o projeto
+`demo-leadflow`, Auth/Firestore Emulator e registros ficticios. Nao existe
+deploy, acesso ao Firebase de producao ou consulta ao SavWin real nesse fluxo.
+
+A tela de metas tambem consulta `captorSalesStats` para o proprio UID quando o
+perfil possui `goals.view_own`. O resumo mensal pessoal mostra apenas conversao,
+quantidade de vendas, receita e ticket medio. Falhas dessa projecao possuem
+estado separado e nao impedem a leitura das metas de captacao. O smoke E2E do
+captador confirma que CPF e numero de OS nao aparecem na interface.
+
+Para calcular corretamente a coorte, o processo privilegiado deve fornecer ao
+calculador todas as atribuicoes ativas potencialmente ligadas aos leads da
+coorte, inclusive quando a primeira compra ocorreu em outro mes. Consultar
+somente as vendas do mes produziria uma taxa de conversao incompleta e nao e um
+modo de uso permitido para essa metrica.
+
 ### 7.9 Colecao `accessAuditEvents`
 
 A Callable Function registra redefinicoes administrativas de senha com acao, UID/e-mail do administrador, UID/e-mail do alvo e data do servidor. A colecao nao possui acesso pelo cliente nas regras atuais; leitura e retencao dependem de operacao administrativa pelo Firebase Admin/Console.
@@ -765,6 +904,8 @@ Cada documento representa a meta individual de um captador. Uma atribuicao em ma
 ```
 
 O progresso nao e gravado no documento. Ele e calculado a partir dos leads sincronizados para evitar contadores divergentes e operacoes privilegiadas no plano Spark.
+
+Uma versao futura podera adicionar metas de conversao e faturamento a partir de agregados conciliados do SavWin. Essa mudanca exige `schemaVersion` novo, compatibilidade com `targetCount`, migracao em `dry-run`, regras de acesso e aceite dos dados antes de alterar a interface oficial de metas. Consulte `docs/PLANO-INTEGRACAO-SAVWIN-E-METAS.md`.
 
 ### 7.11 Indices
 
@@ -1086,6 +1227,8 @@ Um projeto de homologacao separado e desejavel quando o volume ou a equipe aumen
 O deploy completo pode ser executado manualmente pelo Firebase CLI. O repositorio tambem possui GitHub Actions para publicar somente o frontend estatico no GitHub Pages quando houver `push` na `main` ou disparo manual. O workflow instala dependencias, executa os testes unitarios e de regras do Firestore, valida a configuracao Firebase e gera o build com a base `/FASCINLEAD/`.
 
 Rules, indices e Callable Functions nao fazem parte desse workflow estatico. A promocao para producao deve executar os testes de regras, revisar o projeto Firebase selecionado e publicar esses componentes separadamente.
+
+Evolucoes da integracao SavWin e do sistema de metas devem ser desenvolvidas em branch separada da versao oficial, validadas em homologacao e congeladas como release candidate. A producao so recebe uma candidata aprovada depois dos testes funcionais, de permissao, privacidade, idempotencia e conciliacao. Frontend, regras, indices, Functions e workflows n8n possuem publicacoes independentes e devem ter suas versoes compativeis registradas no checklist da release. O procedimento detalhado esta em `docs/PLANO-INTEGRACAO-SAVWIN-E-METAS.md`.
 
 ### 15.4 Migracoes e rotinas administrativas
 

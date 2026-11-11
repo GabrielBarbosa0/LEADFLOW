@@ -64,6 +64,23 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
     dashboardFilters: {
       storeId: ''
     },
+    salesStats: {
+      loading: false,
+      loaded: false,
+      error: '',
+      records: [],
+      period: '',
+      storeId: ''
+    },
+    savwinReview: {
+      loading: false,
+      loaded: false,
+      saving: false,
+      error: '',
+      records: [],
+      activeId: '',
+      filters: { storeId: '', period: monthKeyFromDate(), status: 'pending' }
+    },
     dashboardRanking: {
       open: false,
       storeId: '',
@@ -252,6 +269,14 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       editingGroupId: '',
       duplicatingGroupId: '',
       pendingDeleteGroupId: '',
+      salesStats: {
+        enabled: false,
+        loading: false,
+        loaded: false,
+        error: '',
+        record: null,
+        period: ''
+      },
       draft: createDefaultGoalDraft()
     },
     savwin: {

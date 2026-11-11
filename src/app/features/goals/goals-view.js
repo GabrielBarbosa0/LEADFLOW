@@ -2,7 +2,35 @@ import { GOALS_LEAD_LIMIT } from '../../../services/goal-service.js';
 import { profileStoreIds } from '../../../utils/permissions.js';
 import { STORES } from '../../../utils/stores.js';
 import { escapeHtml, formatGoalDate, profileInitials, storeLabel, toLocalDateInput } from '../../shared/formatters.js';
+import { salesCoverageMarkup } from '../../shared/sales-coverage-view.js';
 import { groupGoalRecords } from './goals-data.js';
+
+const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const percentFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+
+function personalSalesStatsMarkup(salesStats = {}) {
+  if (!salesStats.enabled) return '';
+  const periodLabel = salesStats.period
+    ? `${salesStats.period.slice(5)}/${salesStats.period.slice(0, 4)}`
+    : '';
+  let content = '';
+  if (salesStats.loading) {
+    content = '<div class="personal-sales-empty"><i data-lucide="loader-circle"></i><span>Carregando seus resultados...</span></div>';
+  } else if (salesStats.error) {
+    content = `<div class="notice notice-warning"><i data-lucide="circle-alert"></i><span>${escapeHtml(salesStats.error)}</span></div>`;
+  } else if (!salesStats.record) {
+    content = '<div class="personal-sales-empty"><i data-lucide="chart-no-axes-combined"></i><span>Nenhum resultado conciliado dispon&iacute;vel para este m&ecirc;s.</span></div>';
+  } else {
+    const stats = salesStats.record;
+    content = `${salesCoverageMarkup([stats])}<div class="personal-sales-grid" aria-label="Seus indicadores de vendas">
+      <div><span>Convers&atilde;o da coorte</span><strong>${stats.conversionRate === null ? '-' : `${percentFormatter.format(stats.conversionRate)}%`}</strong><small>${stats.convertedCapturedLeads} de ${stats.capturedLeads} lead(s)</small><i data-lucide="chart-spline"></i></div>
+      <div><span>Vendas conciliadas</span><strong>${stats.salesCount}</strong><small>OS atribu&iacute;das a voc&ecirc;</small><i data-lucide="receipt-text"></i></div>
+      <div><span>Faturamento l&iacute;quido</span><strong>${currencyFormatter.format(stats.netRevenue)}</strong><small>no m&ecirc;s da venda</small><i data-lucide="badge-dollar-sign"></i></div>
+      <div><span>Ticket m&eacute;dio</span><strong>${stats.averageTicket === null ? '-' : currencyFormatter.format(stats.averageTicket)}</strong><small>por OS atribu&iacute;da</small><i data-lucide="circle-dollar-sign"></i></div>
+    </div>`;
+  }
+  return `<section class="personal-sales-summary" aria-labelledby="personal-sales-title"><header><div><span>HOMOLOGACAO</span><h2 id="personal-sales-title">Meus resultados de vendas</h2></div><strong>${escapeHtml(periodLabel)}</strong></header>${content}</section>`;
+}
 
 function goalStatus(goal) {
   const today = toLocalDateInput(new Date());
@@ -34,7 +62,7 @@ export function goalsView({ state, isAdmin, canManageGoals }) {
       }).join('')
     : `<div class="empty-state goals-empty"><i data-lucide="target"></i><strong>Nenhuma meta cadastrada</strong><p>${manager ? 'Crie a primeira meta de captação para a equipe.' : 'Quando uma meta for atribuída, ela aparecerá aqui.'}</p></div>`;
   const editor = manager && editorOpen ? `<dialog id="goal-editor-dialog" class="access-editor-dialog goal-editor-dialog" aria-labelledby="goal-editor-title"><form id="goal-form" class="goal-form ${duplicatingGroupId ? 'is-duplicating' : ''}" novalidate><header><div><span class="eyebrow">META DA EQUIPE</span><h2 id="goal-editor-title">${editingGroupId ? 'Editar meta' : duplicatingGroupId ? 'Duplicar meta' : 'Nova meta'}</h2><p>${duplicatingGroupId ? 'Revise os dados da cópia antes de criar.' : 'Defina a quantidade de leads por colaborador no período.'}</p></div><button class="icon-button" type="button" data-cancel-goal-edit aria-label="Fechar"><i data-lucide="x"></i></button></header><div class="goal-editor-body"><div class="field" data-field="title"><label for="goal-title">Título</label><input id="goal-title" name="title" maxlength="80" value="${escapeHtml(draft.title)}" required /><small class="field-error"></small></div><div class="goal-form-grid"><div class="field" data-field="targetCount"><label for="goal-target">Quantidade</label><input id="goal-target" name="targetCount" type="number" min="1" max="10000" step="1" value="${draft.targetCount}" required /><small class="field-error"></small></div><div class="field" data-field="startDate"><label for="goal-start">Início</label><input id="goal-start" name="startDate" type="date" value="${escapeHtml(draft.startDate)}" required /><small class="field-error"></small></div><div class="field" data-field="endDate"><label for="goal-end">Fim</label><input id="goal-end" name="endDate" type="date" value="${escapeHtml(draft.endDate)}" required /><small class="field-error"></small></div></div><div class="field" data-field="storeId"><label for="goal-store">Loja</label>${isAdmin() || goalStores.length > 1 ? `<select id="goal-store" name="storeId" required>${storeOptions}</select>` : `<input id="goal-store" name="storeId" value="${escapeHtml(draft.storeId)}" type="hidden" /><div class="readonly-field">${escapeHtml(storeLabel(draft.storeId))}</div>`}<small class="field-error"></small></div><fieldset class="goal-members field" data-field="assigneeUids"><legend>Colaboradores <span data-goal-selected-count>${selectedCount} selecionado(s)</span></legend><div class="goal-member-list">${memberOptions}</div><small class="field-error"></small></fieldset></div><footer><button class="button button-secondary" type="button" data-cancel-goal-edit>Cancelar</button><button class="button button-primary" type="submit" ${saving || !visibleMembers.length ? 'disabled' : ''}><i data-lucide="${editingGroupId ? 'save' : duplicatingGroupId ? 'copy' : 'target'}"></i><span>${saving ? 'Salvando...' : editingGroupId ? 'Salvar alterações' : duplicatingGroupId ? 'Criar cópia' : 'Criar metas'}</span></button></footer></form></dialog>` : '';
-  const metrics = `<section class="goal-metrics" aria-label="Resumo das metas"><div><span>Metas</span><strong>${groups.length}</strong></div><div><span>Concluídas</span><strong>${completedGoals}</strong></div><div><span>Captações contabilizadas</span><strong>${totalCaptured}</strong></div></section>`;
+  const metrics = `${personalSalesStatsMarkup(state.goals.salesStats)}<section class="goal-metrics" aria-label="Resumo das metas"><div><span>Metas</span><strong>${groups.length}</strong></div><div><span>Concluídas</span><strong>${completedGoals}</strong></div><div><span>Captações contabilizadas</span><strong>${totalCaptured}</strong></div></section>`;
   const results = `<section class="goals-results" aria-busy="${loading}"><div class="access-list-heading"><div><strong>${manager ? 'Desempenho da equipe' : 'Objetivos atribuídos'}</strong><span>${groups.length} meta(s)</span></div></div>${loading && !records.length ? '<div class="empty-state"><i data-lucide="refresh-cw"></i><strong>Carregando metas...</strong></div>' : cards}</section>`;
   return `${manager ? `<section class="goals-heading goals-heading-compact"><div class="goals-heading-actions"><button class="button button-secondary" type="button" data-action="reload-goals" ${loading ? 'disabled' : ''}><i data-lucide="refresh-cw"></i><span>Atualizar</span></button><button class="button button-primary" type="button" data-goal-new><i data-lucide="circle-plus"></i><span>Nova meta</span></button></div></section>` : ''}${error ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(error)}</span></div>` : ''}${truncated ? `<div class="notice notice-warning"><i data-lucide="info"></i><span>O cálculo atingiu ${GOALS_LEAD_LIMIT} leads. Reduza os períodos das metas para conferir o resultado completo.</span></div>` : ''}${manager ? `${metrics}${results}${editor}` : `<section class="personal-goals">${metrics}${results}</section>`}${selectedGroup ? `<dialog id="delete-goal-dialog" class="confirmation-dialog" aria-labelledby="delete-goal-title"><div class="confirmation-dialog-icon"><i data-lucide="trash-2"></i></div><div><p class="eyebrow">EXCLUIR META</p><h2 id="delete-goal-title">Remover esta meta?</h2><p>A meta &ldquo;${escapeHtml(selectedGroup.title)}&rdquo; será removida de ${selectedGroup.goals.length} colaborador(es). As captações permanecem intactas.</p></div><div class="confirmation-dialog-actions"><button class="button button-secondary" type="button" data-close-goal-dialog>Cancelar</button><button class="button button-danger-solid" type="button" data-confirm-delete-goal="${escapeHtml(selectedGroup.id)}"><i data-lucide="trash-2"></i><span>Excluir meta</span></button></div></dialog>` : ''}`;
 }

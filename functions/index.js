@@ -1,8 +1,15 @@
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { FieldValue, getFirestore } = require('firebase-admin/firestore');
-const { HttpsError, onCall } = require('firebase-functions/v2/https');
+const { timingSafeEqual } = require('node:crypto');
+const { HttpsError, onCall, onRequest } = require('firebase-functions/v2/https');
 const systemRoleConfig = require('./system-role-profiles.json');
+const {
+  SavwinDryRunInputError,
+  buildDryRunResult,
+  isValidCpf,
+  validateDryRunPayload
+} = require('./savwin-dry-run');
 
 initializeApp();
 
@@ -11,6 +18,38 @@ const PERMISSION_SCHEMA_VERSION = systemRoleConfig.permissionSchemaVersion;
 const SYSTEM_ROLE_PROFILES = new Map(systemRoleConfig.profiles.map((profile) => [profile.id, profile]));
 const LEGACY_ROLE_PROFILE_ALIASES = new Map(Object.entries(systemRoleConfig.legacyProfileAliases || {}));
 const DEFAULT_ROLE_PROFILE_IDS = { captor: 'system-external-leader', manager: 'system-manager', admin: 'system-admin' };
+
+function isSavwinEmulatorEnvironment() {
+  const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '';
+  return process.env.FUNCTIONS_EMULATOR === 'true'
+    && projectId === 'demo-leadflow'
+    && Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+}
+
+function hasValidHomologationToken(request) {
+  const expected = String(process.env.SAVWIN_N8N_HOMOLOG_TOKEN || '');
+  const provided = String(request.get('x-leadflow-homolog-token') || '');
+  if (expected.length < 32 || expected.length !== provided.length) return false;
+  return timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+}
+
+async function leadsByCpfForDryRun(firestore, sales) {
+  const cpfs = [...new Set(sales.map((sale) => sale.customerCpf).filter(isValidCpf))];
+  const leadsByCpf = new Map(cpfs.map((cpf) => [cpf, []]));
+  for (let offset = 0; offset < cpfs.length; offset += 30) {
+    const chunk = cpfs.slice(offset, offset + 30);
+    const snapshot = await firestore.collection('leads')
+      .where('customerCpf', 'in', chunk)
+      .limit(500)
+      .get();
+    for (const document of snapshot.docs) {
+      const lead = { id: document.id, ...document.data() };
+      const cpf = String(lead.customerCpf || '');
+      if (leadsByCpf.has(cpf)) leadsByCpf.get(cpf).push(lead);
+    }
+  }
+  return leadsByCpf;
+}
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
@@ -538,4 +577,40 @@ exports.listExternalOperations = onCall({ region: 'southamerica-east1' }, async 
     .sort((left, right) => `${left.appointmentDate}-${left.appointmentTime}-${left.fullName}`
       .localeCompare(`${right.appointmentDate}-${right.appointmentTime}-${right.fullName}`, 'pt-BR'));
   return { records, truncated: snapshot.size === 500 };
+});
+
+if (isSavwinEmulatorEnvironment()) exports.savwinDryRunMatch = onRequest({
+  region: 'southamerica-east1',
+  cors: false,
+  timeoutSeconds: 30,
+  memory: '256MiB'
+}, async (request, response) => {
+  response.set('Cache-Control', 'no-store');
+  response.set('X-Content-Type-Options', 'nosniff');
+  // This endpoint must remain unusable outside the local Emulator Suite.
+  if (!isSavwinEmulatorEnvironment()) {
+    response.status(403).json({ ok: false, error: 'emulator_only' });
+    return;
+  }
+  if (request.method !== 'POST') {
+    response.set('Allow', 'POST').status(405).json({ ok: false, error: 'method_not_allowed' });
+    return;
+  }
+  if (!hasValidHomologationToken(request)) {
+    response.status(401).json({ ok: false, error: 'invalid_homologation_token' });
+    return;
+  }
+
+  try {
+    const { sales, attributionWindowDays } = validateDryRunPayload(request.body);
+    const leadsByCpf = await leadsByCpfForDryRun(getFirestore(), sales);
+    response.status(200).json(buildDryRunResult(sales, leadsByCpf, attributionWindowDays));
+  } catch (error) {
+    if (error instanceof SavwinDryRunInputError) {
+      response.status(400).json({ ok: false, error: 'invalid_payload', message: error.message });
+      return;
+    }
+    console.error('savwinDryRunMatch failed without logging request data', error?.message || error);
+    response.status(500).json({ ok: false, error: 'internal_error' });
+  }
 });

@@ -74,7 +74,10 @@ export async function startLifecycle({
     if (managementRoutes.includes(state.route) && !managementRoutes.includes(previousRoute)) {
       state.management.loaded = false;
     }
-    if (state.route === 'dashboard' && previousRoute !== 'dashboard') state.dashboardUpcoming.loaded = false;
+    if (state.route === 'dashboard' && previousRoute !== 'dashboard') {
+      state.dashboardUpcoming.loaded = false;
+      state.salesStats.loaded = false;
+    }
     if (previousRoute === 'management-lead' && state.route !== 'management-lead') state.management.activeLead = null;
     if (state.route !== 'appointments') stopAppointmentsSubscription();
     if (state.route !== 'confirmations') stopConfirmationsSubscription();

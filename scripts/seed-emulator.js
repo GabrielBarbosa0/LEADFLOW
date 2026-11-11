@@ -6,7 +6,7 @@ import { DEFAULT_STORE_SCHEDULE, appointmentBlockTimes } from '../src/utils/sche
 import { appointmentResourceId } from '../src/utils/stores.js';
 
 const PROJECT_ID = 'demo-leadflow';
-const SEED_VERSION = 4;
+const SEED_VERSION = 9;
 const TEST_PASSWORD = 'LeadFlow@123';
 const resetRequested = process.argv.includes('--reset');
 const authHost = String(process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099');
@@ -81,6 +81,7 @@ function leadRecord({
   id,
   fullName,
   phoneSearch,
+  customerCpf = '',
   storeId = 'loja-02',
   capturedByUid = 'test-collaborator',
   capturedByName = 'Colaborador Teste',
@@ -118,7 +119,7 @@ function leadRecord({
     preferredName,
     phone: `+55${phoneSearch}`,
     phoneSearch,
-    customerCpf: '',
+    customerCpf,
     customerRg: '',
     savwinCode: `TEST-${id.toUpperCase()}`.slice(0, 40),
     score: 750,
@@ -302,6 +303,8 @@ async function writeSeed(db, roleConfig, users) {
   }));
 
   const leads = [
+    leadRecord({ id: 'lead-savwin-homolog-04', fullName: 'Cliente SavWin Homologacao 04', phoneSearch: '81990000904', customerCpf: '52998224725', storeId: 'loja-04', capturedByUid: 'test-telemarketing', capturedByName: 'Colaborador Interno Multi-loja', createdOffset: -10 }),
+    leadRecord({ id: 'lead-savwin-homolog-05', fullName: 'Cliente SavWin Homologacao 05', phoneSearch: '81990000905', customerCpf: '12612562478', storeId: 'loja-05', capturedByUid: 'test-mei', capturedByName: 'MEI Teste', createdOffset: -10 }),
     leadRecord({ id: 'lead-pending-today', fullName: 'Cliente Pendente Hoje', phoneSearch: '81990000001', appointmentDate: dateInSaoPaulo(0), appointmentTime: '08:00' }),
     leadRecord({ id: 'lead-attended-today', fullName: 'Cliente Compareceu Hoje', phoneSearch: '81990000002', appointmentDate: dateInSaoPaulo(0), appointmentTime: '08:20', appointmentAttendance: 'attended' }),
     leadRecord({ id: 'lead-missed-yesterday', fullName: 'Cliente Faltou Ontem', phoneSearch: '81990000003', appointmentDate: dateInSaoPaulo(-1), appointmentTime: '09:00', appointmentAttendance: 'missed' }),
@@ -380,6 +383,121 @@ async function writeSeed(db, roleConfig, users) {
       createdByName: 'Atendente Balcao Teste',
       updatedAt: walkIn.calledAt || timestampAt(0, 9),
       updatedByUid: 'test-receptionist-02',
+      schemaVersion: 1
+    });
+  }
+
+  const statsPeriod = dateInSaoPaulo(0).slice(0, 7);
+  const statsCoverageStart = `${statsPeriod}-01`;
+  const statsCoverageEnd = dateInSaoPaulo(0);
+  const storeCoverage = {
+    'loja-02': { salesReceived: 4, salesEligible: 4, salesReconciled: 4 },
+    'loja-04': { salesReceived: 6, salesEligible: 6, salesReconciled: 6 }
+  };
+  const storeSalesStats = [
+    {
+      id: 'scs_seed_loja_02_collaborator',
+      storeId: 'loja-02',
+      captorUid: 'test-collaborator',
+      capturedLeads: 8,
+      convertedCapturedLeads: 3,
+      convertedLeads: 3,
+      salesCount: 3,
+      netRevenue: 2400,
+      averageDaysToFirstConversion: 7,
+      firstConversionsMeasured: 3
+    },
+    {
+      id: 'scs_seed_loja_02_external',
+      storeId: 'loja-02',
+      captorUid: 'test-external-leader',
+      capturedLeads: 4,
+      convertedCapturedLeads: 2,
+      convertedLeads: 1,
+      salesCount: 1,
+      netRevenue: 1100,
+      averageDaysToFirstConversion: 10,
+      firstConversionsMeasured: 2
+    },
+    {
+      id: 'scs_seed_loja_04_telemarketing',
+      storeId: 'loja-04',
+      captorUid: 'test-telemarketing',
+      capturedLeads: 12,
+      convertedCapturedLeads: 5,
+      convertedLeads: 5,
+      salesCount: 6,
+      netRevenue: 7350.5,
+      averageDaysToFirstConversion: 8,
+      firstConversionsMeasured: 5
+    }
+  ];
+  for (const stats of storeSalesStats) {
+    const { id, ...values } = stats;
+    batch.set(db.doc(`storeCaptorSalesStats/${id}`), {
+      ...values,
+      period: statsPeriod,
+      timeZone: 'America/Sao_Paulo',
+      captureCohortBasis: 'lead_capture_month',
+      captureStoreBasis: 'capture_store',
+      conversionRate: values.capturedLeads
+        ? Math.round((values.convertedCapturedLeads / values.capturedLeads) * 10000) / 100
+        : null,
+      salesBasis: 'sale_month',
+      salesStoreBasis: 'sale_store',
+      averageTicket: values.salesCount
+        ? Math.round((values.netRevenue / values.salesCount) * 100) / 100
+        : null,
+      lastCalculatedAt: now,
+      coverageStartDate: statsCoverageStart,
+      coverageEndDate: statsCoverageEnd,
+      ...storeCoverage[stats.storeId],
+      lastSuccessfulSyncAt: now,
+      schemaVersion: 2
+    });
+  }
+
+  batch.set(db.doc('captorSalesStats/cs_seed_collaborator'), {
+    captorUid: 'test-collaborator',
+    period: statsPeriod,
+    timeZone: 'America/Sao_Paulo',
+    captureCohortBasis: 'lead_capture_month',
+    capturedLeads: 8,
+    convertedCapturedLeads: 3,
+    conversionRate: 37.5,
+    salesBasis: 'sale_month',
+    convertedLeads: 3,
+    salesCount: 3,
+    netRevenue: 2400,
+    averageTicket: 800,
+    averageDaysToFirstConversion: 7,
+    firstConversionsMeasured: 3,
+    storeIds: ['loja-02'],
+    lastCalculatedAt: now,
+    coverageStartDate: statsCoverageStart,
+    coverageEndDate: statsCoverageEnd,
+    salesReceived: 4,
+    salesEligible: 4,
+    salesReconciled: 4,
+    lastSuccessfulSyncAt: now,
+    schemaVersion: 2
+  });
+
+  const reviewCases = [
+    { id: 'review_case_02_a7c4d921', storeId: 'loja-02', saleDate: statsCoverageEnd, netValue: 650, matchStatus: 'no_lead', reconciliationStatus: 'matched', reviewStatus: 'pending' },
+    { id: 'review_case_02_f2b8e604', storeId: 'loja-02', saleDate: statsCoverageEnd, netValue: 420, matchStatus: 'missing_cpf', reconciliationStatus: 'matched', reviewStatus: 'pending' },
+    { id: 'review_case_02_19de73a5', storeId: 'loja-02', saleDate: statsCoverageEnd, netValue: 880, matchStatus: 'reconciliation_divergent', reconciliationStatus: 'divergent', reviewStatus: 'resolved', reviewReason: 'Valor conferido no relatorio ficticio de homologacao.', reviewedByUid: 'test-manager', reviewedAt: now },
+    { id: 'review_case_04_c61a9b30', storeId: 'loja-04', saleDate: statsCoverageEnd, netValue: 990, matchStatus: 'ambiguous', reconciliationStatus: 'matched', reviewStatus: 'pending' }
+  ];
+  for (const reviewCase of reviewCases) {
+    const { id, ...values } = reviewCase;
+    batch.set(db.doc(`savwinReviewCases/${id}`), {
+      ...values,
+      period: statsPeriod,
+      reviewReason: values.reviewReason || '',
+      reviewedByUid: values.reviewedByUid || '',
+      reviewedAt: values.reviewedAt || null,
+      sourceUpdatedAt: now,
       schemaVersion: 1
     });
   }

@@ -10,6 +10,8 @@ import { demoExternalOperations, loadExternalOperations } from '../services/exte
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
 import { ensureDefaultAppointmentServices, loadAppointmentServices } from '../services/service-catalog-service.js';
 import { consultLocalSavwinSales, isLocalSavwinEnabled } from '../services/savwin-service.js';
+import { loadStoreSalesStats } from '../services/sales-stats-service.js';
+import { loadSavwinReviewCases, saveSavwinReviewDecision } from '../services/savwin-review-service.js';
 import { downloadLeadsCsv } from '../utils/lead-export.js';
 import { monthKeyFromDate, monthRange, shiftMonth } from '../utils/calendar.js';
 import { formatBrazilianPhone } from '../utils/phone.js';
@@ -90,6 +92,8 @@ import { initializeKanbanScrollbar } from './features/kanban/kanban-scrollbar.js
 import { filterDashboardRecords, loadDashboardUpcomingRecords } from './features/dashboard/dashboard-data.js';
 import { dashboardCaptorStats, dashboardMetrics } from './features/dashboard/dashboard-metrics.js';
 import { dashboardView as renderDashboardView } from './features/dashboard/dashboard-view.js';
+import { savwinReviewView as renderSavwinReviewView } from './features/savwin-review/savwin-review-view.js';
+import { bindSavwinReviewEvents } from './features/savwin-review/savwin-review-events.js';
 import { loadGoalsData as loadGoalsFeatureData, ensureGoalsData as ensureGoalsFeatureData } from './features/goals/goals-data.js';
 import { bindGoalDialog } from './features/goals/goal-dialog.js';
 import { handleGoalsClick } from './features/goals/goals-events.js';
@@ -164,6 +168,7 @@ function canAccessRoute(route) {
     'management-lead': () => hasAccess('management.view'),
     kanban: () => hasAccess('management.view'),
     dashboard: () => hasAccess('dashboard.view'),
+    'savwin-review': () => hasAccess('savwin.review'),
     appointments: () => hasAccess('appointments.view'),
     confirmations: () => hasAccess('appointments.view'),
     'walk-ins': () => hasAccess('walkins.manage'),
@@ -203,7 +208,7 @@ function homeView() {
 }
 
 function appView() {
-  const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, 'external-operations': externalOperationsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
+  const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, 'external-operations': externalOperationsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, 'savwin-review': savwinReviewView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
   const page = pages[state.route] || homeView;
   return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${leadAssignmentDialogView()}${appointmentCancellationDialogView()}${appointmentRescheduleDialogView()}`, canManage, hasAccess, pendingFollowUps });
 }
@@ -454,6 +459,7 @@ function managementView() {
       followUps: hasAccess('followups.team'),
       kanban: canManage(),
       dashboard: hasAccess('dashboard.view'),
+      savwinReview: hasAccess('savwin.review'),
       export: hasAccess('leads.export'),
       archive: hasAccess('leads.delete')
     },
@@ -503,6 +509,7 @@ function dashboardView() {
       stores: rankingStores
     },
     upcoming: state.dashboardUpcoming,
+    salesStats: state.salesStats,
     savwin: state.savwin,
     savwinEnabled: isLocalSavwinEnabled,
     managementLimit: MANAGEMENT_QUERY_LIMIT,
@@ -515,6 +522,11 @@ function appointmentRecords() {
 
 function allowedAppointmentStores() {
   return isAdmin() ? STORES : STORES.filter((store) => profileStoreIds(state.profile).includes(store.id));
+}
+
+function savwinReviewView() {
+  const allowedStores = isAdmin() ? STORES : STORES.filter((store) => profileStoreIds(state.profile).includes(store.id));
+  return renderSavwinReviewView({ review: state.savwinReview, allowedStores });
 }
 
 function appointmentsView() {
@@ -659,6 +671,15 @@ function handleConnectivityChange() {
 
 function bindPageEvents() {
   initializeKanbanScrollbar();
+  if (state.route === 'savwin-review') {
+    bindSavwinReviewEvents({
+      state,
+      render,
+      load: loadSavwinReviewData,
+      save: (item, values) => saveSavwinReviewDecision(state.profile, item, values),
+      showToast
+    });
+  }
   bindAppointmentListScroll(document.querySelector('.appointment-list'), state.appointments);
   if (state.route === 'external-operations') {
     bindExternalOperationsEvents({ state, render, reload: loadExternalOperationsData, showToast });
@@ -1468,11 +1489,13 @@ function bindPageEvents() {
     state.dashboardFilters.storeId = String(values.storeId || '');
     state.management.loaded = false;
     state.dashboardUpcoming.loaded = false;
+    state.salesStats.loaded = false;
     state.management.page = 1;
     state.savwin.error = '';
     state.savwin.result = null;
     loadManagementData();
     loadDashboardUpcomingData();
+    loadDashboardSalesStatsData();
   });
 
   const appointmentsStore = document.querySelector('#appointments-store');
@@ -1755,11 +1778,77 @@ async function loadDashboardUpcomingData() {
   render();
 }
 
+function selectedDashboardSalesPeriod() {
+  const startMonth = String(state.management.filters.startDate || '').slice(0, 7);
+  const endMonth = String(state.management.filters.endDate || '').slice(0, 7);
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(startMonth) && startMonth === endMonth ? startMonth : '';
+}
+
+async function loadDashboardSalesStatsData() {
+  if (state.route !== 'dashboard' || !hasAccess('dashboard.view')
+    || state.salesStats.loading || state.salesStats.loaded) return;
+  const storeId = state.dashboardFilters.storeId;
+  const period = selectedDashboardSalesPeriod();
+  state.salesStats.error = '';
+  state.salesStats.records = [];
+  state.salesStats.storeId = storeId;
+  state.salesStats.period = period;
+  if (!storeId || !period) {
+    state.salesStats.loaded = true;
+    render();
+    return;
+  }
+  state.salesStats.loading = true;
+  render();
+  try {
+    state.salesStats.records = await loadStoreSalesStats(state.profile, period, storeId);
+    state.salesStats.loaded = true;
+  } catch (error) {
+    state.salesStats.error = error?.code === 'permission-denied'
+      ? 'Seu perfil nao pode consultar os indicadores desta unidade.'
+      : 'Nao foi possivel carregar os indicadores de vendas.';
+    state.salesStats.loaded = true;
+  } finally {
+    state.salesStats.loading = false;
+    render();
+  }
+}
+
+async function loadSavwinReviewData() {
+  if (state.route !== 'savwin-review' || !hasAccess('savwin.review')
+    || state.savwinReview.loading || state.savwinReview.loaded) return;
+  const allowedStoreIds = profileStoreIds(state.profile).filter((storeId) => STORES.some((store) => store.id === storeId));
+  if (!state.savwinReview.filters.storeId) {
+    state.savwinReview.filters.storeId = allowedStoreIds[0] || STORES[0]?.id || '';
+  }
+  state.savwinReview.loading = true;
+  state.savwinReview.error = '';
+  render();
+  try {
+    state.savwinReview.records = await loadSavwinReviewCases(state.profile, state.savwinReview.filters);
+    state.savwinReview.loaded = true;
+  } catch (error) {
+    state.savwinReview.records = [];
+    state.savwinReview.loaded = true;
+    state.savwinReview.error = error?.code === 'permission-denied'
+      ? 'Seu perfil nao pode consultar as revisoes desta unidade.'
+      : 'Nao foi possivel carregar as revisoes do SavWin.';
+  } finally {
+    state.savwinReview.loading = false;
+    render();
+  }
+}
+
+function ensureSavwinReviewData() {
+  if (state.route === 'savwin-review' && !state.savwinReview.loaded) loadSavwinReviewData();
+}
+
 function ensureManagementData() {
   if (['management', 'management-lead', 'kanban', 'dashboard'].includes(state.route) && canManage() && !state.management.loaded) {
     loadManagementData();
   }
   loadDashboardUpcomingData();
+  loadDashboardSalesStatsData();
 }
 
 function existingLeadForDetail(leadId = currentRouteParam()) {
@@ -1976,6 +2065,7 @@ function refreshAuthorizedData() {
   ensureLeadDetailHistory();
   ensureAccessData(state, { render });
   ensureGoalsData();
+  ensureSavwinReviewData();
   ensureSettingsData();
 }
 
@@ -2045,8 +2135,10 @@ async function handleAction(action) {
   if (action === 'reload-reports') {
     state.management.loaded = false;
     state.dashboardUpcoming.loaded = false;
+    state.salesStats.loaded = false;
     await loadManagementData();
     await loadDashboardUpcomingData();
+    await loadDashboardSalesStatsData();
   }
 
   if (action === 'consult-savwin' && canManage() && isLocalSavwinEnabled) {

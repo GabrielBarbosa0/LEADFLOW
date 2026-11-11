@@ -20,6 +20,12 @@ describe('core state', () => {
     expect(state.management.filters).toEqual({ startDate: '2026-10-01', endDate: '2026-10-29' });
     expect(state.management).toMatchObject({ archiveOpen: false, archiveSelection: [], archiveSaving: false });
     expect(state.dashboardFilters).toEqual({ storeId: '' });
+    expect(state.salesStats).toMatchObject({ loaded: false, records: [], period: '', storeId: '' });
+    expect(state.savwinReview).toMatchObject({
+      loaded: false, saving: false, records: [], activeId: '',
+      filters: { storeId: '', status: 'pending' }
+    });
+    expect(state.goals.salesStats).toMatchObject({ enabled: false, loaded: false, record: null, period: '' });
     expect(state.leadSearch).toEqual({ query: '', loading: false, searched: false, error: '', results: [] });
     expect(state.externalOperations.transportMode).toBe('with');
     expect(state.settings.roleDraft).toEqual({ name: '', scope: 'own', permissions: ['leads.create'] });
