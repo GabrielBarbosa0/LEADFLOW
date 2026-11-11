@@ -32,6 +32,8 @@ describe('reports feature modules', () => {
     });
     expect(filterMarkup).toContain('Ana Souza');
     expect(filterMarkup).toContain('Loja &lt;06&gt;');
+    expect(filterMarkup).toContain('class="management-search-row"');
+    expect(filterMarkup).toContain('placeholder="Nome ou telefone"');
 
     const results = reportResultsView({ records: [records[0]], loaded: true, canOpenLead: true, currentPage: 1, totalPages: 2, totalRecords: 2 });
     expect(results).toContain('data-management-lead-id="lead-1"');

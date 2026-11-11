@@ -31,6 +31,42 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   }).toBe(true);
 });
 
+test('keeps report search and appointment actions aligned across responsive widths', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Valida os breakpoints uma vez por seed.');
+  await signIn(page, 'admin@leadflow.test');
+
+  for (const width of [375, 589, 1024]) {
+    await page.setViewportSize({ width, height: 898 });
+    await page.goto('/#/management');
+    await expect(page.locator('#management-search')).toBeVisible();
+
+    const { searchBox, searchButtonBox } = await page.evaluate(() => ({
+      searchBox: document.querySelector('#management-search')?.getBoundingClientRect().toJSON() || null,
+      searchButtonBox: document.querySelector('.management-filter-button')?.getBoundingClientRect().toJSON() || null
+    }));
+    expect(searchBox).not.toBeNull();
+    expect(searchButtonBox).not.toBeNull();
+    expect(Math.abs(searchBox.y - searchButtonBox.y)).toBeLessThanOrEqual(1);
+    expect(searchButtonBox.x + searchButtonBox.width).toBeLessThanOrEqual(width);
+
+    await page.goto('/#/appointments');
+    await expect(page.locator('[data-create-appointment]')).toBeVisible();
+    await expect(page.locator('.agenda-layout')).toHaveAttribute('aria-busy', 'false');
+
+    const { backButtonBox, createButtonBox } = await page.evaluate(() => ({
+      backButtonBox: document.querySelector('.agenda-heading .icon-button')?.getBoundingClientRect().toJSON() || null,
+      createButtonBox: document.querySelector('[data-create-appointment]')?.getBoundingClientRect().toJSON() || null
+    }));
+    expect(backButtonBox).not.toBeNull();
+    expect(createButtonBox).not.toBeNull();
+    expect(Math.abs(
+      (backButtonBox.y + backButtonBox.height / 2) -
+      (createButtonBox.y + createButtonBox.height / 2)
+    )).toBeLessThanOrEqual(1);
+    expect(createButtonBox.x + createButtonBox.width).toBeLessThanOrEqual(width);
+  }
+});
+
 test('fills the address from a complete CEP without changing the street number', async ({ page }) => {
   await page.route('https://viacep.com.br/ws/50000123/json/', async (route) => {
     await route.fulfill({
