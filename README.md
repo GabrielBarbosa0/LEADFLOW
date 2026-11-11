@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/GabrielBarbosa0/LEADFLOW/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/release-v0.1.0-003070" alt="Release v0.1.0"></a>
+  <a href="https://github.com/GabrielBarbosa0/LEADFLOW/releases/tag/v0.1.1"><img src="https://img.shields.io/badge/release-v0.1.1-003070" alt="Release v0.1.1"></a>
   <img src="https://img.shields.io/badge/status-em%20producao-087f5b" alt="Status em producao">
   <img src="https://img.shields.io/badge/PWA-offline%20controlado-0b7285" alt="PWA com operacao offline controlada">
   <img src="https://img.shields.io/badge/Firebase-Authentication%20%2B%20Firestore-f59f00" alt="Firebase Authentication e Firestore">
@@ -21,7 +21,7 @@ operacao de transporte, os retornos e os indicadores de desempenho sem perder a
 capacidade de trabalhar em locais com conexao instavel.
 
 > **Versao oficial em producao:**
-> [`v0.1.0`](https://github.com/GabrielBarbosa0/LEADFLOW/releases/tag/v0.1.0)
+> [`v0.1.1`](https://github.com/GabrielBarbosa0/LEADFLOW/releases/tag/v0.1.1)
 
 ## Interface
 

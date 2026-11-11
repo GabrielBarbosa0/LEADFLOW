@@ -1,0 +1,1252 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function userProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function activeUser() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userProfile().active == true;
+    }
+
+    function isPrimaryAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'oticasfascinantes.financeiro@gmail.com';
+    }
+
+    function isAdmin() {
+      return isPrimaryAdmin()
+        || (activeUser() && userProfile().role == 'admin');
+    }
+
+    function isManager() {
+      return activeUser() && userProfile().role == 'manager';
+    }
+
+    function legacyPermission(permission) {
+      return permission in ['leads.create', 'leads.view_own', 'leads.edit_own', 'appointments.cancel', 'followups.own', 'goals.view_own']
+        || (userProfile().role == 'manager' && permission in [
+          'management.view', 'appointments.view', 'appointments.attendance', 'appointments.cancel',
+          'followups.team', 'goals.manage', 'dashboard.view', 'leads.export',
+          'leads.clinical_update', 'leads.edit_all', 'leads.delete'
+        ]);
+    }
+
+    function hasPermission(permission) {
+      return isPrimaryAdmin() || (activeUser() && (
+        userProfile().role == 'admin'
+        || (('permissions' in userProfile())
+          && permission in userProfile().permissions
+          && (
+            !('roleProfileId' in userProfile())
+            || userProfile().roleProfileId != 'system-telemarketing'
+            || permission in [
+              'leads.create', 'leads.view_own', 'leads.edit_own', 'followups.own',
+              'leads.view_stores', 'appointments.view', 'followups.team'
+            ]
+          ))
+        || (!('permissions' in userProfile())
+          && (!('roleProfileId' in userProfile())
+            || userProfile().roleProfileId != 'system-telemarketing')
+          && legacyPermission(permission))
+      ));
+    }
+
+    function managerHasStore(storeId) {
+      return isManager() && (
+        userProfile().storeId == storeId
+        || ('storeIds' in userProfile() && storeId in userProfile().storeIds)
+      );
+    }
+
+    function userHasStore(storeId) {
+      return activeUser() && (
+        userProfile().storeId == storeId
+        || ('storeIds' in userProfile() && storeId in userProfile().storeIds)
+      );
+    }
+
+    function isSurubimSharedStore(storeId) {
+      return storeId in ['loja-02', 'loja-06'];
+    }
+
+    function userHasScheduleStore(storeId) {
+      return userHasStore(storeId)
+        || (isSurubimSharedStore(storeId) && (
+          userHasStore('loja-02') || userHasStore('loja-06')
+        ));
+    }
+
+    function managerHasScheduleStore(storeId) {
+      return managerHasStore(storeId)
+        || (isSurubimSharedStore(storeId) && (
+          managerHasStore('loja-02') || managerHasStore('loja-06')
+        ));
+    }
+
+    function appointmentResourceId(storeId) {
+      return isSurubimSharedStore(storeId) ? 'consultorio-surubim' : storeId;
+    }
+
+    function permittedStoreIds() {
+      return ('storeIds' in userProfile()) ? userProfile().storeIds : [userProfile().storeId];
+    }
+
+    function canManageGoals() {
+      return hasPermission('goals.manage');
+    }
+
+    function validGoal(data) {
+      return data.keys().hasOnly([
+          'title', 'metric', 'targetCount', 'startDate', 'endDate',
+          'storeId', 'assigneeUid', 'assigneeName', 'createdByUid',
+          'createdByName', 'createdAt', 'groupId', 'schemaVersion'
+        ])
+        && data.title is string
+        && data.title.size() >= 3
+        && data.title.size() <= 80
+        && data.metric == 'leads_captured'
+        && data.targetCount is int
+        && data.targetCount >= 1
+        && data.targetCount <= 10000
+        && data.startDate is string
+        && data.startDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.endDate is string
+        && data.endDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.endDate >= data.startDate
+        && data.storeId is string
+        && data.assigneeUid is string
+        && data.assigneeName is string
+        && data.assigneeName.size() >= 2
+        && data.assigneeName.size() <= 120
+        && data.createdByUid is string
+        && data.createdByName is string
+        && data.groupId is string
+        && data.groupId.size() >= 8
+        && data.groupId.size() <= 64
+        && data.createdAt is timestamp
+        && data.schemaVersion == 1;
+    }
+
+    function validLead(data) {
+      return data.fullName is string
+        && data.fullName.size() >= 2
+        && data.fullName.size() <= 120
+        && data.phone is string
+        && data.phone.matches('^\\+\\d{11,13}$')
+        && data.phoneSearch is string
+        && data.phoneSearch.matches('^\\d{10,11}$')
+        && (!('customerCpf' in data) || (
+          data.customerCpf is string
+          && (data.customerCpf == '' || data.customerCpf.matches('^\\d{11}$'))
+        ))
+        && (!('customerRg' in data) || (data.customerRg is string && data.customerRg.size() <= 20))
+        && (!('addressReference' in data) || (data.addressReference is string && data.addressReference.size() <= 160))
+        && (!('examPrice' in data) || (data.examPrice is number && data.examPrice >= 0 && data.examPrice <= 100000))
+        && data.birthDate is string
+        && (data.birthDate.matches('^\\d{4}-\\d{2}-\\d{2}$') || (
+          data.birthDate == ''
+          && data.registrationMode == 'quick_walk_in'
+          && data.registrationCompleted == false
+        ))
+        && (!('registrationMode' in data) || data.registrationMode in ['quick_walk_in'])
+        && (!('registrationCompleted' in data) || data.registrationCompleted is bool)
+        && (!('birthMonthDay' in data) || (data.birthMonthDay is string
+          && data.birthMonthDay.matches('^\\d{2}-\\d{2}$')))
+        && (!('needsTransport' in data) || data.needsTransport is bool)
+        && (!('hasCompanion' in data) || data.hasCompanion is bool)
+        && (!('companionCount' in data) || (data.companionCount is int
+          && data.companionCount >= 0 && data.companionCount <= 5))
+        && (!('transportSeats' in data) || (data.transportSeats is int
+          && data.transportSeats >= 0 && data.transportSeats <= 6))
+        && (!('needsTransport' in data) || !('hasCompanion' in data) || data.needsTransport || !data.hasCompanion)
+        && (!('needsTransport' in data) || !('transportSeats' in data) || !('hasCompanion' in data)
+          || data.transportSeats == (data.needsTransport
+            ? (('companionCount' in data) ? data.companionCount + 1 : (data.hasCompanion ? 2 : 1))
+            : 0))
+        && (!('companionCount' in data) || !('hasCompanion' in data)
+          || data.hasCompanion == (data.companionCount > 0))
+        && data.notes is string
+        && data.notes.size() <= 500
+        && (!('appointmentDate' in data) || (
+          data.appointmentDate is string
+          && (data.appointmentDate == '' || data.appointmentDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
+        ))
+        && (!('appointmentTime' in data) || (
+          data.appointmentTime is string
+          && (data.appointmentTime == '' || data.appointmentTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$'))
+        ))
+        && (!('appointmentDate' in data) || !('appointmentTime' in data)
+          || ((data.appointmentDate == '') == (data.appointmentTime == '')))
+        && (!('appointmentAttendance' in data)
+          || data.appointmentAttendance in ['pending', 'attended', 'missed', 'cancelled'])
+        && (!('appointmentStatus' in data)
+          || data.appointmentStatus in ['scheduled', 'cancelled'])
+        && (!('appointmentSchedulingMode' in data)
+          || data.appointmentSchedulingMode in ['controlled', 'free'])
+        && (!('appointmentDurationMinutes' in data)
+          || (data.appointmentDurationMinutes is int
+            && data.appointmentDurationMinutes >= 5
+            && data.appointmentDurationMinutes <= 180))
+        && (!('appointmentServiceId' in data)
+          || (data.appointmentServiceId is string
+            && data.appointmentServiceId.size() >= 1
+            && data.appointmentServiceId.size() <= 120))
+        && (!('appointmentServiceName' in data)
+          || (data.appointmentServiceName is string
+            && data.appointmentServiceName.size() >= 2
+            && data.appointmentServiceName.size() <= 80))
+        && (!('examPaymentType' in data) || data.examPaymentType in ['paid', 'courtesy'])
+        && (!('examPaymentMethods' in data) || (data.examPaymentMethods is list
+          && data.examPaymentMethods.size() <= 6
+          && data.examPaymentMethods.hasOnly(['cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'])))
+        && (!('examPaymentMethods' in data) || !('examPaymentType' in data)
+          || data.examPaymentType == 'paid' || data.examPaymentMethods.size() == 0)
+        && (!('productPaymentMethods' in data) || (data.productPaymentMethods is list
+          && data.productPaymentMethods.size() <= 6
+          && data.productPaymentMethods.hasOnly(['cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'])))
+        && data.strategyType in [
+          'external', 'after-sales', 'telemarketing', 'social-media', 'spontaneous-visit'
+        ]
+        && data.source == 'street'
+        && data.schemaVersion == 1;
+    }
+
+    function validLeadHistory(data) {
+      return data.keys().hasOnly([
+          'leadId', 'storeId', 'eventType', 'funnelStage', 'reasonCode',
+          'benefitType', 'benefitValue', 'benefitLabel',
+          'description', 'walkInId',
+          'actorUid', 'actorName', 'actorRole', 'occurredAtClient',
+          'occurredAtServer', 'schemaVersion'
+        ])
+        && data.leadId is string
+        && data.storeId is string
+        && data.eventType in [
+          'lead_created', 'appointment_scheduled', 'appointment_rescheduled',
+          'appointment_cancelled', 'appointment_reminder_sent', 'lead_archived',
+          'appointment_attended', 'appointment_missed', 'follow_up_contacted',
+          'lead_claimed', 'lead_reassigned',
+          'birthday_benefit_planned', 'birthday_congratulated',
+          'walk_in_created', 'walk_in_called', 'walk_in_in_service',
+          'walk_in_completed', 'walk_in_gave_up',
+          'walk_in_not_accommodated', 'walk_in_cancelled'
+        ]
+        && data.funnelStage in [
+          'captured', 'awaiting_appointment', 'scheduled', 'confirmation',
+          'confirmed', 'attended', 'missed', 'awaiting_reschedule',
+          'cancelled', 'closed'
+        ]
+        && data.reasonCode is string
+        && data.reasonCode.size() <= 64
+        && (!('benefitType' in data) || data.benefitType in ['voucher', 'cashback'])
+        && (!('benefitValue' in data) || (data.benefitValue is number
+          && data.benefitValue >= 0 && data.benefitValue <= 100000))
+        && (!('benefitLabel' in data) || (data.benefitLabel is string && data.benefitLabel.size() <= 80))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500))
+        && (!('walkInId' in data) || (data.walkInId is string && data.walkInId.size() <= 180))
+        && data.actorUid is string
+        && data.actorName is string
+        && data.actorName.size() >= 2
+        && data.actorName.size() <= 120
+        && data.actorRole is string
+        && data.actorRole.size() <= 40
+        && data.occurredAtClient is string
+        && data.occurredAtClient.size() <= 40
+        && data.occurredAtServer is timestamp
+        && data.schemaVersion == 1;
+    }
+
+    function canReadLeadHistory(leadId) {
+      return activeUser()
+        && exists(/databases/$(database)/documents/leads/$(leadId))
+        && (
+          (get(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+            && hasPermission('leads.view_own'))
+          || (((('appointmentStatus' in get(/databases/$(database)/documents/leads/$(leadId)).data)
+                && get(/databases/$(database)/documents/leads/$(leadId)).data.appointmentStatus == 'cancelled')
+              || (('appointmentAttendance' in get(/databases/$(database)/documents/leads/$(leadId)).data)
+                && get(/databases/$(database)/documents/leads/$(leadId)).data.appointmentAttendance == 'cancelled'))
+            && userHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+            && hasPermission('leads.view_own'))
+          || (managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+            && hasPermission('management.view'))
+          || (managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+            && hasPermission('appointments.view'))
+          || (managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+            && hasPermission('leads.view_stores'))
+          || isAdmin()
+        );
+    }
+
+    function validAppointmentService(data) {
+      return data.keys().hasOnly([
+          'name', 'storeIds', 'durationMinutes', 'active', 'schemaVersion',
+          'createdAt', 'createdByUid', 'updatedAt', 'updatedByUid'
+        ])
+        && data.name is string
+        && data.name.size() >= 2
+        && data.name.size() <= 80
+        && data.storeIds is list
+        && data.storeIds.size() >= 1
+        && data.storeIds.size() <= 4
+        && data.storeIds.hasOnly(['loja-02', 'loja-04', 'loja-05', 'loja-06'])
+        && data.durationMinutes is int
+        && data.durationMinutes >= 10
+        && data.durationMinutes <= 180
+        && data.durationMinutes % 10 == 0
+        && data.active is bool
+        && data.schemaVersion == 2
+        && data.createdAt is timestamp
+        && data.createdByUid is string
+        && data.updatedAt is timestamp
+        && data.updatedByUid == request.auth.uid;
+    }
+
+    function validAppointmentSlot(slotId, data) {
+      return data.keys().hasOnly([
+          'storeId', 'appointmentDate', 'appointmentTime', 'blockTime', 'durationMinutes',
+          'leadId', 'capturedByUid', 'createdAt'
+        ])
+        && data.storeId is string
+        && data.appointmentDate is string
+        && data.appointmentDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.appointmentTime is string
+        && data.appointmentTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
+        && data.blockTime is string
+        && data.blockTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
+        && data.durationMinutes is int
+        && data.durationMinutes >= 10
+        && data.durationMinutes <= 180
+        && data.leadId is string
+        && data.capturedByUid is string
+        && data.createdAt is timestamp
+        && slotId == 'slot-' + appointmentResourceId(data.storeId) + '-' + data.appointmentDate + '-' + data.blockTime;
+    }
+
+    function validLeadSale(leadId, data) {
+      return data.keys().hasOnly([
+          'leadId', 'storeId', 'capturedByUid', 'customerCpf',
+          'purchaseInterest', 'matchStatus', 'savwinStoreCode',
+          'savwinOsNumber', 'savwinSaleCode', 'savwinCustomerCode',
+          'savwinSaleDate', 'savwinSaleValue', 'createdByUid',
+          'createdAt', 'updatedByUid', 'updatedAt', 'schemaVersion'
+        ])
+        && data.leadId == leadId
+        && data.storeId is string
+        && data.capturedByUid is string
+        && data.customerCpf is string
+        && data.customerCpf.matches('^\\d{11}$')
+        && data.purchaseInterest == true
+        && data.matchStatus in ['interest_registered', 'sale_linked']
+        && data.savwinStoreCode is string
+        && data.savwinOsNumber is string
+        && data.savwinSaleCode is string
+        && data.savwinCustomerCode is string
+        && data.savwinSaleDate is string
+        && (data.savwinSaleDate == '' || data.savwinSaleDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
+        && data.savwinSaleValue is number
+        && data.savwinSaleValue >= 0
+        && data.createdByUid is string
+        && data.createdAt is timestamp
+        && data.updatedByUid == request.auth.uid
+        && data.updatedAt is timestamp
+        && data.schemaVersion == 1;
+    }
+
+    function isOwnerAppointmentUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'appointmentDate', 'appointmentTime', 'appointmentSchedulingMode',
+          'appointmentDurationMinutes', 'appointmentServiceId', 'appointmentServiceName',
+          'appointmentAttendance', 'funnelStage', 'funnelReasonCode',
+          'funnelUpdatedAtClient', 'funnelUpdatedAtServer', 'appointmentCycle',
+          'updatedAtServer'
+        ])
+        && resource.data.capturedByUid == request.auth.uid
+        && request.resource.data.appointmentDate != ''
+        && request.resource.data.appointmentTime != ''
+        && request.resource.data.appointmentAttendance == 'pending'
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['appointmentAttendance'])
+          || (
+            (!('appointmentAttendance' in resource.data)
+              || resource.data.appointmentAttendance == 'missed')
+            && (
+              request.resource.data.appointmentDate != resource.data.appointmentDate
+              || request.resource.data.appointmentTime != resource.data.appointmentTime
+            )
+          ))
+        && activeUser()
+        && hasPermission('leads.create')
+        && userHasStore(resource.data.storeId);
+    }
+
+    function canManageWalkInStore(storeId) {
+      return isAdmin() || (managerHasStore(storeId) && (
+        (('roleProfileId' in userProfile())
+          && userProfile().roleProfileId in ['system-manager', 'system-captor', 'system-receptionist', 'system-telemarketing'])
+        || (!('roleProfileId' in userProfile()) && userProfile().role == 'manager')
+      ));
+    }
+
+    function validWalkIn(data) {
+      return data.keys().hasOnly([
+          'leadId', 'storeId', 'queueDate', 'serviceId', 'serviceName',
+          'professionalType', 'broughtByUid', 'broughtByName',
+          'reason', 'notes', 'status', 'priority',
+          'priorityReason', 'arrivedAt', 'calledAt', 'startedAt', 'completedAt',
+          'closedReason', 'convertedAppointmentLeadId', 'createdAt',
+          'createdByUid', 'createdByName', 'updatedAt', 'updatedByUid',
+          'schemaVersion'
+        ])
+        && data.leadId is string
+        && data.leadId.size() >= 1
+        && data.leadId.size() <= 128
+        && data.storeId is string
+        && data.queueDate is string
+        && data.queueDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.serviceId is string
+        && data.serviceId.size() >= 1
+        && data.serviceId.size() <= 120
+        && data.serviceName is string
+        && data.serviceName.size() >= 2
+        && data.serviceName.size() <= 80
+        && data.professionalType in ['optometrist', 'ophthalmologist']
+        && (
+          (!('broughtByUid' in data) && !('broughtByName' in data))
+          || (
+            data.broughtByUid is string
+            && data.broughtByUid.size() <= 128
+            && data.broughtByName is string
+            && data.broughtByName.size() <= 120
+            && (
+              (data.broughtByUid == '' && data.broughtByName == '')
+              || (
+                data.broughtByUid != ''
+                && targetLeadOwnerIsActive(data.broughtByUid, data.storeId)
+                && data.broughtByName
+                  == get(/databases/$(database)/documents/users/$(data.broughtByUid)).data.displayName
+              )
+            )
+          )
+        )
+        && data.reason is string
+        && data.reason.size() >= 5
+        && data.reason.size() <= 240
+        && data.notes is string
+        && data.notes.size() <= 500
+        && data.status in ['waiting', 'called', 'in_service', 'completed', 'gave_up', 'not_accommodated', 'cancelled']
+        && data.priority is int
+        && data.priority >= 0
+        && data.priority <= 100
+        && data.priorityReason is string
+        && data.priorityReason.size() <= 240
+        && data.arrivedAt is timestamp
+        && (data.calledAt == null || data.calledAt is timestamp)
+        && (data.startedAt == null || data.startedAt is timestamp)
+        && (data.completedAt == null || data.completedAt is timestamp)
+        && data.closedReason is string
+        && data.closedReason.size() <= 500
+        && data.convertedAppointmentLeadId is string
+        && data.convertedAppointmentLeadId.size() <= 128
+        && data.createdAt is timestamp
+        && data.createdByUid is string
+        && data.createdByName is string
+        && data.createdByName.size() >= 2
+        && data.createdByName.size() <= 120
+        && data.updatedAt is timestamp
+        && data.updatedByUid is string
+        && data.schemaVersion == 1;
+    }
+
+    function validWalkInTransition() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'calledAt', 'startedAt', 'completedAt', 'closedReason',
+          'updatedAt', 'updatedByUid'
+        ])
+        && request.resource.data.updatedByUid == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && (
+          (resource.data.status == 'waiting' && request.resource.data.status == 'called'
+            && resource.data.calledAt == null && request.resource.data.calledAt == request.time)
+          || (resource.data.status == 'called' && request.resource.data.status == 'in_service'
+            && resource.data.startedAt == null && request.resource.data.startedAt == request.time)
+          || (resource.data.status == 'in_service' && request.resource.data.status == 'completed'
+            && resource.data.completedAt == null && request.resource.data.completedAt == request.time)
+          || (resource.data.status in ['waiting', 'called']
+            && request.resource.data.status in ['gave_up', 'not_accommodated', 'cancelled']
+            && request.resource.data.closedReason.size() >= 3)
+          || (resource.data.status == 'in_service'
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.closedReason.size() >= 3)
+        );
+    }
+
+    function validAppointmentReminder(data) {
+      return data.keys().hasOnly([
+          'leadId', 'storeId', 'appointmentDate', 'appointmentTime',
+          'appointmentKey', 'completedAt', 'completedByUid',
+          'completedByName', 'schemaVersion'
+        ])
+        && data.leadId is string
+        && data.leadId.size() >= 1
+        && data.storeId is string
+        && data.appointmentDate is string
+        && data.appointmentDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.appointmentTime is string
+        && data.appointmentTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
+        && data.appointmentKey == data.appointmentDate + '|' + data.appointmentTime
+        && data.completedAt is timestamp
+        && data.completedByUid == request.auth.uid
+        && data.completedByName == userProfile().displayName
+        && data.schemaVersion == 1;
+    }
+
+    function leadIdentityIsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'capturedByUid', 'capturedByName', 'storeId', 'capturedAtClient',
+        'createdAtServer', 'installationId', 'source', 'schemaVersion', 'recordOrigin',
+        'consentGiven', 'consentAtClient'
+      ]);
+    }
+
+    function validLeadUpdateShape() {
+      return request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 2
+        && request.resource.data.fullName.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 12
+        && request.resource.data.phone.size() <= 14
+        && request.resource.data.phoneSearch is string
+        && request.resource.data.phoneSearch.matches('^\\d{10,11}$')
+        && request.resource.data.notes is string
+        && request.resource.data.notes.size() <= 500
+        && (!('appointmentDate' in request.resource.data)
+          || request.resource.data.appointmentDate == ''
+          || request.resource.data.appointmentDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
+        && (!('appointmentTime' in request.resource.data)
+          || request.resource.data.appointmentTime == ''
+          || request.resource.data.appointmentTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$'))
+        && (!('appointmentDate' in request.resource.data)
+          || !('appointmentTime' in request.resource.data)
+          || ((request.resource.data.appointmentDate == '')
+            == (request.resource.data.appointmentTime == '')))
+        && (!('appointmentAttendance' in request.resource.data)
+          || request.resource.data.appointmentAttendance in ['pending', 'attended', 'missed', 'cancelled'])
+        && (!('appointmentStatus' in request.resource.data)
+          || request.resource.data.appointmentStatus in ['scheduled', 'cancelled'])
+        && (!('customerRg' in request.resource.data)
+          || (request.resource.data.customerRg is string
+            && request.resource.data.customerRg.size() <= 20))
+        && (!('addressReference' in request.resource.data)
+          || (request.resource.data.addressReference is string
+            && request.resource.data.addressReference.size() <= 160))
+        && (!('productPaymentMethods' in request.resource.data)
+          || (request.resource.data.productPaymentMethods is list
+            && request.resource.data.productPaymentMethods.size() <= 6
+            && request.resource.data.productPaymentMethods.hasOnly([
+              'cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'
+            ])))
+        && (!('ametropiaIds' in request.resource.data)
+          || (request.resource.data.ametropiaIds is list
+            && request.resource.data.ametropiaIds.size() <= 4
+            && request.resource.data.ametropiaIds.hasOnly([
+              'myopia', 'hyperopia', 'astigmatism', 'presbyopia', 'none', 'unknown'
+            ])
+            && (!request.resource.data.ametropiaIds.hasAny(['none', 'unknown'])
+              || request.resource.data.ametropiaIds.size() == 1)))
+        && (!('pathologyIds' in request.resource.data)
+          || (request.resource.data.pathologyIds is list
+            && request.resource.data.pathologyIds.size() <= 10
+            && request.resource.data.pathologyIds.hasOnly([
+              'cataract', 'glaucoma', 'diabetes', 'hypertension', 'keratoconus',
+              'retinopathy', 'dry-eye', 'macular-degeneration', 'retinal-detachment',
+              'other', 'none', 'unknown'
+            ])
+            && (!request.resource.data.pathologyIds.hasAny(['none', 'unknown'])
+              || request.resource.data.pathologyIds.size() == 1)))
+        && (!('companionCount' in request.resource.data)
+          || (request.resource.data.companionCount is int
+            && request.resource.data.companionCount >= 0
+            && request.resource.data.companionCount <= 5))
+        && (!('transportSeats' in request.resource.data)
+          || (request.resource.data.transportSeats is int
+            && request.resource.data.transportSeats >= 0
+            && request.resource.data.transportSeats <= 6))
+        && (!('needsTransport' in request.resource.data)
+          || !('hasCompanion' in request.resource.data)
+          || request.resource.data.needsTransport
+          || !request.resource.data.hasCompanion)
+        && (!('companionCount' in request.resource.data)
+          || !('hasCompanion' in request.resource.data)
+          || request.resource.data.hasCompanion
+            == (request.resource.data.companionCount > 0))
+        && (!('needsTransport' in request.resource.data)
+          || !('hasCompanion' in request.resource.data)
+          || !('transportSeats' in request.resource.data)
+          || request.resource.data.transportSeats == (request.resource.data.needsTransport
+            ? (('companionCount' in request.resource.data)
+              ? request.resource.data.companionCount + 1
+              : (request.resource.data.hasCompanion ? 2 : 1))
+            : 0));
+    }
+
+    function ownerAttendanceChangeIsValid() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'appointmentAttendanceUpdatedAt', 'appointmentAttendanceUpdatedByUid'
+        ])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['appointmentAttendance'])
+          || (
+            request.resource.data.appointmentAttendance == 'pending'
+            && (!('appointmentAttendance' in resource.data)
+              || resource.data.appointmentAttendance == 'missed')
+            && (
+              request.resource.data.appointmentDate != resource.data.appointmentDate
+              || request.resource.data.appointmentTime != resource.data.appointmentTime
+            )
+          ));
+    }
+
+    function targetLeadOwnerIsActive(uid, storeId) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.active == true
+        && (
+          get(/databases/$(database)/documents/users/$(uid)).data.role == 'captor'
+          || get(/databases/$(database)/documents/users/$(uid)).data.roleProfileId
+            in ['system-captor', 'system-receptionist', 'system-telemarketing']
+        )
+        && (
+          get(/databases/$(database)/documents/users/$(uid)).data.storeId == storeId
+          || (('storeIds' in get(/databases/$(database)/documents/users/$(uid)).data)
+            && storeId in get(/databases/$(database)/documents/users/$(uid)).data.storeIds)
+        );
+    }
+
+    function originalLeadOwnerIsPreserved() {
+      return (
+          !('originalCapturedByUid' in resource.data)
+          && request.resource.data.originalCapturedByUid == resource.data.capturedByUid
+          && request.resource.data.originalCapturedByName == resource.data.capturedByName
+        ) || (
+          ('originalCapturedByUid' in resource.data)
+          && request.resource.data.originalCapturedByUid == resource.data.originalCapturedByUid
+          && request.resource.data.originalCapturedByName == resource.data.originalCapturedByName
+        );
+    }
+
+    function validLeadOwnershipChange(changeType) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'capturedByUid', 'capturedByName',
+          'originalCapturedByUid', 'originalCapturedByName',
+          'ownershipUpdatedAtServer', 'ownershipUpdatedByUid',
+          'ownershipUpdatedByName', 'ownershipChangeType', 'updatedAtServer'
+        ])
+        && request.resource.data.capturedByUid != resource.data.capturedByUid
+        && targetLeadOwnerIsActive(request.resource.data.capturedByUid, resource.data.storeId)
+        && request.resource.data.capturedByName
+          == get(/databases/$(database)/documents/users/$(request.resource.data.capturedByUid)).data.displayName
+        && originalLeadOwnerIsPreserved()
+        && request.resource.data.ownershipUpdatedAtServer == request.time
+        && request.resource.data.ownershipUpdatedByUid == request.auth.uid
+        && request.resource.data.ownershipUpdatedByName == userProfile().displayName
+        && request.resource.data.ownershipChangeType == changeType
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function isCancelledLeadClaim() {
+      return activeUser()
+        && request.auth.uid == request.resource.data.capturedByUid
+        && userHasStore(resource.data.storeId)
+        && hasPermission('leads.create')
+        && hasPermission('leads.edit_own')
+        && (
+          (('appointmentStatus' in resource.data) && resource.data.appointmentStatus == 'cancelled')
+          || (('appointmentAttendance' in resource.data) && resource.data.appointmentAttendance == 'cancelled')
+        )
+        && validLeadOwnershipChange('claim');
+    }
+
+    function isManagerLeadReassignment() {
+      return isManager()
+        && managerHasStore(resource.data.storeId)
+        && hasPermission('leads.edit_all')
+        && validLeadOwnershipChange('reassign');
+    }
+
+    function isLeadOwnershipUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'capturedByUid', 'capturedByName', 'ownershipChangeType'
+      ]);
+    }
+
+    function validAppointmentCancellation() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'appointmentStatus', 'appointmentAttendance',
+          'appointmentCancelledAtServer', 'appointmentCancelledByUid',
+          'appointmentCancelledByName', 'appointmentCancellationReason',
+          'appointmentCancellationDetails', 'funnelStage', 'funnelReasonCode',
+          'funnelUpdatedAtClient', 'funnelUpdatedAtServer', 'updatedAtServer'
+        ])
+        && resource.data.appointmentDate is string
+        && resource.data.appointmentDate != ''
+        && resource.data.appointmentTime is string
+        && resource.data.appointmentTime != ''
+        && (!('appointmentStatus' in resource.data) || resource.data.appointmentStatus != 'cancelled')
+        && (!('appointmentAttendance' in resource.data) || resource.data.appointmentAttendance == 'pending')
+        && request.resource.data.appointmentStatus == 'cancelled'
+        && request.resource.data.appointmentAttendance == 'cancelled'
+        && request.resource.data.appointmentCancelledAtServer == request.time
+        && request.resource.data.appointmentCancelledByUid == request.auth.uid
+        && request.resource.data.appointmentCancelledByName == userProfile().displayName
+        && request.resource.data.appointmentCancellationReason in [
+          'client_withdrew', 'unable_to_attend', 'schedule_conflict',
+          'other_provider', 'transport_issue', 'duplicate_registration',
+          'operational_guidance', 'other'
+        ]
+        && request.resource.data.appointmentCancellationDetails is string
+        && request.resource.data.appointmentCancellationDetails.size() <= 500
+        && (request.resource.data.appointmentCancellationReason != 'other'
+          || request.resource.data.appointmentCancellationDetails.size() >= 3)
+        && request.resource.data.funnelStage == 'cancelled'
+        && request.resource.data.funnelReasonCode == request.resource.data.appointmentCancellationReason
+        && request.resource.data.funnelUpdatedAtClient is string
+        && request.resource.data.funnelUpdatedAtServer == request.time
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function validAppointmentReschedule() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'appointmentDate', 'appointmentTime', 'appointmentSchedulingMode',
+          'appointmentDurationMinutes', 'appointmentServiceId', 'appointmentServiceName',
+          'appointmentStatus', 'appointmentAttendance',
+          'appointmentRescheduledAtServer', 'appointmentRescheduledByUid',
+          'appointmentRescheduledByName', 'appointmentRescheduleReason',
+          'appointmentRescheduleDetails', 'funnelStage', 'funnelReasonCode',
+          'funnelUpdatedAtClient', 'funnelUpdatedAtServer', 'updatedAtServer'
+        ])
+        && request.resource.data.appointmentDate is string
+        && request.resource.data.appointmentDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.appointmentTime is string
+        && request.resource.data.appointmentTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
+        && (
+          request.resource.data.appointmentDate != resource.data.appointmentDate
+          || request.resource.data.appointmentTime != resource.data.appointmentTime
+        )
+        && (!('appointmentAttendance' in resource.data)
+          || resource.data.appointmentAttendance != 'attended')
+        && request.resource.data.appointmentStatus == 'scheduled'
+        && request.resource.data.appointmentAttendance == 'pending'
+        && request.resource.data.appointmentRescheduledAtServer == request.time
+        && request.resource.data.appointmentRescheduledByUid == request.auth.uid
+        && request.resource.data.appointmentRescheduledByName == userProfile().displayName
+        && request.resource.data.appointmentRescheduleReason in [
+          'client_request', 'schedule_conflict', 'professional_availability',
+          'transport_issue', 'other'
+        ]
+        && request.resource.data.appointmentRescheduleDetails is string
+        && request.resource.data.appointmentRescheduleDetails.size() <= 500
+        && (request.resource.data.appointmentRescheduleReason != 'other'
+          || request.resource.data.appointmentRescheduleDetails.size() >= 3)
+        && request.resource.data.funnelStage == 'scheduled'
+        && request.resource.data.funnelReasonCode == request.resource.data.appointmentRescheduleReason
+        && request.resource.data.funnelUpdatedAtClient is string
+        && request.resource.data.funnelUpdatedAtServer == request.time
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function isAppointmentCancellationUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'appointmentStatus', 'appointmentCancelledAtServer', 'appointmentCancellationReason'
+      ]);
+    }
+
+    function isAppointmentRescheduleUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'appointmentRescheduledAtServer', 'appointmentRescheduleReason'
+      ]);
+    }
+
+    function isOwnerLeadUpdate() {
+      return resource.data.capturedByUid == request.auth.uid
+        && userHasStore(resource.data.storeId)
+        && hasPermission('leads.edit_own')
+        && validLeadUpdateShape()
+        && ownerAttendanceChangeIsValid();
+    }
+
+    function isOwnerAppointmentCancellation() {
+      return resource.data.capturedByUid == request.auth.uid
+        && userHasStore(resource.data.storeId)
+        && canCancelAppointments()
+        && validAppointmentCancellation();
+    }
+
+    function isOwnerAppointmentReschedule() {
+      return resource.data.capturedByUid == request.auth.uid
+        && userHasStore(resource.data.storeId)
+        && hasPermission('leads.create')
+        && validAppointmentReschedule();
+    }
+
+    function canCancelAppointments() {
+      return hasPermission('appointments.cancel')
+        || (activeUser() && (
+          (('roleProfileId' in userProfile()) && userProfile().roleProfileId in [
+            'system-captor', 'system-external-leader', 'system-mei', 'system-manager', 'system-receptionist', 'system-telemarketing'
+          ])
+          || (!('roleProfileId' in userProfile()) && userProfile().role in ['captor', 'manager'])
+        ));
+    }
+
+    function canRescheduleAppointments() {
+      return activeUser() && (
+        (resource.data.capturedByUid == request.auth.uid
+          && userHasStore(resource.data.storeId)
+          && hasPermission('leads.create'))
+        || (isManager()
+          && managerHasStore(resource.data.storeId)
+          && hasPermission('appointments.attendance'))
+      );
+    }
+
+    function isManagerAttendanceUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'appointmentAttendance', 'appointmentAttendanceUpdatedAt',
+          'appointmentAttendanceUpdatedByUid', 'updatedAtServer'
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'appointmentAttendance'
+        ])
+        && isManager()
+        && managerHasStore(resource.data.storeId)
+        && hasPermission('appointments.attendance')
+        && resource.data.appointmentDate is string
+        && resource.data.appointmentDate != '';
+    }
+
+    function isManagerLeadUpdate() {
+      return isManager()
+        && managerHasStore(resource.data.storeId)
+        && (
+          (hasPermission('leads.edit_all') && validLeadUpdateShape())
+          || (
+            hasPermission('followups.team')
+            &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'followUpContactedAt', 'followUpContactedByUid',
+              'followUpContactedByName', 'followUpContactedAppointmentKey',
+              'updatedAtServer'
+            ])
+            && request.resource.data.followUpContactedByUid == request.auth.uid
+            && request.resource.data.followUpContactedByName == userProfile().displayName
+            && request.resource.data.followUpContactedAppointmentKey
+              == resource.data.appointmentDate + '|' + resource.data.appointmentTime
+          )
+          || (hasPermission('appointments.attendance')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'appointmentDate', 'appointmentTime', 'appointmentSchedulingMode',
+              'appointmentDurationMinutes', 'appointmentServiceId', 'appointmentServiceName',
+              'appointmentAttendance', 'updatedAtServer'
+            ]))
+        );
+    }
+
+    function isManagerLeadArchive() {
+      return isManager()
+        && managerHasStore(resource.data.storeId)
+        && hasPermission('leads.delete')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'archived', 'archivedAtServer', 'archivedByUid', 'archivedByName', 'updatedAtServer'
+        ])
+        && (!('archived' in resource.data) || resource.data.archived == false)
+        && request.resource.data.archived == true
+        && request.resource.data.archivedAtServer == request.time
+        && request.resource.data.archivedByUid == request.auth.uid
+        && request.resource.data.archivedByName == userProfile().displayName
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function leadArchiveFieldsAreUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'archived', 'archivedAtServer', 'archivedByUid', 'archivedByName'
+      ]);
+    }
+
+    function isCaptorFollowUpContactUpdate() {
+      return activeUser()
+        && resource.data.capturedByUid == request.auth.uid
+        && (
+          userProfile().roleProfileId == 'system-receptionist'
+          || hasPermission('followups.own')
+        )
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'followUpContactedAt', 'followUpContactedByUid',
+          'followUpContactedByName', 'followUpContactedAppointmentKey',
+          'updatedAtServer'
+        ])
+        && request.resource.data.followUpContactedByUid == request.auth.uid
+        && request.resource.data.followUpContactedByName == userProfile().displayName
+        && request.resource.data.followUpContactedAt is timestamp
+        && request.resource.data.followUpContactedAppointmentKey is string
+        && request.resource.data.followUpContactedAppointmentKey
+          == resource.data.appointmentDate + '|' + resource.data.appointmentTime;
+    }
+
+    match /allowedEmails/{email} {
+      allow get: if (signedIn() && request.auth.token.email == email)
+        || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        && (email != request.auth.token.email || (
+          request.resource.data.active == true
+          && request.resource.data.role == 'admin'
+          && request.resource.data.storeId == userProfile().storeId
+          && (!('storeIds' in resource.data) || request.resource.data.storeIds == resource.data.storeIds)
+        ));
+      allow delete: if isAdmin() && email != request.auth.token.email;
+    }
+
+    match /users/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId
+        || isAdmin();
+
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && exists(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email))
+        && get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data.active == true
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data.role
+        && (!('roleProfileId' in get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data)
+          || request.resource.data.roleProfileId == get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data.roleProfileId)
+        && (!('permissions' in get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data)
+          || request.resource.data.permissions == get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data.permissions)
+        && request.resource.data.storeId == get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data.storeId
+        && (!('storeIds' in get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data)
+          || request.resource.data.storeIds == get(/databases/$(database)/documents/allowedEmails/$(request.auth.token.email)).data.storeIds);
+
+      allow update: if isAdmin()
+        && request.resource.data.email == resource.data.email
+        && (userId != request.auth.uid || (
+          request.resource.data.active == true
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.storeId == resource.data.storeId
+          && (!('storeIds' in resource.data) || request.resource.data.storeIds == resource.data.storeIds)
+        ));
+      allow delete: if false;
+      allow list: if isAdmin()
+        || managerHasStore(resource.data.storeId);
+    }
+
+    match /roleProfiles/{roleProfileId} {
+      allow get: if activeUser();
+      allow list, create, update, delete: if isAdmin();
+    }
+
+    match /stores/{storeId} {
+      allow get: if isPrimaryAdmin() || (activeUser() && (
+        userHasScheduleStore(storeId) || managerHasScheduleStore(storeId) || isAdmin()
+      ));
+      allow list: if activeUser() || isPrimaryAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /interests/{interestId} {
+      allow read: if activeUser();
+      allow write: if isAdmin();
+    }
+
+    match /appointmentServices/{serviceId} {
+      allow get, list: if isAdmin() || (activeUser()
+        && resource.data.active == true
+        && resource.data.storeIds.hasAny(permittedStoreIds()));
+      allow create: if isAdmin()
+        && validAppointmentService(request.resource.data)
+        && request.resource.data.createdByUid == request.auth.uid;
+      allow update: if isAdmin()
+        && validAppointmentService(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdByUid == resource.data.createdByUid;
+      allow delete: if isAdmin();
+    }
+
+    match /appointmentWalkIns/{walkInId} {
+      allow get, list: if activeUser() && canManageWalkInStore(resource.data.storeId);
+      allow create: if activeUser()
+        && validWalkIn(request.resource.data)
+        && canManageWalkInStore(request.resource.data.storeId)
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.priority == 0
+        && request.resource.data.arrivedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.updatedByUid == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId))
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.storeId == request.resource.data.storeId;
+      allow update: if activeUser()
+        && validWalkIn(request.resource.data)
+        && canManageWalkInStore(resource.data.storeId)
+        && validWalkInTransition();
+      allow delete: if false;
+    }
+
+    match /leads/{leadId} {
+      allow create: if isAdmin() || (
+        activeUser()
+        && hasPermission('leads.create')
+        && validLead(request.resource.data)
+        && request.resource.data.capturedByUid == request.auth.uid
+        && userHasStore(request.resource.data.storeId)
+      );
+
+      allow get: if activeUser() && (
+        (resource.data.capturedByUid == request.auth.uid && hasPermission('leads.view_own'))
+        || (((('appointmentStatus' in resource.data) && resource.data.appointmentStatus == 'cancelled')
+              || (('appointmentAttendance' in resource.data) && resource.data.appointmentAttendance == 'cancelled'))
+            && userHasStore(resource.data.storeId)
+            && hasPermission('leads.view_own'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('leads.view_stores'))
+        || isAdmin()
+      );
+
+      allow list: if activeUser() && (
+        (resource.data.capturedByUid == request.auth.uid && hasPermission('leads.view_own'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('leads.view_stores'))
+        || isAdmin()
+      );
+
+      allow update: if isAdmin() || (
+        isLeadOwnershipUpdate() && (isCancelledLeadClaim() || isManagerLeadReassignment())
+      ) || (
+        activeUser()
+        && leadIdentityIsUnchanged()
+        && (
+          (leadArchiveFieldsAreUnchanged() && (
+            (isAppointmentRescheduleUpdate() && (
+              isOwnerAppointmentReschedule()
+              || (isManager()
+                && managerHasStore(resource.data.storeId)
+                && hasPermission('appointments.attendance')
+                && validAppointmentReschedule())
+            ))
+            || (!isAppointmentRescheduleUpdate() && isAppointmentCancellationUpdate() && (
+              isOwnerAppointmentCancellation()
+              || (isManager()
+                && managerHasStore(resource.data.storeId)
+                && canCancelAppointments()
+                && validAppointmentCancellation())
+            ))
+            || (!isAppointmentRescheduleUpdate() && !isAppointmentCancellationUpdate() && (
+              isManagerAttendanceUpdate()
+              || isOwnerAppointmentUpdate()
+              || isOwnerLeadUpdate()
+              || isCaptorFollowUpContactUpdate()
+              || isManagerLeadUpdate()
+            ))
+          ))
+          || isManagerLeadArchive()
+        )
+      );
+
+      allow delete: if isAdmin() || (
+        activeUser()
+        && hasPermission('leads.delete')
+        && (
+          (resource.data.capturedByUid == request.auth.uid && userHasStore(resource.data.storeId))
+          || managerHasStore(resource.data.storeId)
+        )
+      );
+
+      match /history/{historyId} {
+        allow get, list: if canReadLeadHistory(leadId);
+        allow create: if activeUser()
+          && validLeadHistory(request.resource.data)
+          && request.resource.data.leadId == leadId
+          && request.resource.data.actorUid == request.auth.uid
+          && existsAfter(/databases/$(database)/documents/leads/$(leadId))
+          && getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId == request.resource.data.storeId
+          && (
+            isAdmin()
+            || (getAfter(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+              && hasPermission('leads.create'))
+            || (managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+              && hasPermission('management.view'))
+            || (request.resource.data.eventType.matches('^walk_in_.*$')
+              && canManageWalkInStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId))
+            || (request.resource.data.eventType == 'appointment_cancelled'
+              && canCancelAppointments()
+              && (
+                (getAfter(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+                  && userHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId))
+                || managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+              ))
+            || (request.resource.data.eventType == 'appointment_rescheduled'
+              && (
+                (getAfter(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+                  && userHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+                  && hasPermission('leads.create'))
+                || (isManager()
+                  && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+                  && hasPermission('appointments.attendance'))
+              ))
+            || (request.resource.data.eventType == 'lead_claimed'
+              && getAfter(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.auth.uid
+              && getAfter(/databases/$(database)/documents/leads/$(leadId)).data.ownershipChangeType == 'claim'
+              && userHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+              && hasPermission('leads.edit_own'))
+            || (request.resource.data.eventType == 'lead_reassigned'
+              && isManager()
+              && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+              && hasPermission('leads.edit_all'))
+            || (!request.resource.data.eventType.matches('^walk_in_.*$')
+              && managerHasStore(getAfter(/databases/$(database)/documents/leads/$(leadId)).data.storeId)
+              && hasPermission('appointments.view'))
+          );
+        allow update, delete: if false;
+      }
+    }
+
+    match /leadSales/{leadId} {
+      allow get: if isAdmin() || (isManager()
+        && exists(/databases/$(database)/documents/leads/$(leadId))
+        && managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId));
+      allow list: if isAdmin() || managerHasStore(resource.data.storeId);
+      allow create: if validLeadSale(leadId, request.resource.data)
+        && (isAdmin() || managerHasStore(request.resource.data.storeId))
+        && exists(/databases/$(database)/documents/leads/$(leadId))
+        && get(/databases/$(database)/documents/leads/$(leadId)).data.storeId == request.resource.data.storeId
+        && get(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.resource.data.capturedByUid;
+      allow update: if validLeadSale(leadId, request.resource.data)
+        && (isAdmin() || managerHasStore(resource.data.storeId))
+        && request.resource.data.leadId == resource.data.leadId
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.capturedByUid == resource.data.capturedByUid
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /appointmentSlots/{slotId} {
+      allow get: if activeUser() && (
+        (!exists(/databases/$(database)/documents/appointmentSlots/$(slotId))
+          && (hasPermission('leads.create') || hasPermission('appointments.attendance')))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('leads.create'))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || isAdmin()
+      );
+      allow list: if activeUser() && (
+        (userHasScheduleStore(resource.data.storeId) && hasPermission('leads.create'))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || isAdmin()
+      );
+      allow create: if activeUser()
+        && validAppointmentSlot(slotId, request.resource.data)
+        && (isAdmin() || managerHasStore(request.resource.data.storeId) || (
+          userHasStore(request.resource.data.storeId)
+          && request.resource.data.capturedByUid == request.auth.uid
+        ))
+        && existsAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId))
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.storeId == request.resource.data.storeId
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.appointmentDate == request.resource.data.appointmentDate
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.appointmentTime == request.resource.data.appointmentTime
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.capturedByUid == request.resource.data.capturedByUid;
+      allow update: if activeUser()
+        && resource.data.leadId == request.resource.data.leadId
+        && validAppointmentSlot(slotId, request.resource.data)
+        && (isAdmin() || managerHasStore(request.resource.data.storeId) || (
+          userHasStore(request.resource.data.storeId)
+          && request.resource.data.capturedByUid == request.auth.uid
+        ))
+        && existsAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId))
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.storeId == request.resource.data.storeId
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.appointmentDate == request.resource.data.appointmentDate
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.appointmentTime == request.resource.data.appointmentTime
+        && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.capturedByUid == request.resource.data.capturedByUid;
+      allow delete: if isAdmin()
+        || (activeUser() && (
+          ((resource.data.capturedByUid == request.auth.uid || managerHasStore(resource.data.storeId))
+            && canCancelAppointments()
+            && existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
+            && getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled')
+          || (hasPermission('leads.delete')
+            && (resource.data.capturedByUid == request.auth.uid || managerHasStore(resource.data.storeId))
+            && !existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)))
+          || (resource.data.capturedByUid == request.auth.uid
+            && (
+              !existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDate != resource.data.appointmentDate
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled'
+            ))
+          || (existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
+            && canRescheduleAppointments()
+            && (
+              getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDate != resource.data.appointmentDate
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
+            ))
+        ));
+    }
+
+    match /appointmentReminders/{reminderId} {
+      allow get, list: if isAdmin()
+        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.confirmations'));
+      allow create: if validAppointmentReminder(request.resource.data)
+        && (isAdmin() || (managerHasStore(request.resource.data.storeId) && hasPermission('appointments.confirmations')));
+      allow update: if validAppointmentReminder(request.resource.data)
+        && request.resource.data.leadId == resource.data.leadId
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.appointmentDate == resource.data.appointmentDate
+        && request.resource.data.appointmentTime == resource.data.appointmentTime
+        && request.resource.data.appointmentKey == resource.data.appointmentKey
+        && (isAdmin() || (managerHasStore(resource.data.storeId) && hasPermission('appointments.confirmations')));
+      allow delete: if isAdmin()
+        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.confirmations'));
+    }
+
+    match /goals/{goalId} {
+      allow get, list: if activeUser() && (
+        (resource.data.assigneeUid == request.auth.uid && hasPermission('goals.view_own'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('goals.manage'))
+        || isAdmin()
+      );
+
+      allow create: if canManageGoals()
+        && validGoal(request.resource.data)
+        && request.resource.data.createdByUid == request.auth.uid
+        && targetLeadOwnerIsActive(request.resource.data.assigneeUid, request.resource.data.storeId)
+        && (isAdmin() || managerHasStore(request.resource.data.storeId));
+
+      allow update: if canManageGoals()
+        && validGoal(request.resource.data)
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.createdByName == resource.data.createdByName
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.groupId == resource.data.groupId
+        && request.resource.data.assigneeUid == resource.data.assigneeUid
+        && targetLeadOwnerIsActive(request.resource.data.assigneeUid, request.resource.data.storeId)
+        && (isAdmin() || (
+          managerHasStore(resource.data.storeId)
+          && managerHasStore(request.resource.data.storeId)
+        ));
+      allow delete: if isAdmin()
+        || managerHasStore(resource.data.storeId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
