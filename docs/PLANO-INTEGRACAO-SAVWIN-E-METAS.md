@@ -762,6 +762,89 @@ Firestore/Auth Emulator do projeto `demo-leadflow`, em desktop e mobile. A
 medicao com volume representativo do piloto continua pendente antes de qualquer
 promocao.
 
+### Pausa operacional - recuperacao da producao (11/11/2026)
+
+A evolucao SavWin e a reformulacao das metas ficam temporariamente congeladas.
+A versao atualmente publicada apresentou uma regressao ainda nao diagnosticada,
+que nao foi detectada antes da publicacao por ausencia de cobertura automatizada
+do fluxo afetado. O commit de homologacao `f471466` nao deve ser promovido como
+tentativa de corrigir esse incidente. A recuperacao da versao oficial passa a
+ter prioridade P0 e deve ocorrer em branch e release candidate proprias.
+
+#### Etapa 1 - preservar evidencias e limitar o impacto
+
+- [ ] registrar URL, horario, perfil, dispositivo e passos exatos que apresentam
+  a falha;
+- [ ] salvar capturas da tela, mensagens do console e requisicoes com erro, sem
+  incluir CPF, credenciais ou outros dados pessoais;
+- [ ] identificar quais fluxos continuam funcionando e quais estao bloqueados;
+- [ ] identificar o commit, tag, artefato, regras, indices e Functions que estao
+  efetivamente publicados;
+- [ ] suspender novas publicacoes ate existir diagnostico, teste de regressao e
+  caminho de rollback aprovados.
+
+#### Etapa 2 - reproduzir e diagnosticar
+
+- [ ] reproduzir a falha em ambiente controlado usando a mesma combinacao de
+  frontend, configuracao e regras da versao publicada;
+- [ ] comparar a versao publicada com a ultima release conhecida como estavel;
+- [ ] determinar se o problema esta no frontend, cache/PWA, Firestore Rules,
+  indices, Functions, configuracao ou incompatibilidade entre componentes;
+- [ ] documentar causa raiz, impacto nos dados e motivo pelo qual os testes
+  existentes nao detectaram a regressao;
+- [ ] decidir entre rollback imediato e hotfix minimo, favorecendo rollback se
+  houver risco de perda de dados, indisponibilidade ampla ou acesso indevido.
+
+#### Etapa 3 - criar a barreira de regressao
+
+- [ ] escrever primeiro um teste automatizado que falhe pelo mesmo motivo da
+  producao;
+- [ ] cobrir o fluxo com o nivel adequado: unidade, Security Rules, integracao
+  com emuladores e Playwright autenticado;
+- [ ] incluir os perfis e tamanhos de tela envolvidos no incidente;
+- [ ] confirmar que o teste falha na revisao quebrada e passa somente depois da
+  correcao;
+- [ ] impedir que o pipeline gere ou publique artefatos quando essa cobertura
+  falhar.
+
+#### Etapa 4 - corrigir e validar a candidata
+
+- [ ] aplicar a menor correcao possivel em branch de hotfix, sem misturar a
+  integracao SavWin ainda nao promovida;
+- [ ] executar testes unitarios, regras, integracao, E2E autenticado e build;
+- [ ] validar manualmente os fluxos criticos de login, captacao, sincronizacao,
+  agenda, gestao e permissoes na candidata;
+- [ ] testar instalacao limpa e atualizacao de uma PWA ja instalada, incluindo
+  cache e Service Worker;
+- [ ] confirmar que nenhuma migracao ou correcao altera dados sem backup,
+  simulacao e aprovacao explicita;
+- [ ] registrar o commit, versoes dos componentes, resultados dos testes e
+  responsaveis pelo aceite.
+
+#### Etapa 5 - recuperar e acompanhar producao
+
+- [ ] preparar backup/exportacao e procedimento de rollback antes da promocao;
+- [ ] publicar somente a candidata aprovada, com os projetos e destinos
+  conferidos explicitamente;
+- [ ] executar smoke test autenticado imediatamente depois da publicacao;
+- [ ] acompanhar erros e os fluxos criticos durante a janela de observacao;
+- [ ] encerrar o incidente apenas depois de confirmar a recuperacao em mais de
+  um dispositivo e perfil afetado;
+- [ ] registrar a licao aprendida e atualizar o checklist de release.
+
+#### Criterio para retomar o SavWin
+
+O trabalho das fases seguintes so pode ser retomado quando a producao estiver
+estavel, a causa raiz estiver documentada, o teste de regressao fizer parte da
+barreira de qualidade e o hotfix ou rollback estiver identificado por commit e
+release. Depois disso, permanecem pendentes para o SavWin:
+
+- [ ] validar o volume de leituras com uma amostra representativa do piloto;
+- [ ] executar a Fase 5 de reformulacao das metas;
+- [ ] executar a Fase 6 de operacao assistida e promocao;
+- [ ] comparar ao menos um ciclo mensal completo antes de oficializar os
+  indicadores.
+
 ### Fase 5 - Reformulacao das metas
 
 - versionar o modelo `goals`;
