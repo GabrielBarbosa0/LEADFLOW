@@ -28,6 +28,8 @@ export function homeView({ state, hasAccess, canManage, canManageGoals, isAdmin,
   }
   if (hasAccess('appointments.view')) {
     cards.push(actionCard('appointments', 'calendar-days', 'Agenda de exames', 'Visualizar os pré-agendamentos'));
+  }
+  if (hasAccess('appointments.confirmations')) {
     cards.push(actionCard('confirmations', 'message-circle', 'Confirmações', 'Enviar lembretes aos clientes'));
   }
   if (hasAccess('goals.view_own') || canManageGoals()) cards.push(actionCard('goals', 'target', 'Metas', canManageGoals() ? 'Definir e acompanhar a equipe' : 'Acompanhar meu desempenho'));

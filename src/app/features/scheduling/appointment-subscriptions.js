@@ -18,7 +18,7 @@ export function stopConfirmationsSubscription(state) {
 }
 
 export function startConfirmationsSubscription({ state, render, hasAccess, subscribe }) {
-  if (!hasAccess('appointments.view') || state.route !== 'confirmations') return;
+  if (!hasAccess('appointments.confirmations') || state.route !== 'confirmations') return;
   stopConfirmationsSubscription(state);
   const startDate = toLocalDateInput(new Date());
   const endDate = confirmationEndDate(startDate, state.confirmations.days);
@@ -85,7 +85,7 @@ export function startAppointmentsSubscription({ state, render, hasAccess, isAdmi
 
 export function ensureAppointmentData({ state, hasAccess, startAppointments, startConfirmations }) {
   if (state.route === 'appointments' && hasAccess('appointments.view') && !state.unsubscribeAppointments) startAppointments();
-  if (state.route === 'confirmations' && hasAccess('appointments.view') && !state.unsubscribeConfirmations) startConfirmations();
+  if (state.route === 'confirmations' && hasAccess('appointments.confirmations') && !state.unsubscribeConfirmations) startConfirmations();
 }
 
 export async function openAppointmentCreateDialog({ state, render, profileStoreIds }) {

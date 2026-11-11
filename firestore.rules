@@ -1013,7 +1013,7 @@ service cloud.firestore {
             && userHasStore(resource.data.storeId)
             && hasPermission('leads.view_own'))
         || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
-        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
         || (managerHasStore(resource.data.storeId) && hasPermission('leads.view_stores'))
         || isAdmin()
       );
@@ -1021,7 +1021,7 @@ service cloud.firestore {
       allow list: if activeUser() && (
         (resource.data.capturedByUid == request.auth.uid && hasPermission('leads.view_own'))
         || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
-        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
         || (managerHasStore(resource.data.storeId) && hasPermission('leads.view_stores'))
         || isAdmin()
       );
@@ -1142,12 +1142,12 @@ service cloud.firestore {
         (!exists(/databases/$(database)/documents/appointmentSlots/$(slotId))
           && (hasPermission('leads.create') || hasPermission('appointments.attendance')))
         || (userHasScheduleStore(resource.data.storeId) && hasPermission('leads.create'))
-        || (managerHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
         || isAdmin()
       );
       allow list: if activeUser() && (
         (userHasScheduleStore(resource.data.storeId) && hasPermission('leads.create'))
-        || (managerHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
+        || (userHasScheduleStore(resource.data.storeId) && hasPermission('appointments.view'))
         || isAdmin()
       );
       allow create: if activeUser()
@@ -1202,18 +1202,18 @@ service cloud.firestore {
 
     match /appointmentReminders/{reminderId} {
       allow get, list: if isAdmin()
-        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view'));
+        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.confirmations'));
       allow create: if validAppointmentReminder(request.resource.data)
-        && (isAdmin() || (managerHasStore(request.resource.data.storeId) && hasPermission('appointments.view')));
+        && (isAdmin() || (managerHasStore(request.resource.data.storeId) && hasPermission('appointments.confirmations')));
       allow update: if validAppointmentReminder(request.resource.data)
         && request.resource.data.leadId == resource.data.leadId
         && request.resource.data.storeId == resource.data.storeId
         && request.resource.data.appointmentDate == resource.data.appointmentDate
         && request.resource.data.appointmentTime == resource.data.appointmentTime
         && request.resource.data.appointmentKey == resource.data.appointmentKey
-        && (isAdmin() || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view')));
+        && (isAdmin() || (managerHasStore(resource.data.storeId) && hasPermission('appointments.confirmations')));
       allow delete: if isAdmin()
-        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.view'));
+        || (managerHasStore(resource.data.storeId) && hasPermission('appointments.confirmations'));
     }
 
     match /goals/{goalId} {

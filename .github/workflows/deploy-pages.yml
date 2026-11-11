@@ -36,6 +36,28 @@ jobs:
       - name: Run Firestore security rules tests
         run: npm run test:rules
 
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run profile and permission E2E tests
+        run: npx firebase emulators:exec --project demo-leadflow --config firebase.emulators.docker.json --only auth,firestore,functions "npm run seed:emulator:reset && npm run test:e2e"
+        env:
+          VITE_FIREBASE_API_KEY: demo-key
+          VITE_FIREBASE_AUTH_DOMAIN: demo-leadflow.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: demo-leadflow
+          VITE_FIREBASE_STORAGE_BUCKET: demo-leadflow.appspot.com
+          VITE_FIREBASE_MESSAGING_SENDER_ID: "000000000000"
+          VITE_FIREBASE_APP_ID: "1:000000000000:web:demo"
+          VITE_USE_FIREBASE_EMULATORS: "true"
+          VITE_FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1
+          VITE_FIREBASE_AUTH_EMULATOR_PORT: "9099"
+          VITE_FIRESTORE_EMULATOR_HOST: 127.0.0.1
+          VITE_FIRESTORE_EMULATOR_PORT: "8180"
+          VITE_FUNCTIONS_EMULATOR_PORT: "5001"
+
       - name: Validate Firebase configuration
         run: test -n "$VITE_FIREBASE_API_KEY"
         env:

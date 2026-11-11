@@ -11,8 +11,8 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(6);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 6)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(7);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 7)).toBe(true);
     expect(SYSTEM_ROLE_PROFILES.map((profile) => profile.name)).toEqual([
       'Colaborador Interno',
       'Colaborador Externo',
@@ -41,6 +41,10 @@ describe('role profiles', () => {
 
     expect(external).toMatchObject({ name: 'Colaborador Externo', scope: 'stores', baseRole: 'captor', system: true });
     expect(external.permissions).toContain('external.operations.read');
+    expect(external.permissions).toContain('appointments.view');
+    expect(external.permissions).not.toContain('appointments.confirmations');
+    expect(external.permissions).not.toContain('appointments.attendance');
+    expect(external.permissions).not.toContain('walkins.manage');
     expect(external.permissions).not.toContain('management.view');
     expect(external.permissions).not.toContain('leads.view_stores');
   });
@@ -56,7 +60,8 @@ describe('role profiles', () => {
     });
     expect(internal.permissions).toEqual(expect.arrayContaining([
       'leads.create', 'leads.view_stores', 'management.view', 'appointments.view',
-      'appointments.attendance', 'appointments.cancel', 'walkins.manage', 'followups.team'
+      'appointments.confirmations', 'appointments.attendance', 'appointments.cancel',
+      'walkins.manage', 'followups.team', 'external.operations.read'
     ]));
     expect(internal.permissions).not.toContain('dashboard.view');
     expect(internal.permissions).not.toContain('leads.export');
@@ -76,13 +81,23 @@ describe('role profiles', () => {
 
     expect(hasPermission(legacyTelemarketing, 'management.view')).toBe(true);
     expect(hasPermission(legacyTelemarketing, 'walkins.manage')).toBe(true);
-    expect(hasPermission(legacyTelemarketing, 'external.operations.read')).toBe(false);
+    expect(hasPermission(legacyTelemarketing, 'external.operations.read')).toBe(true);
   });
 
   it('gives managers visibility into external operations', () => {
     const manager = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-manager');
     expect(manager).toMatchObject({ name: 'Gestor', baseRole: 'manager' });
     expect(manager.permissions).toContain('external.operations.read');
+    expect(manager.permissions).toContain('appointments.confirmations');
+  });
+
+  it('keeps internal permissions as a superset of the external profile', () => {
+    const external = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-external-leader');
+    const internal = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-captor');
+    const manager = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-manager');
+
+    expect(external.permissions.every((permission) => internal.permissions.includes(permission))).toBe(true);
+    expect(internal.permissions.every((permission) => manager.permissions.includes(permission))).toBe(true);
   });
 
   it('creates an own-data profile without team permissions', () => {

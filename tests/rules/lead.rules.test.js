@@ -396,11 +396,11 @@ describe('lead correction rules', () => {
     await assertFails(getDoc(doc(noAgendaDb, 'leads', 'lead-test')));
   });
 
-  it('lets an agenda profile complete only the current appointment reminder as itself', async () => {
+  it('lets a confirmation profile complete only the current appointment reminder as itself', async () => {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await updateDoc(doc(context.firestore(), 'users', 'manager-uid'), {
         roleProfileId: 'custom-agenda-only',
-        permissions: ['appointments.view']
+        permissions: ['appointments.view', 'appointments.confirmations']
       });
     });
     const db = authenticatedDb('manager-uid', 'manager@example.com');

@@ -11,6 +11,21 @@ Evitar divergencias entre o que a interface permite e o que o Firestore autoriza
 - `roleProfiles` funciona como modelo para aplicar permissoes aos acessos, e nao e consultado pelas regras durante cada operacao.
 - `functions/system-role-profiles.json` concentra a versao e as permissoes padrao dos cargos do sistema.
 
+## Matriz operacional v7
+
+| Funcionalidade | Externo / MEI | Interno | Gestor | Administrador |
+| --- | --- | --- | --- | --- |
+| Nova abordagem, cadastros, retornos proprios e metas proprias | Sim | Sim | Sim | Sim |
+| Operacao externa | Sim | Sim | Sim | Sim |
+| Agenda de exames | Somente leitura | Sim | Sim | Sim |
+| Comparecimento, falta e estado neutro | Nao | Sim | Sim | Sim |
+| Encaixe rapido | Nao | Sim | Sim | Sim |
+| Confirmacoes | Nao | Sim | Sim | Sim |
+| Acessos da equipe e configuracoes | Nao | Nao | Nao | Sim |
+
+`appointments.view` controla somente a leitura da agenda. `appointments.confirmations`,
+`appointments.attendance` e `walkins.manage` permanecem permissoes independentes.
+
 ## Sincronizacao
 
 A funcao callable `syncCurrentAccess` roda no carregamento da sessao. Ela:
@@ -36,12 +51,25 @@ A funcao so grava quando encontra alguma diferenca, evitando ciclos no listener 
 Validar e publicar regras e funcoes juntas:
 
 ```powershell
-npm.cmd run deploy:firebase
+npm.cmd run deploy:firebase:full
 ```
 
-Esse comando valida todo o conjunto e publica somente as regras, sendo compativel com o plano gratuito Spark.
+O hotfix de permissoes exige a Function e as regras da mesma versao. A Function
+`syncCurrentAccess` atualiza `allowedEmails` e `users` no proximo login; a build de
+producao chama essa Function automaticamente. Nao publique primeiro a interface,
+pois ela pode expor uma acao que as regras antigas ainda recusam.
 
-`syncCurrentAccess` fica desativada enquanto a Function nao estiver publicada, evitando bloqueios de login e erros de CORS. Depois de migrar o projeto para o plano Blaze, publique regras e Functions com `npm.cmd run deploy:firebase:full` e defina `VITE_ENABLE_ACCESS_SYNC=true` na build. Nos emuladores, a sincronizacao e habilitada automaticamente.
+Ordem de publicacao:
+
+1. Execute todos os testes locais e gere o build.
+2. Publique Functions e regras com `npm.cmd run deploy:firebase:full`.
+3. Publique a interface somente depois do sucesso do passo anterior.
+4. Peca aos usuarios conectados que saiam e entrem novamente.
+5. Valide um Externo, um Interno e um Gestor antes de remover os acessos administrativos temporarios.
+
+O erro de limite de 1.000 refere-se a expressoes avaliadas pelas regras do Firestore,
+nao a 1.000 requisicoes. Os testes de regras devem permanecer verdes para impedir
+que alteracoes de permissao ultrapassem esse limite.
 
 Esse comando executa os testes do emulador e verifica a sintaxe das funcoes antes da publicacao. A hospedagem do site continua sendo empacotada separadamente.
 

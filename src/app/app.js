@@ -165,7 +165,7 @@ function canAccessRoute(route) {
     kanban: () => hasAccess('management.view'),
     dashboard: () => hasAccess('dashboard.view'),
     appointments: () => hasAccess('appointments.view'),
-    confirmations: () => hasAccess('appointments.view'),
+    confirmations: () => hasAccess('appointments.confirmations'),
     'walk-ins': () => hasAccess('walkins.manage'),
     'external-operations': () => hasAccess('external.operations.read'),
     access: () => isAdmin(),
@@ -535,7 +535,7 @@ function appointmentsView() {
 
 function confirmationsView() {
   return renderConfirmationsView({
-    allowed: hasAccess('appointments.view'),
+    allowed: hasAccess('appointments.confirmations'),
     source: state.confirmations.records,
     confirmations: state.confirmations,
     profileName: state.profile?.displayName || '',

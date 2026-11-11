@@ -71,6 +71,48 @@ describe('application shell modules', () => {
     expect(currentPageTitle({ route: 'external-operations' }, () => false)).toBe('Operação externa');
   });
 
+  it('shows a read-only agenda to external collaborators without confirmations', () => {
+    const externalMarkup = homeView({
+      state,
+      hasAccess: (permission) => [
+        'leads.create', 'leads.view_own', 'followups.own', 'goals.view_own',
+        'external.operations.read', 'appointments.view'
+      ].includes(permission),
+      canManage: () => false,
+      canManageGoals: () => false,
+      isAdmin: () => false,
+      pendingFollowUps: () => []
+    });
+
+    expect(externalMarkup).toContain('Agenda de exames');
+    expect(externalMarkup).not.toContain('Confirmações');
+    expect(externalMarkup).not.toContain('Novo encaixe rápido');
+    expect(externalMarkup).not.toContain('Acessos da equipe');
+    expect(externalMarkup).not.toContain('Configurações');
+  });
+
+  it('shows the external features plus operational actions to internal collaborators', () => {
+    const internalMarkup = homeView({
+      state,
+      hasAccess: (permission) => [
+        'leads.create', 'leads.view_own', 'followups.own', 'goals.view_own',
+        'external.operations.read', 'appointments.view', 'appointments.confirmations',
+        'appointments.attendance', 'walkins.manage'
+      ].includes(permission),
+      canManage: () => true,
+      canManageGoals: () => false,
+      isAdmin: () => false,
+      pendingFollowUps: () => []
+    });
+
+    expect(internalMarkup).toContain('Operação externa');
+    expect(internalMarkup).toContain('Agenda de exames');
+    expect(internalMarkup).toContain('Confirmações');
+    expect(internalMarkup).toContain('Novo encaixe rápido');
+    expect(internalMarkup).not.toContain('Acessos da equipe');
+    expect(internalMarkup).not.toContain('Configurações');
+  });
+
   it('keeps navigation active state and management grouping', () => {
     const navigation = bottomNavigation({ state: { ...state, route: 'dashboard' }, hasAccess, canManage: () => true, pendingFollowUps: () => [] });
     expect(navigation).toContain('Gestão');

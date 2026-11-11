@@ -231,7 +231,7 @@ function appointmentReminderId(lead) {
 }
 
 function appointmentsQuery(profile, monthKey, selectedStoreId = '') {
-  if (!isFirebaseConfigured || !['manager', 'admin'].includes(profile?.role)) {
+  if (!isFirebaseConfigured || !hasPermission(profile, 'appointments.view')) {
     const error = new Error('Agenda indisponível para este perfil.');
     error.code = 'permission-denied';
     throw error;
@@ -250,7 +250,7 @@ function appointmentsQuery(profile, monthKey, selectedStoreId = '') {
     limit(APPOINTMENTS_QUERY_LIMIT + 1)
   ];
   if (selectedStoreId) constraints.unshift(where('storeId', '==', selectedStoreId));
-  else if (profile.role === 'manager') constraints.unshift(where('storeId', storeIds.length === 1 ? '==' : 'in', storeIds.length === 1 ? storeIds[0] : storeIds));
+  else if (profile.role !== 'admin') constraints.unshift(where('storeId', storeIds.length === 1 ? '==' : 'in', storeIds.length === 1 ? storeIds[0] : storeIds));
   return query(collection(db, 'leads'), ...constraints);
 }
 

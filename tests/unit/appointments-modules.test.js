@@ -61,6 +61,21 @@ describe('appointments feature modules', () => {
     expect(markup).toContain('Exame de vista - 20 min');
   });
 
+  it('renders the external agenda without attendance actions', () => {
+    const markup = appointmentsView({
+      allowed: true,
+      appointments: { loading: false, error: '', truncated: false, month: '2026-10', storeId: 'loja-06', selectedDate: '2026-10-30', updatingId: '' },
+      records: [lead], allowedStores: [store], backRoute: 'home', canCreate: true,
+      canMarkAttendance: false, adminView: false, queryLimit: 500,
+      now: new Date('2026-10-29T12:00:00-03:00')
+    });
+
+    expect(markup).toContain('Maria Silva');
+    expect(markup).not.toContain('data-attendance-status');
+    expect(markup).not.toContain('Compareceu');
+    expect(markup).not.toContain('Não compareceu');
+  });
+
   it('delegates appointment and confirmation actions', async () => {
     const selectDate = vi.fn();
     await expect(handleAppointmentClick(clickEvent('[data-appointment-date]', { appointmentDate: '2026-10-30' }), {

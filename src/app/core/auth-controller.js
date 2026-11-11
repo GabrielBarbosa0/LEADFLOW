@@ -190,9 +190,9 @@ export async function startAuthenticationController(dependencies) {
         state.settings.loaded = false;
         if (!hasAccess('appointments.view')) {
           stopAppointmentsSubscription();
-          stopConfirmationsSubscription();
           stopWalkInsSubscription?.();
         }
+        if (!hasAccess('appointments.confirmations')) stopConfirmationsSubscription();
         subscribeProfileLeads();
         startOfflineCaptureSubscription();
         startFollowUpScheduleSubscription();

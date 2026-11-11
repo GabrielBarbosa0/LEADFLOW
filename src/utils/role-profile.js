@@ -27,6 +27,7 @@ export const PERMISSION_GROUPS = [
       { id: 'management.view', label: 'Acessar a gestão de leads', scopes: ['stores'] },
       { id: 'leads.clinical_update', label: 'Atualizar dados clinicos do lead', scopes: ['stores'] },
       { id: 'appointments.view', label: 'Visualizar a agenda de exames', scopes: ['stores'] },
+      { id: 'appointments.confirmations', label: 'Gerenciar confirmações de agendamentos', scopes: ['stores'] },
       { id: 'appointments.attendance', label: 'Registrar comparecimento e falta', scopes: ['stores'] },
       { id: 'walkins.manage', label: 'Gerenciar encaixes do consultório', scopes: ['stores'] },
       { id: 'followups.team', label: 'Acompanhar retornos da equipe', scopes: ['stores'] },

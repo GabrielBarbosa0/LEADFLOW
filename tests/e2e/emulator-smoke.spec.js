@@ -8,7 +8,7 @@ async function signIn(page, email) {
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill(password);
   await page.getByRole('button', { name: 'Entrar com e-mail' }).click();
-  await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible({ timeout: 15000 });
 }
 
 test('authenticates an administrator through the Firebase Emulator', async ({ page }) => {
@@ -93,6 +93,24 @@ test('loads store-scoped logistics for an external collaborator', async ({ page 
   await expect(page.getByText('Dona Lucia').first()).toBeVisible();
   await expect(page.getByText('Seu Jose').first()).toBeVisible();
   await expect(page.getByText('Cliente Compareceu Hoje')).toHaveCount(0);
+});
+
+test('gives external collaborators a read-only agenda and no internal tools', async ({ page }) => {
+  await signIn(page, 'externa@leadflow.test');
+
+  await expect(page.getByRole('button', { name: /Agenda de exames/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Confirmações/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Novo encaixe rápido/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Acessos da equipe/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Configurações/ })).toHaveCount(0);
+
+  await page.getByRole('button', { name: /Agenda de exames/ }).click();
+  await expect(page).toHaveURL(/#\/appointments$/);
+  await expect(page.getByText('Agenda de exames')).toBeVisible();
+  await expect(page.getByText('Seu perfil não possui acesso a agenda gerencial.')).toHaveCount(0);
+  await expect(page.locator('.agenda-layout')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Compareceu' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Não compareceu' })).toHaveCount(0);
 });
 
 test('lists active store captors when creating a quick walk-in', async ({ page }) => {
@@ -209,7 +227,7 @@ test('keeps the confirmation period beside a compact back button', async ({ page
   }).toEqual({ sameRow: true, backWidth: 54 });
 });
 
-test('validates appointment cancellation reasons for an internal collaborator', async ({ page }) => {
+test('validates and completes appointment cancellation for an internal collaborator', async ({ page }, testInfo) => {
   await signIn(page, 'balcao@leadflow.test');
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
@@ -226,8 +244,15 @@ test('validates appointment cancellation reasons for an internal collaborator', 
   await dialog.getByLabel('Motivo do cancelamento').selectOption('other');
   await dialog.getByRole('button', { name: 'Confirmar cancelamento' }).click();
   await expect(dialog.getByText('Descreva o motivo do cancelamento.')).toBeVisible();
-  await dialog.getByRole('button', { name: 'Voltar' }).click();
-  await expect(dialog).toHaveCount(0);
+  if (testInfo.project.name === 'desktop-chrome') {
+    await dialog.getByLabel('Motivo do cancelamento').selectOption('schedule_conflict');
+    await dialog.getByRole('button', { name: 'Confirmar cancelamento' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText('Agendamento cancelado e horário liberado.')).toBeVisible();
+  } else {
+    await dialog.getByRole('button', { name: 'Voltar' }).click();
+    await expect(dialog).toHaveCount(0);
+  }
 });
 
 test('requires formal confirmation when an internal collaborator reschedules a cancelled appointment', async ({ page }) => {
@@ -337,10 +362,8 @@ test('lets a MEI schedule an unscheduled lead transferred by a store manager', a
   await history.getByRole('button', { name: 'Fechar histórico' }).click();
 
   await page.getByRole('button', { name: 'Sair' }).click();
-  await page.getByLabel('E-mail').fill('mei@leadflow.test');
-  await page.getByLabel('Senha').fill(password);
-  await page.getByRole('button', { name: 'Entrar com e-mail' }).click();
-  await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible();
+  await expect(page.getByLabel('E-mail')).toBeVisible();
+  await signIn(page, 'mei@leadflow.test');
   await page.goto('/#/leads');
   await page.getByRole('button', { name: 'Ver cadastro de Cliente Sem Agendamento' }).click();
 
