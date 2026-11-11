@@ -23,16 +23,6 @@ capacidade de trabalhar em locais com conexao instavel.
 > **Versao oficial em producao:**
 > [`v0.1.1`](https://github.com/GabrielBarbosa0/LEADFLOW/releases/tag/v0.1.1)
 
-## Interface
-
-### Inicio
-
-![Tela inicial do LeadFlow](docs/assets/readme/tela-inicio.png)
-
-### Agenda de exames
-
-![Agenda de exames do LeadFlow](docs/assets/readme/tela-agenda.png)
-
 ## Principais destaques
 
 - **Operacao offline controlada:** permite captar e preservar dados no aparelho
