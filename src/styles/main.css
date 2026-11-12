@@ -2662,11 +2662,24 @@ svg {
 
 .manual-sale-dialog {
   width: min(calc(100% - 32px), 760px);
+  height: min(680px, calc(100dvh - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+}
+
+.manual-sale-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.manual-sale-form-dialog {
+  width: min(calc(100% - 32px), 680px);
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
 }
 
-.manual-sale-dialog .manual-sale-icon {
+.manual-sale-dialog .manual-sale-icon,
+.manual-sale-form-dialog .manual-sale-icon {
   color: var(--success-dark);
   background: var(--success-soft);
 }
@@ -2679,6 +2692,16 @@ svg {
 
 .manual-sale-heading .confirmation-dialog-icon {
   flex: 0 0 auto;
+}
+
+.manual-sale-heading .confirmation-dialog-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.manual-sale-close {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .manual-purchase-summary {
@@ -2710,6 +2733,9 @@ svg {
 
 .manual-purchase-list {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
   gap: 8px;
   margin-top: 18px;
 }
@@ -2721,10 +2747,19 @@ svg {
   gap: 12px;
 }
 
-.manual-purchase-list h3,
-.manual-sale-dialog form h3 {
+.manual-purchase-list h3 {
   margin: 0;
   font-size: 0.95rem;
+}
+
+.manual-purchase-scroll {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  padding-right: 4px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .manual-purchase-card {
@@ -2792,32 +2827,30 @@ svg {
   height: 18px;
 }
 
-.manual-sale-dialog form {
+.manual-sale-form-dialog form {
   display: grid;
   gap: 14px;
   margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
 }
 
-.manual-sale-dialog .manual-sale-primary-fields,
-.manual-sale-dialog .manual-sale-fields {
+.manual-sale-form-dialog .manual-sale-primary-fields,
+.manual-sale-form-dialog .manual-sale-fields {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.manual-sale-dialog .manual-sale-fields .field:first-child {
+.manual-sale-form-dialog .manual-sale-fields .field:first-child {
   grid-column: auto;
 }
 
-.manual-sale-dialog form > .field[data-field="notes"] {
+.manual-sale-form-dialog form > .field[data-field="notes"] {
   margin-bottom: 0;
 }
 
-.manual-sale-dialog .manual-sale-actions {
+.manual-sale-form-dialog .manual-sale-actions {
   margin-top: 0;
 }
 
-.manual-sale-dialog .confirmation-dialog-actions .button {
+.manual-sale-form-dialog .confirmation-dialog-actions .button {
   min-width: 0;
   gap: 7px;
   padding-right: 12px;
@@ -2847,8 +2880,8 @@ svg {
 
 @media (max-width: 520px) {
   .manual-purchase-summary,
-  .manual-sale-dialog .manual-sale-primary-fields,
-  .manual-sale-dialog .manual-sale-fields {
+  .manual-sale-form-dialog .manual-sale-primary-fields,
+  .manual-sale-form-dialog .manual-sale-fields {
     grid-template-columns: 1fr;
   }
 
@@ -2860,7 +2893,7 @@ svg {
     grid-column: 1 / -1;
   }
 
-  .manual-sale-dialog .confirmation-dialog-actions .button {
+  .manual-sale-form-dialog .confirmation-dialog-actions .button {
     width: 100%;
   }
 }

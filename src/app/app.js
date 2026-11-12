@@ -409,7 +409,14 @@ function applyManualSaleUpdate(updated) {
 }
 
 function closeManualSaleDialog() {
-  state.saleConfirmation = { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '' };
+  state.saleConfirmation = { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '', formOpen: false };
+  render();
+}
+
+function closeManualSaleForm() {
+  state.saleConfirmation.formOpen = false;
+  state.saleConfirmation.editingId = '';
+  state.saleConfirmation.error = '';
   render();
 }
 
@@ -791,15 +798,44 @@ function bindPageEvents() {
     manualSaleDialog.querySelector('[data-close-manual-sale]')?.addEventListener('click', closeManualSaleDialog);
     manualSaleDialog.querySelectorAll('[data-new-purchase]').forEach((button) => button.addEventListener('click', () => {
       state.saleConfirmation.editingId = '';
+      state.saleConfirmation.formOpen = true;
       state.saleConfirmation.error = '';
       render();
     }));
     manualSaleDialog.querySelectorAll('[data-edit-purchase]').forEach((button) => button.addEventListener('click', () => {
       state.saleConfirmation.editingId = button.dataset.editPurchase;
+      state.saleConfirmation.formOpen = true;
       state.saleConfirmation.error = '';
       render();
     }));
-    const saleForm = manualSaleDialog.querySelector('#manual-sale-form');
+    manualSaleDialog.querySelectorAll('[data-cancel-purchase]').forEach((button) => button.addEventListener('click', async () => {
+      if (!window.confirm('Cancelar esta compra? O registro permanecera no historico.')) return;
+      const lead = manualSaleLead();
+      state.saleConfirmation.saving = true;
+      try {
+        const result = await removeManualSaleConfirmation(state.profile, lead, button.dataset.cancelPurchase);
+        applyManualSaleUpdate(result.data);
+        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
+        state.saleConfirmation.editingId = '';
+        state.saleConfirmation.error = '';
+        showToast('Compra cancelada. O histórico foi preservado.', 'success', 'undo-2');
+      } catch {
+        state.saleConfirmation.error = 'Nao foi possivel cancelar a compra.';
+      } finally {
+        state.saleConfirmation.saving = false;
+        render();
+      }
+    }));
+  }
+  const manualSaleFormDialog = document.querySelector('#manual-sale-form-dialog');
+  if (manualSaleFormDialog) {
+    requestAnimationFrame(() => {
+      if (manualSaleFormDialog.isConnected && !manualSaleFormDialog.open) manualSaleFormDialog.showModal();
+    });
+    manualSaleFormDialog.addEventListener('cancel', (event) => { event.preventDefault(); closeManualSaleForm(); });
+    manualSaleFormDialog.addEventListener('click', (event) => { if (event.target === manualSaleFormDialog) closeManualSaleForm(); });
+    manualSaleFormDialog.querySelector('[data-close-purchase-form]')?.addEventListener('click', closeManualSaleForm);
+    const saleForm = manualSaleFormDialog.querySelector('#manual-sale-form');
     saleForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const lead = manualSaleLead();
@@ -820,6 +856,7 @@ function bindPageEvents() {
         applyManualSaleUpdate(result.data);
         state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
         state.saleConfirmation.editingId = '';
+        state.saleConfirmation.formOpen = false;
         state.saleConfirmation.error = '';
         showToast('Compra registrada e vinculada ao colaborador.', 'success', 'badge-check');
       } catch (error) {
@@ -831,24 +868,6 @@ function bindPageEvents() {
         render();
       }
     });
-    manualSaleDialog.querySelectorAll('[data-cancel-purchase]').forEach((button) => button.addEventListener('click', async () => {
-      if (!window.confirm('Cancelar esta compra? O registro permanecera no historico.')) return;
-      const lead = manualSaleLead();
-      state.saleConfirmation.saving = true;
-      try {
-        const result = await removeManualSaleConfirmation(state.profile, lead, button.dataset.cancelPurchase);
-        applyManualSaleUpdate(result.data);
-        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
-        state.saleConfirmation.editingId = '';
-        state.saleConfirmation.error = '';
-        showToast('Compra cancelada. O histórico foi preservado.', 'success', 'undo-2');
-      } catch {
-        state.saleConfirmation.error = 'Nao foi possivel cancelar a compra.';
-      } finally {
-        state.saleConfirmation.saving = false;
-        render();
-      }
-    }));
   }
   const form = document.querySelector('#lead-form');
   if (form) {
@@ -2219,7 +2238,7 @@ export async function startApp() {
       const lead = [...state.leads, ...state.management.records, ...state.appointments.records, state.management.activeLead]
         .find((item) => item?.id === leadId);
       if (!canConfirmManualSale(state.profile, lead)) return;
-      state.saleConfirmation = { leadId, loading: true, saving: false, error: '', record: null, editingId: '' };
+      state.saleConfirmation = { leadId, loading: true, saving: false, error: '', record: null, editingId: '', formOpen: false };
       render();
       try {
         state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, lead);

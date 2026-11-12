@@ -279,31 +279,47 @@ test('registers multiple purchases with responsible collaborators and preserves 
   await expect(saleDialog).toBeVisible();
   await expect(saleDialog.locator('.manual-sale-icon svg.lucide-badge-dollar-sign')).toBeVisible();
   await expect(saleDialog.getByRole('heading', { name: 'Compras de Cliente Encaixe Aguardando' })).toBeVisible();
-  await expect(saleDialog.getByLabel('OS ou pedido')).toBeVisible();
-  await expect(saleDialog.getByLabel('Valor da venda')).toBeVisible();
+  await expect(page.locator('#manual-sale-form-dialog')).toHaveCount(0);
+  await saleDialog.getByRole('button', { name: 'Nova compra' }).click();
+
+  let saleFormDialog = page.locator('#manual-sale-form-dialog');
+  await expect(saleFormDialog.getByRole('heading', { name: 'Registrar nova compra' })).toBeVisible();
+  await expect(saleFormDialog.getByLabel('OS ou pedido')).toBeVisible();
+  await expect(saleFormDialog.getByLabel('Valor da venda')).toBeVisible();
   const [orderBox, valueBox] = await Promise.all([
-    saleDialog.getByLabel('OS ou pedido').boundingBox(),
-    saleDialog.getByLabel('Valor da venda').boundingBox()
+    saleFormDialog.getByLabel('OS ou pedido').boundingBox(),
+    saleFormDialog.getByLabel('Valor da venda').boundingBox()
   ]);
   expect(orderBox).not.toBeNull();
   expect(valueBox).not.toBeNull();
   expect(Math.abs(orderBox.y - valueBox.y)).toBeLessThanOrEqual(1);
   expect(Math.abs(orderBox.width - valueBox.width)).toBeLessThanOrEqual(1);
-  await saleDialog.getByLabel('OS ou pedido').fill('E2E-001');
-  await saleDialog.getByLabel('Valor da venda').fill('450,90');
-  await saleDialog.getByLabel('Observação').fill('Primeira compra do teste automatizado.');
-  await saleDialog.getByRole('button', { name: 'Registrar compra' }).click();
+  await saleFormDialog.getByLabel('OS ou pedido').fill('E2E-001');
+  await saleFormDialog.getByLabel('Valor da venda').fill('450,90');
+  await saleFormDialog.getByLabel('Observação').fill('Primeira compra do teste automatizado.');
+  await saleFormDialog.getByRole('button', { name: 'Registrar compra' }).click();
 
   await expect(page.getByText('Compra registrada e vinculada ao colaborador.')).toBeVisible();
+  await expect(page.locator('#manual-sale-form-dialog')).toHaveCount(0);
   await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(1);
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 450,90', { exact: true })).toBeVisible();
+  await expect(saleDialog.getByRole('button', { name: 'Cancelar compra' }).locator('svg.lucide-circle-x')).toBeVisible();
 
-  await saleDialog.getByLabel('Responsável pela venda').selectOption({ label: 'Colaborador Interno Teste' });
-  await saleDialog.getByLabel('OS ou pedido').fill('E2E-002');
-  await saleDialog.getByLabel('Valor da venda').fill('275,00');
-  await saleDialog.getByLabel('Observação').fill('Segunda compra vinculada a outro colaborador.');
-  await saleDialog.getByRole('button', { name: 'Registrar compra' }).click();
+  await saleDialog.getByRole('button', { name: 'Editar compra' }).click();
+  saleFormDialog = page.locator('#manual-sale-form-dialog');
+  await expect(saleFormDialog.getByRole('heading', { name: 'Editar compra' })).toBeVisible();
+  await expect(saleFormDialog.getByLabel('OS ou pedido')).toHaveValue('E2E-001');
+  await saleFormDialog.getByRole('button', { name: 'Voltar' }).click();
+  await expect(page.locator('#manual-sale-form-dialog')).toHaveCount(0);
+
+  await saleDialog.getByRole('button', { name: 'Nova compra' }).click();
+  saleFormDialog = page.locator('#manual-sale-form-dialog');
+  await saleFormDialog.getByLabel('Responsável pela venda').selectOption({ label: 'Colaborador Interno Teste' });
+  await saleFormDialog.getByLabel('OS ou pedido').fill('E2E-002');
+  await saleFormDialog.getByLabel('Valor da venda').fill('275,00');
+  await saleFormDialog.getByLabel('Observação').fill('Segunda compra vinculada a outro colaborador.');
+  await saleFormDialog.getByRole('button', { name: 'Registrar compra' }).click();
 
   await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(2);
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('2', { exact: true })).toBeVisible();
@@ -324,20 +340,26 @@ test('keeps the purchases dialog responsive on mobile and desktop', async ({ pag
   await page.getByRole('button', { name: /Ver cadastro de Cliente Encaixe Aguardando/ }).click();
   await page.locator('#edit-lead-form').getByRole('button', { name: /Registrar compra|Ver compras do cliente/ }).click();
 
-  const dialog = page.locator('#manual-sale-dialog');
-  await expect(dialog.getByLabel('Data da compra')).toBeVisible();
-  await expect(dialog.getByLabel('Responsável pela venda')).toBeVisible();
+  const historyDialog = page.locator('#manual-sale-dialog');
+  await expect(historyDialog).toBeVisible();
+  await expect(historyDialog.getByLabel('Data da compra')).toHaveCount(0);
+  expect(await historyDialog.locator('.manual-purchase-scroll').evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
+  await historyDialog.getByRole('button', { name: 'Nova compra' }).click();
+
+  const formDialog = page.locator('#manual-sale-form-dialog');
+  await expect(formDialog.getByLabel('Data da compra')).toBeVisible();
+  await expect(formDialog.getByLabel('Responsável pela venda')).toBeVisible();
   const [dateBox, responsibleBox, dialogBox] = await Promise.all([
-    dialog.getByLabel('Data da compra').boundingBox(),
-    dialog.getByLabel('Responsável pela venda').boundingBox(),
-    dialog.boundingBox()
+    formDialog.getByLabel('Data da compra').boundingBox(),
+    formDialog.getByLabel('Responsável pela venda').boundingBox(),
+    formDialog.boundingBox()
   ]);
   expect(dateBox).not.toBeNull();
   expect(responsibleBox).not.toBeNull();
   expect(dialogBox).not.toBeNull();
   expect(dialogBox.x).toBeGreaterThanOrEqual(0);
   expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(page.viewportSize().width + 1);
-  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  expect(await formDialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
   if (testInfo.project.name === 'mobile-chrome') {
     expect(Math.abs(dateBox.x - responsibleBox.x)).toBeLessThanOrEqual(1);
     expect(responsibleBox.y).toBeGreaterThan(dateBox.y + dateBox.height);
