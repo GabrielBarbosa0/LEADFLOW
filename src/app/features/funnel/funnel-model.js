@@ -23,6 +23,8 @@ export const FUNNEL_EVENT_LABELS = Object.freeze({
   lead_archived: 'Lead arquivado',
   lead_claimed: 'Lead assumido',
   lead_reassigned: 'Responsável transferido',
+  sale_confirmed: 'Compra confirmada',
+  sale_confirmation_removed: 'Confirmação de compra removida',
   birthday_benefit_planned: 'Beneficio de aniversario planejado',
   birthday_congratulated: 'Cliente parabenizado',
   walk_in_created: 'Encaixe criado',

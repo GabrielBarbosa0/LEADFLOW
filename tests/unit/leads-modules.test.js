@@ -91,6 +91,15 @@ describe('leads feature modules', () => {
     expect(markup).toContain('data-lead-filters-clear');
   });
 
+  it('filters and labels customers with a confirmed purchase', () => {
+    const leads = [sampleLead(), sampleLead({ id: 'lead-2', saleStatus: 'confirmed', saleDate: '2026-11-11' })];
+    expect(filterLeadRecords(leads, { saleStatus: 'confirmed' }).map((lead) => lead.id)).toEqual(['lead-2']);
+    expect(filterLeadRecords(leads, { saleStatus: 'pending' }).map((lead) => lead.id)).toEqual(['lead-1']);
+    const markup = leadsView({ leads, filters: { saleStatus: 'confirmed' } });
+    expect(markup).toContain('id="lead-sale-filter"');
+    expect(markup).toContain('Compra confirmada');
+  });
+
   it('shows a marker for a Captar import', () => {
     const markup = leadsView({ leads: [sampleLead({ recordOrigin: 'captar_import' })] });
     expect(markup).toContain('Importado do Captar');
@@ -142,6 +151,18 @@ describe('leads feature modules', () => {
     });
     expect(markup).toContain('Origem do registro');
     expect(markup).toContain('Importado do Captar');
+  });
+
+  it('shows the purchase summary to everyone and the action only to authorized staff', () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const options = {
+      lead: sampleLead({ saleStatus: 'confirmed', saleDate: '2026-11-11' }),
+      managementMode: true, canManage: true, profileRole: 'manager', scheduleState: scheduleState(),
+      appointmentTimeMarkup: '<div></div>', canDelete: false
+    };
+    expect(leadDetailView(options)).toContain('Confirmada');
+    expect(leadDetailView(options)).not.toContain('data-open-manual-sale');
+    expect(leadDetailView({ ...options, canConfirmSale: true })).toContain('data-open-manual-sale="lead-1"');
   });
 
   it('warns and offers ownership of a cancelled lead in read-only mode', () => {

@@ -13,6 +13,8 @@ const HISTORY_EVENT_ICONS = Object.freeze({
   lead_archived: 'archive',
   lead_claimed: 'user-round-check',
   lead_reassigned: 'user-round-cog',
+  sale_confirmed: 'badge-dollar-sign',
+  sale_confirmation_removed: 'undo-2',
   birthday_benefit_planned: 'cake-slice',
   birthday_congratulated: 'party-popper',
   walk_in_created: 'list-plus',

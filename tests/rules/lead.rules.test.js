@@ -2175,45 +2175,93 @@ describe('lead responsibility transfers', () => {
 });
 
 describe('private lead sale tracking', () => {
-  const tracking = {
+  const tracking = (overrides = {}) => ({
     leadId: 'lead-test',
     storeId: 'loja-06',
     capturedByUid: 'captor-uid',
     customerCpf: '52998224725',
     purchaseInterest: true,
     matchStatus: 'interest_registered',
+    source: 'savwin',
     savwinStoreCode: '',
     savwinOsNumber: '',
     savwinSaleCode: '',
     savwinCustomerCode: '',
     savwinSaleDate: '',
     savwinSaleValue: 0,
+    manualSaleDate: '',
+    manualOrderNumber: '',
+    manualSaleValue: 0,
+    manualNotes: '',
     createdByUid: 'manager-uid',
-    createdAt: Timestamp.now(),
+    createdByName: 'Gestor Teste',
+    createdAt: serverTimestamp(),
     updatedByUid: 'manager-uid',
-    updatedAt: Timestamp.now(),
-    schemaVersion: 1
-  };
+    updatedByName: 'Gestor Teste',
+    updatedAt: serverTimestamp(),
+    schemaVersion: 1,
+    ...overrides
+  });
 
   it('lets an authorized manager register and read purchase interest', async () => {
     const db = authenticatedDb('manager-uid', 'manager@example.com');
     await assertSucceeds(getDoc(doc(db, 'leadSales', 'lead-test')));
-    await assertSucceeds(setDoc(doc(db, 'leadSales', 'lead-test'), tracking));
+    await assertSucceeds(setDoc(doc(db, 'leadSales', 'lead-test'), tracking()));
     await assertSucceeds(getDoc(doc(db, 'leadSales', 'lead-test')));
   });
 
   it('keeps CPF and sale data hidden from captors', async () => {
     await testEnvironment.withSecurityRulesDisabled((context) => setDoc(
       doc(context.firestore(), 'leadSales', 'lead-test'),
-      tracking
+      tracking()
     ));
     const db = authenticatedDb('captor-uid', 'captor@example.com');
     await assertFails(getDoc(doc(db, 'leadSales', 'lead-test')));
-    await assertFails(setDoc(doc(db, 'leadSales', 'lead-test'), { ...tracking, updatedByUid: 'captor-uid' }));
+    await assertFails(setDoc(doc(db, 'leadSales', 'lead-test'), tracking({ updatedByUid: 'captor-uid' })));
   });
 
   it('rejects a manager assigning sale data to another store', async () => {
     const db = authenticatedDb('manager-uid', 'manager@example.com');
-    await assertFails(setDoc(doc(db, 'leadSales', 'lead-test'), { ...tracking, storeId: 'loja-05' }));
+    await assertFails(setDoc(doc(db, 'leadSales', 'lead-test'), tracking({ storeId: 'loja-05' })));
+  });
+
+  it('lets internal staff confirm a sale while exposing only the public status to its captor', async () => {
+    const db = authenticatedDb('internal-uid', 'internal@example.com');
+    await assertSucceeds(setDoc(doc(db, 'leadSales', 'lead-test'), tracking({
+        customerCpf: '', matchStatus: 'manual_confirmed', source: 'manual',
+        manualSaleDate: '2026-11-11', manualOrderNumber: 'OS-123', manualSaleValue: 450,
+        createdByUid: 'internal-uid', createdByName: 'Colaborador Interno Multi-loja',
+        updatedByUid: 'internal-uid', updatedByName: 'Colaborador Interno Multi-loja'
+      })));
+    await assertSucceeds(setDoc(doc(db, 'leadPurchaseStatuses', 'lead-test'), {
+      leadId: 'lead-test', storeId: 'loja-06', capturedByUid: 'captor-uid',
+      saleStatus: 'confirmed', saleDate: '2026-11-11', updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(setDoc(doc(db, 'leadSaleEvents', 'sale-confirmed'), {
+        leadId: 'lead-test', storeId: 'loja-06', eventType: 'sale_confirmed', funnelStage: 'captured',
+        reasonCode: 'manual', description: 'Compra confirmada manualmente (OS/pedido OS-123).',
+        actorUid: 'internal-uid', actorName: 'Colaborador Interno Multi-loja', actorRole: 'manager',
+        occurredAtClient: '2026-11-11T12:00:00.000Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
+      }));
+
+    const captorDb = authenticatedDb('captor-uid', 'captor@example.com');
+    await assertSucceeds(getDoc(doc(captorDb, 'leads', 'lead-test')));
+    await assertSucceeds(getDoc(doc(captorDb, 'leadPurchaseStatuses', 'lead-test')));
+    await assertFails(getDoc(doc(captorDb, 'leadSales', 'lead-test')));
+    await assertFails(updateDoc(doc(captorDb, 'leadPurchaseStatuses', 'lead-test'), {
+      saleStatus: 'pending', saleDate: '', updatedAt: serverTimestamp()
+    }));
+  });
+
+  it('rejects manual sale confirmation outside the authorized store', async () => {
+    await testEnvironment.withSecurityRulesDisabled((context) => updateDoc(
+      doc(context.firestore(), 'users', 'internal-uid'), { storeId: 'loja-02', storeIds: ['loja-02'] }
+    ));
+    const db = authenticatedDb('internal-uid', 'internal@example.com');
+    await assertFails(setDoc(doc(db, 'leadSales', 'lead-test'), tracking({
+      customerCpf: '', matchStatus: 'manual_confirmed', source: 'manual', manualSaleDate: '2026-11-11',
+      createdByUid: 'internal-uid', createdByName: 'Colaborador Interno Multi-loja',
+      updatedByUid: 'internal-uid', updatedByName: 'Colaborador Interno Multi-loja'
+    })));
   });
 });

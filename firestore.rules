@@ -35,7 +35,7 @@ service cloud.firestore {
         || (userProfile().role == 'manager' && permission in [
           'management.view', 'appointments.view', 'appointments.attendance', 'appointments.cancel',
           'followups.team', 'goals.manage', 'dashboard.view', 'leads.export',
-          'leads.clinical_update', 'leads.edit_all', 'leads.delete'
+          'leads.clinical_update', 'leads.edit_all', 'leads.delete', 'sales.confirm_manual'
         ]);
     }
 
@@ -334,18 +334,21 @@ service cloud.firestore {
     function validLeadSale(leadId, data) {
       return data.keys().hasOnly([
           'leadId', 'storeId', 'capturedByUid', 'customerCpf',
-          'purchaseInterest', 'matchStatus', 'savwinStoreCode',
+          'purchaseInterest', 'matchStatus', 'source', 'savwinStoreCode',
           'savwinOsNumber', 'savwinSaleCode', 'savwinCustomerCode',
-          'savwinSaleDate', 'savwinSaleValue', 'createdByUid',
-          'createdAt', 'updatedByUid', 'updatedAt', 'schemaVersion'
+          'savwinSaleDate', 'savwinSaleValue', 'manualSaleDate',
+          'manualOrderNumber', 'manualSaleValue', 'manualNotes',
+          'createdByUid', 'createdByName', 'createdAt', 'updatedByUid',
+          'updatedByName', 'updatedAt', 'schemaVersion'
         ])
         && data.leadId == leadId
         && data.storeId is string
         && data.capturedByUid is string
         && data.customerCpf is string
-        && data.customerCpf.matches('^\\d{11}$')
+        && (data.customerCpf == '' || data.customerCpf.matches('^\\d{11}$'))
         && data.purchaseInterest == true
-        && data.matchStatus in ['interest_registered', 'sale_linked']
+        && data.matchStatus in ['interest_registered', 'sale_linked', 'manual_confirmed', 'manual_reverted']
+        && data.source in ['manual', 'savwin']
         && data.savwinStoreCode is string
         && data.savwinOsNumber is string
         && data.savwinSaleCode is string
@@ -354,10 +357,56 @@ service cloud.firestore {
         && (data.savwinSaleDate == '' || data.savwinSaleDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
         && data.savwinSaleValue is number
         && data.savwinSaleValue >= 0
+        && data.manualSaleDate is string
+        && (data.manualSaleDate == '' || data.manualSaleDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
+        && data.manualOrderNumber is string
+        && data.manualOrderNumber.size() <= 40
+        && data.manualSaleValue is number
+        && data.manualSaleValue >= 0
+        && data.manualNotes is string
+        && data.manualNotes.size() <= 500
         && data.createdByUid is string
+        && data.createdByName is string
         && data.createdAt is timestamp
         && data.updatedByUid == request.auth.uid
+        && data.updatedByName is string
         && data.updatedAt is timestamp
+        && data.schemaVersion == 1;
+    }
+
+    function validLeadPurchaseStatus(leadId, data) {
+      return data.keys().hasOnly([
+          'leadId', 'storeId', 'capturedByUid', 'saleStatus', 'saleDate', 'updatedAt'
+        ])
+        && data.leadId == leadId
+        && data.storeId is string
+        && data.capturedByUid is string
+        && data.saleStatus in ['confirmed', 'pending']
+        && data.saleDate is string
+        && (data.saleDate == '' || data.saleDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
+        && ((data.saleStatus == 'confirmed' && data.saleDate != '')
+          || (data.saleStatus == 'pending' && data.saleDate == ''))
+        && data.updatedAt == request.time;
+    }
+
+    function validLeadSaleEvent(data) {
+      return data.keys().hasOnly([
+          'leadId', 'storeId', 'eventType', 'funnelStage', 'reasonCode',
+          'description', 'actorUid', 'actorName', 'actorRole',
+          'occurredAtClient', 'occurredAtServer', 'schemaVersion'
+        ])
+        && data.leadId is string
+        && data.storeId is string
+        && data.eventType in ['sale_confirmed', 'sale_confirmation_removed']
+        && data.funnelStage is string
+        && data.reasonCode == 'manual'
+        && data.description is string
+        && data.description.size() <= 180
+        && data.actorUid == request.auth.uid
+        && data.actorName is string
+        && data.actorRole is string
+        && data.occurredAtClient is string
+        && data.occurredAtServer == request.time
         && data.schemaVersion == 1;
     }
 
@@ -1117,18 +1166,57 @@ service cloud.firestore {
       }
     }
 
-    match /leadSales/{leadId} {
-      allow get: if isAdmin() || (isManager()
-        && exists(/databases/$(database)/documents/leads/$(leadId))
-        && managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId));
-      allow list: if isAdmin() || managerHasStore(resource.data.storeId);
-      allow create: if validLeadSale(leadId, request.resource.data)
+    match /leadPurchaseStatuses/{leadId} {
+      allow get, list: if activeUser() && (
+        isAdmin()
+        || (resource.data.capturedByUid == request.auth.uid && hasPermission('leads.view_own'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('management.view'))
+      );
+      allow create: if validLeadPurchaseStatus(leadId, request.resource.data)
+        && hasPermission('sales.confirm_manual')
         && (isAdmin() || managerHasStore(request.resource.data.storeId))
         && exists(/databases/$(database)/documents/leads/$(leadId))
         && get(/databases/$(database)/documents/leads/$(leadId)).data.storeId == request.resource.data.storeId
         && get(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.resource.data.capturedByUid;
-      allow update: if validLeadSale(leadId, request.resource.data)
+      allow update: if validLeadPurchaseStatus(leadId, request.resource.data)
+        && hasPermission('sales.confirm_manual')
         && (isAdmin() || managerHasStore(resource.data.storeId))
+        && request.resource.data.leadId == resource.data.leadId
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.capturedByUid == resource.data.capturedByUid;
+      allow delete: if false;
+    }
+
+    match /leadSaleEvents/{eventId} {
+      allow get, list: if activeUser() && hasPermission('sales.confirm_manual')
+        && (isAdmin() || managerHasStore(resource.data.storeId));
+      allow create: if activeUser()
+        && hasPermission('sales.confirm_manual')
+        && validLeadSaleEvent(request.resource.data)
+        && (isAdmin() || managerHasStore(request.resource.data.storeId))
+        && exists(/databases/$(database)/documents/leads/$(request.resource.data.leadId))
+        && get(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.storeId == request.resource.data.storeId;
+      allow update, delete: if false;
+    }
+
+    match /leadSales/{leadId} {
+      allow get: if activeUser() && hasPermission('sales.confirm_manual') && (isAdmin() || (isManager()
+        && exists(/databases/$(database)/documents/leads/$(leadId))
+        && managerHasStore(get(/databases/$(database)/documents/leads/$(leadId)).data.storeId)));
+      allow list: if activeUser() && hasPermission('sales.confirm_manual')
+        && (isAdmin() || managerHasStore(resource.data.storeId));
+      allow create: if validLeadSale(leadId, request.resource.data)
+        && hasPermission('sales.confirm_manual')
+        && (isAdmin() || managerHasStore(request.resource.data.storeId))
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && exists(/databases/$(database)/documents/leads/$(leadId))
+        && get(/databases/$(database)/documents/leads/$(leadId)).data.storeId == request.resource.data.storeId
+        && get(/databases/$(database)/documents/leads/$(leadId)).data.capturedByUid == request.resource.data.capturedByUid;
+      allow update: if validLeadSale(leadId, request.resource.data)
+        && hasPermission('sales.confirm_manual')
+        && (isAdmin() || managerHasStore(resource.data.storeId))
+        && request.resource.data.updatedAt == request.time
         && request.resource.data.leadId == resource.data.leadId
         && request.resource.data.storeId == resource.data.storeId
         && request.resource.data.capturedByUid == resource.data.capturedByUid

@@ -242,6 +242,34 @@ test('loads the real appointment flow for an internal collaborator', async ({ pa
   }
 });
 
+test('confirms and removes a manual sale as an internal collaborator', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
+  await signIn(page, 'colaborador@leadflow.test');
+
+  await page.goto('/#/leads');
+  await page.getByRole('button', { name: /Ver cadastro de Cliente Encaixe Aguardando/ }).click();
+  const leadDetail = page.locator('#edit-lead-form');
+  await expect(leadDetail.getByRole('button', { name: 'Confirmar compra' })).toBeVisible();
+  await leadDetail.getByRole('button', { name: 'Confirmar compra' }).click();
+
+  const saleDialog = page.locator('#manual-sale-dialog');
+  await expect(saleDialog).toBeVisible();
+  await saleDialog.getByLabel('OS ou pedido').fill('E2E-001');
+  await saleDialog.getByLabel('Valor da venda').fill('450,90');
+  await saleDialog.getByLabel('Observacao').fill('Confirmacao temporaria do teste automatizado.');
+  await saleDialog.getByRole('button', { name: 'Confirmar compra' }).click();
+
+  await expect(page.getByText('Compra confirmada e captador atualizado.')).toBeVisible();
+  await expect(page.locator('.lead-sale-summary').getByText('Confirmada', { exact: true })).toBeVisible();
+  await leadDetail.getByRole('button', { name: 'Ver confirmacao da compra' }).click();
+  await expect(saleDialog.getByLabel('OS ou pedido')).toHaveValue('E2E-001');
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await saleDialog.getByRole('button', { name: 'Desfazer confirmacao' }).click();
+  await expect(page.getByText('Confirmacao de compra desfeita.')).toBeVisible();
+  await expect(page.locator('.lead-sale-summary').getByText('Nao confirmada', { exact: true })).toBeVisible();
+});
+
 test('keeps the confirmation period beside a compact back button', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
   await page.locator('[data-route="confirmations"]').click();

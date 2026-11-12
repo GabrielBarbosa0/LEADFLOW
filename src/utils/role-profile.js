@@ -29,6 +29,7 @@ export const PERMISSION_GROUPS = [
       { id: 'appointments.view', label: 'Visualizar a agenda de exames', scopes: ['stores'] },
       { id: 'appointments.confirmations', label: 'Gerenciar confirmações de agendamentos', scopes: ['stores'] },
       { id: 'appointments.attendance', label: 'Registrar comparecimento e falta', scopes: ['stores'] },
+      { id: 'sales.confirm_manual', label: 'Confirmar compras manualmente', scopes: ['stores'] },
       { id: 'walkins.manage', label: 'Gerenciar encaixes do consultório', scopes: ['stores'] },
       { id: 'followups.team', label: 'Acompanhar retornos da equipe', scopes: ['stores'] },
       { id: 'goals.manage', label: 'Criar e editar metas da equipe', scopes: ['stores'] },

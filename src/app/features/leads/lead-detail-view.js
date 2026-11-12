@@ -28,6 +28,7 @@ export function leadDetailView({
   canEditClinical = false,
   canClaimLead = false,
   canTransferLead = false,
+  canConfirmSale = false,
   readOnly = false,
   inDialog = false,
   history = { loading: false, error: '', records: [], stage: '' }
@@ -67,6 +68,7 @@ export function leadDetailView({
     <section class="lead-detail-summary" aria-label="Informações do cadastro">
       <div><span>Status</span><strong class="status-badge status-${syncTone}">${syncStatus}</strong></div>
       <div><span>Loja</span><strong>${escapeHtml(storeLabel(lead.storeId))}</strong></div>
+      <div class="lead-sale-summary"><span>Compra</span><strong class="${lead.saleStatus === 'confirmed' ? 'sale-confirmed' : ''}">${lead.saleStatus === 'confirmed' ? 'Confirmada' : 'Nao confirmada'}</strong>${lead.saleStatus === 'confirmed' && lead.saleDate ? `<small>${escapeHtml(lead.saleDate.split('-').reverse().join('/'))}</small>` : ''}</div>
       ${originLabel ? `<div><span>Origem do registro</span><strong class="lead-origin-badge"><i data-lucide="archive"></i>${escapeHtml(originLabel)}</strong></div>` : ''}
       <button class="lead-history-summary" type="button" data-open-lead-history aria-haspopup="dialog"><span>Histórico do lead</span><strong>Ver histórico</strong><small>Ver todas as alterações</small></button>
     </section>
@@ -110,6 +112,7 @@ export function leadDetailView({
         ${renderedAppointmentTimeMarkup}
       </div>
       <div class="field" data-field="notes"><label for="edit-notes">Observação rápida</label><textarea id="edit-notes" name="notes" maxlength="500" rows="3" ${locked}>${escapeHtml(lead.notes)}</textarea><small class="field-hint"><span id="edit-notes-count">${String(lead.notes || '').length}</span>/500</small><small class="field-error"></small></div>
+      ${canConfirmSale ? `<button class="button ${lead.saleStatus === 'confirmed' ? 'button-secondary' : 'button-primary'} button-block" type="button" data-open-manual-sale="${escapeHtml(lead.id)}" ${offlineEdit ? 'disabled' : ''}><i data-lucide="badge-dollar-sign"></i><span>${lead.saleStatus === 'confirmed' ? 'Ver confirmacao da compra' : 'Confirmar compra'}</span></button>` : ''}
       ${readOnly ? '' : `<button class="button button-primary button-block" type="submit" ${offlineEdit ? 'disabled' : ''}><i data-lucide="save"></i><span>${managerReschedule ? 'Salvar reagendamento' : 'Salvar alterações'}</span></button>`}
       ${canCancelAppointment ? `<button class="button button-danger button-block" type="button" data-cancel-appointment="${escapeHtml(lead.id)}" ${offlineEdit ? 'disabled' : ''}><i data-lucide="calendar-x"></i><span>Cancelar agendamento</span></button>` : ''}
       ${canTransferLead ? `<button class="button button-secondary button-block" type="button" data-transfer-lead="${escapeHtml(lead.id)}"><i data-lucide="repeat-2"></i><span>Transferir responsável</span></button>` : ''}

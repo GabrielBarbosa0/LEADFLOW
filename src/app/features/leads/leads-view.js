@@ -13,6 +13,8 @@ export function filterLeadRecords(leads = [], filters = {}) {
     if (!matchesQuery || (filters.storeId && lead.storeId !== filters.storeId)) return false;
     if (filters.startDate && capturedDate < filters.startDate) return false;
     if (filters.endDate && capturedDate > filters.endDate) return false;
+    if (filters.saleStatus === 'confirmed' && lead.saleStatus !== 'confirmed') return false;
+    if (filters.saleStatus === 'pending' && lead.saleStatus === 'confirmed') return false;
     return true;
   });
 }
@@ -20,14 +22,15 @@ export function filterLeadRecords(leads = [], filters = {}) {
 export function leadsView({ leads, filters = {}, allowedStores = [], dataError = '', canCreate = false }) {
   const filtered = filterLeadRecords(leads, filters);
   const visibleIds = new Set(filtered.map((lead) => lead.id));
-  const filtersActive = Boolean(filters.query || filters.storeId || filters.startDate || filters.endDate);
+  const filtersActive = Boolean(filters.query || filters.storeId || filters.startDate || filters.endDate || filters.saleStatus);
   const storeOptions = allowedStores.map((store) => `<option value="${escapeHtml(store.id)}" ${filters.storeId === store.id ? 'selected' : ''}>${escapeHtml(store.displayLabel || store.label)}</option>`).join('');
   const rows = leads.map((lead) => {
     const [label, tone] = syncLabel(lead);
     const originLabel = leadOriginLabel(lead);
+    const saleLabel = lead.saleStatus === 'confirmed' ? '<small class="lead-sale-label"><i data-lucide="badge-check"></i>Compra confirmada</small>' : '';
     return `<button class="lead-item" type="button" data-lead-list-row data-open-lead-id="${escapeHtml(lead.id)}" ${visibleIds.has(lead.id) ? '' : 'hidden'} aria-label="Ver cadastro de ${escapeHtml(lead.fullName)}">
       <div class="lead-avatar">${escapeHtml(lead.fullName[0]?.toUpperCase() || '?')}</div>
-      <div class="lead-content"><strong>${escapeHtml(lead.fullName)}</strong><span>${escapeHtml(formatBrazilianPhone(lead.phoneSearch))}</span><small>${escapeHtml(offlineSyncDetail(lead) || lead.interestLabel || 'Interesse não informado')}</small>${originLabel ? `<small class="lead-origin-label"><i data-lucide="archive"></i>${escapeHtml(originLabel)}</small>` : ''}</div>
+      <div class="lead-content"><strong>${escapeHtml(lead.fullName)}</strong><span>${escapeHtml(formatBrazilianPhone(lead.phoneSearch))}</span><small>${escapeHtml(offlineSyncDetail(lead) || lead.interestLabel || 'Interesse não informado')}</small>${saleLabel}${originLabel ? `<small class="lead-origin-label"><i data-lucide="archive"></i>${escapeHtml(originLabel)}</small>` : ''}</div>
       <span class="status-badge status-${tone}">${label}</span>
       <i class="lead-chevron" data-lucide="chevron-right"></i>
     </button>`;
@@ -40,6 +43,7 @@ export function leadsView({ leads, filters = {}, allowedStores = [], dataError =
       <div class="field"><label for="lead-store-filter">Loja</label><select id="lead-store-filter"><option value="">Todas as lojas permitidas</option>${storeOptions}</select></div>
       <div class="field"><label for="lead-start-date">Data inicial</label><input id="lead-start-date" type="date" value="${escapeHtml(filters.startDate || '')}" /></div>
       <div class="field"><label for="lead-end-date">Data final</label><input id="lead-end-date" type="date" value="${escapeHtml(filters.endDate || '')}" /></div>
+      <div class="field"><label for="lead-sale-filter">Compra</label><select id="lead-sale-filter"><option value="">Todos</option><option value="confirmed" ${filters.saleStatus === 'confirmed' ? 'selected' : ''}>Compraram</option><option value="pending" ${filters.saleStatus === 'pending' ? 'selected' : ''}>Sem confirmacao</option></select></div>
     </section>
     ${dataError ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(dataError)}</span></div>` : ''}
     <section class="lead-list">${rows}${empty}</section>`;
