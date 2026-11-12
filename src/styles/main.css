@@ -2667,8 +2667,18 @@ svg {
   grid-column: auto;
 }
 
-.manual-sale-dialog .confirmation-dialog-actions {
-  flex-wrap: wrap;
+.manual-sale-dialog .manual-sale-actions.has-three-actions {
+  display: grid;
+  grid-template-columns: auto repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.manual-sale-dialog .confirmation-dialog-actions .button {
+  min-width: 0;
+  gap: 7px;
+  padding-right: 12px;
+  padding-left: 12px;
+  white-space: nowrap;
 }
 
 .manual-sale-loading {
@@ -2687,6 +2697,16 @@ svg {
   }
 
   .confirmation-dialog-actions .button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .manual-sale-dialog .manual-sale-actions.has-three-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-sale-dialog .confirmation-dialog-actions .button {
     width: 100%;
   }
 }

@@ -281,9 +281,13 @@ test('confirms and removes a manual sale as an internal collaborator', async ({ 
   await expect(page.locator('.lead-sale-summary').getByText('Confirmada', { exact: true })).toBeVisible();
   await leadDetail.getByRole('button', { name: 'Ver confirmacao da compra' }).click();
   await expect(saleDialog.getByLabel('OS ou pedido')).toHaveValue('E2E-001');
+  const saleActions = saleDialog.locator('.confirmation-dialog-actions > .button');
+  await expect(saleActions).toHaveCount(3);
+  const actionRows = await saleActions.evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().y));
+  expect(Math.max(...actionRows) - Math.min(...actionRows)).toBeLessThanOrEqual(1);
 
   page.once('dialog', (dialog) => dialog.accept());
-  await saleDialog.getByRole('button', { name: 'Desfazer confirmacao' }).click();
+  await saleDialog.getByRole('button', { name: 'Desfazer confirmação' }).click();
   await expect(page.getByText('Confirmacao de compra desfeita.')).toBeVisible();
   await expect(page.locator('.lead-sale-summary').getByText('Nao confirmada', { exact: true })).toBeVisible();
 });
