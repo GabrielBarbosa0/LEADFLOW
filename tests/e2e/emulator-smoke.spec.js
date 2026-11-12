@@ -380,6 +380,12 @@ test('shows the simplified lead history without a duplicated funnel heading', as
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
   await page.getByRole('button', { name: /Abrir cadastro de/ }).first().click();
+  const summaryItems = page.locator('#lead-detail-dialog > .lead-detail-summary > *');
+  await expect(summaryItems).toHaveCount(4);
+  if ((page.viewportSize()?.width || 0) > 760) {
+    const itemRows = await summaryItems.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
+    expect(Math.max(...itemRows) - Math.min(...itemRows)).toBeLessThanOrEqual(1);
+  }
   await page.getByText('Ver histórico', { exact: true }).click();
 
   const dialog = page.locator('#lead-history-dialog');
