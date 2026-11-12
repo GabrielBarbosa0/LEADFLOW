@@ -88,6 +88,7 @@ describe('leads feature modules', () => {
     const markup = leadsView({ leads, filters: { storeId: 'loja-02' }, allowedStores: [{ id: 'loja-02', label: 'Loja 02' }] });
     expect(markup).toContain('id="lead-start-date"');
     expect(markup).toContain('id="lead-end-date"');
+    expect(markup).toContain('<option value="">Todas as lojas</option>');
     expect(markup).toContain('data-lead-filters-clear');
   });
 

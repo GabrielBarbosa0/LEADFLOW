@@ -44,6 +44,20 @@ test('keeps report search and appointment actions aligned across responsive widt
 
   for (const width of [375, 589, 1024]) {
     await page.setViewportSize({ width, height: 898 });
+    await page.goto('/#/leads');
+    await expect(page.locator('#lead-store-filter')).toContainText('Todas as lojas');
+    const leadFilterBoxes = await page.locator('.lead-list-filters > .field').evaluateAll((fields) => fields.map((field) => {
+      const { x, y, width: fieldWidth } = field.getBoundingClientRect();
+      return { x, y, width: fieldWidth };
+    }));
+    expect(leadFilterBoxes).toHaveLength(4);
+    if (width > 560) {
+      expect(Math.max(...leadFilterBoxes.map(({ y }) => y)) - Math.min(...leadFilterBoxes.map(({ y }) => y))).toBeLessThanOrEqual(1);
+      expect(Math.max(...leadFilterBoxes.map(({ width: fieldWidth }) => fieldWidth)) - Math.min(...leadFilterBoxes.map(({ width: fieldWidth }) => fieldWidth))).toBeLessThanOrEqual(1);
+    } else {
+      expect(leadFilterBoxes[1].y).toBeGreaterThan(leadFilterBoxes[0].y);
+    }
+
     await page.goto('/#/management');
     await expect(page.locator('#management-search')).toBeVisible();
 
