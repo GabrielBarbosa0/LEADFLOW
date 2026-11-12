@@ -17,9 +17,11 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   await expect(page.getByText('Administrador Teste')).toBeVisible();
   const storeMenu = page.locator('.store-menu');
   await expect(storeMenu.locator('summary')).toContainText('Todas');
+  await expect(storeMenu.locator('summary svg.lucide-chevron-down')).toBeVisible();
   await storeMenu.locator('summary').click();
   await expect(storeMenu.locator('.store-menu-popover')).toBeVisible();
   await expect(storeMenu.locator('.store-menu-item')).toHaveCount(4);
+  await expect(storeMenu.locator('.store-menu-item svg.lucide-building').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /Acessos da equipe/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Configurações/ })).toBeVisible();
 
@@ -254,11 +256,22 @@ test('confirms and removes a manual sale as an internal collaborator', async ({ 
   await page.goto('/#/leads');
   await page.getByRole('button', { name: /Ver cadastro de Cliente Encaixe Aguardando/ }).click();
   const leadDetail = page.locator('#edit-lead-form');
-  await expect(leadDetail.getByRole('button', { name: 'Confirmar compra' })).toBeVisible();
-  await leadDetail.getByRole('button', { name: 'Confirmar compra' }).click();
+  const confirmSaleButton = leadDetail.getByRole('button', { name: 'Confirmar compra' });
+  await expect(confirmSaleButton).toBeVisible();
+  await expect(confirmSaleButton.locator('svg.lucide-badge-dollar-sign')).toBeVisible();
+  await confirmSaleButton.click();
 
   const saleDialog = page.locator('#manual-sale-dialog');
   await expect(saleDialog).toBeVisible();
+  await expect(saleDialog.locator('.manual-sale-icon svg.lucide-badge-dollar-sign')).toBeVisible();
+  const [orderBox, valueBox] = await Promise.all([
+    saleDialog.getByLabel('OS ou pedido').boundingBox(),
+    saleDialog.getByLabel('Valor da venda').boundingBox()
+  ]);
+  expect(orderBox).not.toBeNull();
+  expect(valueBox).not.toBeNull();
+  expect(Math.abs(orderBox.y - valueBox.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(orderBox.width - valueBox.width)).toBeLessThanOrEqual(1);
   await saleDialog.getByLabel('OS ou pedido').fill('E2E-001');
   await saleDialog.getByLabel('Valor da venda').fill('450,90');
   await saleDialog.getByLabel('Observacao').fill('Confirmacao temporaria do teste automatizado.');

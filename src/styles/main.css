@@ -2653,6 +2653,14 @@ svg {
   margin-top: 20px;
 }
 
+.manual-sale-dialog .manual-sale-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.manual-sale-dialog .manual-sale-fields .field:first-child {
+  grid-column: auto;
+}
+
 .manual-sale-dialog .confirmation-dialog-actions {
   flex-wrap: wrap;
 }
