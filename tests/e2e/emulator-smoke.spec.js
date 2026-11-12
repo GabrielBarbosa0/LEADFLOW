@@ -349,6 +349,13 @@ test('keeps the purchases dialog responsive on mobile and desktop', async ({ pag
   const formDialog = page.locator('#manual-sale-form-dialog');
   await expect(formDialog.getByLabel('Data da compra')).toBeVisible();
   await expect(formDialog.getByLabel('Responsável pela venda')).toBeVisible();
+  const formDialogSize = await formDialog.boundingBox();
+  expect(formDialogSize).not.toBeNull();
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await formDialog.click({ position: { x: formDialogSize.width - 8, y: formDialogSize.height / 2 } });
+  }
+  await expect(formDialog).toBeVisible();
+  await expect(formDialog.getByLabel('Data da compra')).toBeVisible();
   const [dateBox, responsibleBox, dialogBox] = await Promise.all([
     formDialog.getByLabel('Data da compra').boundingBox(),
     formDialog.getByLabel('Responsável pela venda').boundingBox(),

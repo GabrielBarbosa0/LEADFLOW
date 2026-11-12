@@ -420,6 +420,15 @@ function closeManualSaleForm() {
   render();
 }
 
+function isDialogBackdropClick(event, dialog) {
+  if (event.target !== dialog) return false;
+  const bounds = dialog.getBoundingClientRect();
+  return event.clientX < bounds.left
+    || event.clientX > bounds.right
+    || event.clientY < bounds.top
+    || event.clientY > bounds.bottom;
+}
+
 function leadAssignmentDialogView() {
   const lead = existingLeadForDetail(state.leadAssignment.leadId);
   return renderLeadAssignmentDialog({ assignment: state.leadAssignment, lead });
@@ -794,7 +803,9 @@ function bindPageEvents() {
       if (manualSaleDialog.isConnected && !manualSaleDialog.open) manualSaleDialog.showModal();
     });
     manualSaleDialog.addEventListener('cancel', (event) => { event.preventDefault(); closeManualSaleDialog(); });
-    manualSaleDialog.addEventListener('click', (event) => { if (event.target === manualSaleDialog) closeManualSaleDialog(); });
+    manualSaleDialog.addEventListener('click', (event) => {
+      if (isDialogBackdropClick(event, manualSaleDialog)) closeManualSaleDialog();
+    });
     manualSaleDialog.querySelector('[data-close-manual-sale]')?.addEventListener('click', closeManualSaleDialog);
     manualSaleDialog.querySelectorAll('[data-new-purchase]').forEach((button) => button.addEventListener('click', () => {
       state.saleConfirmation.editingId = '';
@@ -833,7 +844,9 @@ function bindPageEvents() {
       if (manualSaleFormDialog.isConnected && !manualSaleFormDialog.open) manualSaleFormDialog.showModal();
     });
     manualSaleFormDialog.addEventListener('cancel', (event) => { event.preventDefault(); closeManualSaleForm(); });
-    manualSaleFormDialog.addEventListener('click', (event) => { if (event.target === manualSaleFormDialog) closeManualSaleForm(); });
+    manualSaleFormDialog.addEventListener('click', (event) => {
+      if (isDialogBackdropClick(event, manualSaleFormDialog)) closeManualSaleForm();
+    });
     manualSaleFormDialog.querySelector('[data-close-purchase-form]')?.addEventListener('click', closeManualSaleForm);
     const saleForm = manualSaleFormDialog.querySelector('#manual-sale-form');
     saleForm?.addEventListener('submit', async (event) => {
