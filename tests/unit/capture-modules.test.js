@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { restoreNewLeadDraft } from '../../src/app/features/capture/capture-form.js';
 import { captureAppointmentTimeField, careRouteAppointmentSchedule } from '../../src/app/features/capture/capture-schedule.js';
-import { enrichLeadTriage, eyeTriageFields, triageConfigFields } from '../../src/app/features/capture/capture-triage.js';
+import { creditDetailsFields, enrichLeadTriage, eyeTriageFields, triageConfigFields } from '../../src/app/features/capture/capture-triage.js';
 import { transportFields } from '../../src/app/features/capture/capture-transport.js';
 import { productPaymentFields } from '../../src/app/features/capture/product-payment.js';
 import { purchaseHolderFields } from '../../src/app/features/capture/purchase-holder.js';
@@ -92,24 +92,20 @@ describe('capture feature modules', () => {
     expect(markup).toContain('value="0" data-exam-price');
   });
 
-  it('shows credit fields only when boleto is selected', () => {
-    const hiddenMarkup = eyeTriageFields({ examPaymentType: 'paid', examPaymentMethods: ['pix'] });
-    const visibleMarkup = eyeTriageFields({
-      examPaymentType: 'paid',
-      examPaymentMethods: ['bank-slip'],
-      creditFatherName: 'João da Silva'
-    });
-    const productCreditMarkup = eyeTriageFields({
-      examPaymentType: 'paid',
-      examPaymentMethods: [],
-      productPaymentMethods: ['bank-slip']
-    });
+  it('renders family contact fields independently from payment methods', () => {
+    const markup = creditDetailsFields({
+      creditFatherName: 'João da Silva',
+      creditMotherName: 'Maria da Silva',
+      creditAuxiliaryPhone: '(81) 98888-7777'
+    }, 'test-credit');
 
-    expect(hiddenMarkup).toContain('data-credit-details-fields hidden');
-    expect(visibleMarkup).toContain('Boleto');
-    expect(visibleMarkup).toContain('name="creditFatherName"');
-    expect(visibleMarkup).not.toContain('data-credit-details-fields hidden');
-    expect(productCreditMarkup).not.toContain('data-credit-details-fields hidden');
+    expect(markup).toContain('name="creditFatherName"');
+    expect(markup).toContain('value="João da Silva"');
+    expect(markup).toContain('name="creditMotherName"');
+    expect(markup).toContain('name="creditAuxiliaryPhone"');
+    expect(markup).not.toContain('hidden');
+    expect(markup).not.toContain('disabled');
+    expect(eyeTriageFields({ examPaymentMethods: ['bank-slip'] })).not.toContain('name="creditFatherName"');
   });
 
   it('shows product payment methods only for product interests', () => {
@@ -228,7 +224,10 @@ describe('capture feature modules', () => {
     expect(markup).not.toContain('Informacao obrigatoria para todos os clientes.');
     expect(markup).toContain('class="field-row document-fields"');
     expect(markup).toContain('class="field-row demographic-fields"');
+    expect(markup).toContain('class="field-row credit-details-fields"');
     expect(markup).toContain('class="field-row preferred-postal-fields"');
+    expect(markup.indexOf('demographic-fields')).toBeLessThan(markup.indexOf('credit-details-fields'));
+    expect(markup.indexOf('credit-details-fields')).toBeLessThan(markup.indexOf('preferred-postal-fields'));
     expect(markup).not.toContain('name="pathologyIds" value="unknown"');
     expect(markup).toContain('Exame de vista - 20 min');
     expect(markup).toContain('data-time-field');

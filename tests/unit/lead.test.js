@@ -494,10 +494,10 @@ describe('lead validation', () => {
     expect(validateLeadInput({ ...validInput, examPaymentMethods: ['pix', 'crypto'] }).errors.examPaymentMethods).toBeDefined();
   });
 
-  it('persists optional boleto details when they are informed', () => {
+  it('persists optional family contact details for any payment method', () => {
     const creditInput = {
       ...validInput,
-      examPaymentMethods: ['bank-slip'],
+      examPaymentMethods: ['pix'],
       creditFatherName: 'João da Silva',
       creditMotherName: 'Maria da Silva',
       creditAuxiliaryPhone: '(81) 98888-7777'

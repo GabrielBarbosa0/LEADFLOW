@@ -519,6 +519,21 @@ test('renders the compact registration fields and product payment options', asyn
   await page.getByLabel('Loja de destino').selectOption('loja-02');
   await expect(page.getByLabel('Interesse principal')).toBeEnabled();
 
+  const familyContactFields = page.locator('.credit-details-fields');
+  await expect(familyContactFields.getByLabel('Nome do pai (opcional)')).toBeVisible();
+  await expect(familyContactFields.getByLabel('Nome da mãe (opcional)')).toBeVisible();
+  await expect(familyContactFields.getByLabel('Telefone auxiliar (opcional)')).toBeVisible();
+  const [demographicBox, familyContactBox, preferredPostalBox] = await Promise.all([
+    page.locator('.demographic-fields').boundingBox(),
+    familyContactFields.boundingBox(),
+    page.locator('.preferred-postal-fields').boundingBox()
+  ]);
+  expect(demographicBox).not.toBeNull();
+  expect(familyContactBox).not.toBeNull();
+  expect(preferredPostalBox).not.toBeNull();
+  expect(familyContactBox.y).toBeGreaterThan(demographicBox.y);
+  expect(preferredPostalBox.y).toBeGreaterThan(familyContactBox.y);
+
   const examPrice = page.getByLabel('Valor do exame');
   expect(Number(await examPrice.inputValue())).toBeGreaterThan(0);
   await expect(examPrice).toHaveCSS('border-top-width', '0px');

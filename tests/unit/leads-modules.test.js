@@ -138,6 +138,9 @@ describe('leads feature modules', () => {
     expect(markup).toContain('Excluir lead');
     expect(markup).toContain('edit-appointment-time-field');
     expect(markup).toContain('class="lead-detail-actions"');
+    expect(markup).toContain('class="field-row credit-details-fields"');
+    expect(markup.indexOf('demographic-fields')).toBeLessThan(markup.indexOf('credit-details-fields'));
+    expect(markup.indexOf('credit-details-fields')).toBeLessThan(markup.indexOf('preferred-postal-fields'));
   });
 
   it('shows the Captar origin in the lead detail summary', () => {

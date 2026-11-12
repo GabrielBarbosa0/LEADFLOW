@@ -366,10 +366,9 @@ export function validateLeadInput(input, options = {}) {
   if (productInterest && invalidProductPaymentMethod) {
     errors.productPaymentMethods = 'Selecione somente formas de pagamento válidas.';
   }
-  const usesStoreCredit = examPaymentMethods.includes('bank-slip') || productPaymentMethods.includes('bank-slip');
-  const creditFatherName = usesStoreCredit ? String(input.creditFatherName || '').trim() : '';
-  const creditMotherName = usesStoreCredit ? String(input.creditMotherName || '').trim() : '';
-  const creditAuxiliaryPhoneValue = usesStoreCredit ? String(input.creditAuxiliaryPhone || '').trim() : '';
+  const creditFatherName = String(input.creditFatherName || '').trim();
+  const creditMotherName = String(input.creditMotherName || '').trim();
+  const creditAuxiliaryPhoneValue = String(input.creditAuxiliaryPhone || '').trim();
   const creditAuxiliaryPhone = creditAuxiliaryPhoneValue ? normalizeBrazilianPhone(creditAuxiliaryPhoneValue) : null;
   if (creditAuxiliaryPhoneValue && !creditAuxiliaryPhone) {
     errors.creditAuxiliaryPhone = 'Informe um telefone auxiliar válido com DDD.';
