@@ -1895,6 +1895,18 @@ svg {
   color: var(--brand);
 }
 
+.lead-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.lead-detail-actions .button-block {
+  min-width: 0;
+  margin-top: 0;
+}
+
 .search-box {
   height: 50px;
   display: flex;
@@ -2558,6 +2570,10 @@ svg {
 }
 
 @media (max-width: 600px) {
+  .lead-detail-actions {
+    grid-template-columns: 1fr;
+  }
+
   .lead-detail-dialog {
     width: calc(100% - 16px);
     max-height: 94dvh;

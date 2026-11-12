@@ -379,7 +379,7 @@ test('requires formal confirmation when an internal collaborator reschedules a c
   await expect(dialog).toHaveCount(0);
 });
 
-test('shows the simplified lead history without a duplicated funnel heading', async ({ page }) => {
+test('keeps the lead summary and actions responsive without duplicating the history heading', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
@@ -389,6 +389,19 @@ test('shows the simplified lead history without a duplicated funnel heading', as
   if ((page.viewportSize()?.width || 0) > 760) {
     const itemRows = await summaryItems.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
     expect(Math.max(...itemRows) - Math.min(...itemRows)).toBeLessThanOrEqual(1);
+  }
+  const actionButtons = page.locator('#edit-lead-form .lead-detail-actions > .button');
+  expect(await actionButtons.count()).toBeGreaterThanOrEqual(2);
+  const actionBoxes = await actionButtons.evaluateAll((buttons) => buttons.slice(0, 2).map((button) => {
+    const { x, y, width } = button.getBoundingClientRect();
+    return { x, y, width };
+  }));
+  if ((page.viewportSize()?.width || 0) > 600) {
+    expect(Math.abs(actionBoxes[0].y - actionBoxes[1].y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(actionBoxes[0].width - actionBoxes[1].width)).toBeLessThanOrEqual(1);
+  } else {
+    expect(actionBoxes[1].y).toBeGreaterThan(actionBoxes[0].y);
+    expect(Math.abs(actionBoxes[0].x - actionBoxes[1].x)).toBeLessThanOrEqual(1);
   }
   await page.getByText('Ver histórico', { exact: true }).click();
 

@@ -136,6 +136,7 @@ describe('leads feature modules', () => {
     expect(markup).toContain('name="strategyType" required');
     expect(markup).toContain('Excluir lead');
     expect(markup).toContain('edit-appointment-time-field');
+    expect(markup).toContain('class="lead-detail-actions"');
   });
 
   it('shows the Captar origin in the lead detail summary', () => {
