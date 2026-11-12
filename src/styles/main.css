@@ -403,6 +403,95 @@ svg {
   height: 15px;
 }
 
+.store-menu {
+  position: relative;
+}
+
+.store-menu > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.store-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.store-menu .store-menu-chevron {
+  width: 13px;
+  height: 13px;
+  transition: transform 160ms ease;
+}
+
+.store-menu[open] .store-menu-chevron {
+  transform: rotate(180deg);
+}
+
+.store-menu-popover {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 210px;
+  padding: 6px;
+  visibility: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  opacity: 0;
+  background: #fff;
+  box-shadow: 0 14px 32px rgba(15, 48, 87, 0.18);
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+}
+
+.store-menu[open] .store-menu-popover,
+.store-menu:hover .store-menu-popover {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.store-menu-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px;
+  color: var(--ink);
+}
+
+.store-menu-item + .store-menu-item {
+  border-top: 1px solid var(--line);
+}
+
+.store-menu-item > svg {
+  width: 17px;
+  height: 17px;
+  color: var(--primary);
+}
+
+.store-menu-item span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.store-menu-item strong,
+.store-menu-item small {
+  letter-spacing: 0;
+}
+
+.store-menu-item strong {
+  font-size: 0.78rem;
+}
+
+.store-menu-item small {
+  color: var(--muted);
+  font-size: 0.69rem;
+}
+
 .connectivity,
 .mode-badge,
 .status-badge {
@@ -455,13 +544,6 @@ svg {
   .connectivity {
     padding-right: 7px;
     padding-left: 7px;
-  }
-
-  .store-indicator.is-multiple {
-    max-width: 104px;
-    line-height: 1.15;
-    text-align: center;
-    white-space: normal;
   }
 
   .header-brand {

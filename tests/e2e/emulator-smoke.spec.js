@@ -15,6 +15,11 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   await signIn(page, 'admin@leadflow.test');
 
   await expect(page.getByText('Administrador Teste')).toBeVisible();
+  const storeMenu = page.locator('.store-menu');
+  await expect(storeMenu.locator('summary')).toContainText('Todas');
+  await storeMenu.locator('summary').click();
+  await expect(storeMenu.locator('.store-menu-popover')).toBeVisible();
+  await expect(storeMenu.locator('.store-menu-item')).toHaveCount(4);
   await expect(page.getByRole('button', { name: /Acessos da equipe/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Configurações/ })).toBeVisible();
 

@@ -22,10 +22,15 @@ export function currentPageTitle(state, canManage) {
 export function headerView({ state, canManage }) {
   const online = navigator.onLine;
   const storeSummary = formatAccessStoreSummary(state.profile);
-  const labels = STORES.filter((store) => profileStoreIds(state.profile).includes(store.id)).map((store) => store.label);
-  const indicator = storeSummary.short === 'TODAS' ? 'Todas' : labels.join(' · ') || storeSummary.short;
-  const multiple = labels.length > 1 && storeSummary.short !== 'TODAS';
-  return `<header class="app-header"><div class="header-inner layout-wide"><div class="header-brand"><img class="brand-logo brand-logo-header" src="${import.meta.env.BASE_URL}leadflow-logo.png" alt="" aria-hidden="true" /><div><p class="eyebrow">LEADFLOW</p><h1 class="header-page-title">${escapeHtml(currentPageTitle(state, canManage))}</h1></div></div><div class="header-actions"><span class="store-indicator ${multiple ? 'is-multiple' : ''}" title="${escapeHtml(storeSummary.full)}" aria-label="Lojas: ${escapeHtml(storeSummary.full)}"><i data-lucide="building-2"></i><span>${escapeHtml(indicator)}</span></span><span class="connectivity ${online ? 'is-online' : 'is-offline'}"><i data-lucide="${online ? 'wifi' : 'wifi-off'}"></i>${online ? 'Online' : 'Offline'}</span><button class="icon-button" type="button" data-action="logout" title="Sair"><i data-lucide="log-out"></i></button></div></div></header>`;
+  const allowedStoreIds = new Set(profileStoreIds(state.profile));
+  const stores = STORES.filter((store) => allowedStoreIds.has(store.id))
+    .sort((first, second) => first.label.localeCompare(second.label, 'pt-BR', { numeric: true }));
+  const allStores = stores.length === STORES.length;
+  const indicator = allStores ? 'Todas' : stores.length > 1 ? 'Lojas' : stores[0]?.label || storeSummary.short;
+  const storeIndicator = stores.length > 1
+    ? `<details class="store-menu"><summary class="store-indicator" aria-label="Lojas permitidas: ${escapeHtml(storeSummary.full)}"><i data-lucide="building-2"></i><span>${escapeHtml(indicator)}</span><i class="store-menu-chevron" data-lucide="chevron-down"></i></summary><div class="store-menu-popover" role="list" aria-label="Lojas permitidas">${stores.map((store) => `<div class="store-menu-item" role="listitem"><i data-lucide="building"></i><span><strong>${escapeHtml(store.label)}</strong><small>${escapeHtml(store.city)}</small></span></div>`).join('')}</div></details>`
+    : `<span class="store-indicator" title="${escapeHtml(storeSummary.full)}" aria-label="Loja: ${escapeHtml(storeSummary.full)}"><i data-lucide="building-2"></i><span>${escapeHtml(indicator)}</span></span>`;
+  return `<header class="app-header"><div class="header-inner layout-wide"><div class="header-brand"><img class="brand-logo brand-logo-header" src="${import.meta.env.BASE_URL}leadflow-logo.png" alt="" aria-hidden="true" /><div><p class="eyebrow">LEADFLOW</p><h1 class="header-page-title">${escapeHtml(currentPageTitle(state, canManage))}</h1></div></div><div class="header-actions">${storeIndicator}<span class="connectivity ${online ? 'is-online' : 'is-offline'}"><i data-lucide="${online ? 'wifi' : 'wifi-off'}"></i>${online ? 'Online' : 'Offline'}</span><button class="icon-button" type="button" data-action="logout" title="Sair"><i data-lucide="log-out"></i></button></div></div></header>`;
 }
 
 export function appShellView({ state, page, canManage, hasAccess, pendingFollowUps }) {
