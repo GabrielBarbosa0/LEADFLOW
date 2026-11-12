@@ -2683,10 +2683,15 @@ svg {
   grid-column: auto;
 }
 
+.manual-sale-dialog form > .field[data-field="notes"] {
+  margin-bottom: 0;
+}
+
 .manual-sale-dialog .manual-sale-actions.has-three-actions {
   display: grid;
   grid-template-columns: auto repeat(2, minmax(0, 1fr));
   gap: 8px;
+  margin-top: 0;
 }
 
 .manual-sale-dialog .confirmation-dialog-actions .button {

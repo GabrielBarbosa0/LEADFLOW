@@ -299,6 +299,13 @@ test('confirms and removes a manual sale as an internal collaborator', async ({ 
   await expect(saleActions).toHaveCount(3);
   const actionRows = await saleActions.evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().y));
   expect(Math.max(...actionRows) - Math.min(...actionRows)).toBeLessThanOrEqual(1);
+  const [observationBox, saleActionsBox] = await Promise.all([
+    saleDialog.getByLabel('Observacao').boundingBox(),
+    saleDialog.locator('.confirmation-dialog-actions').boundingBox()
+  ]);
+  expect(observationBox).not.toBeNull();
+  expect(saleActionsBox).not.toBeNull();
+  expect(saleActionsBox.y - (observationBox.y + observationBox.height)).toBeLessThanOrEqual(20);
 
   page.once('dialog', (dialog) => dialog.accept());
   await saleDialog.getByRole('button', { name: 'Desfazer confirmação' }).click();
