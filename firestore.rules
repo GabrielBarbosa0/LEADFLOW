@@ -234,6 +234,7 @@ service cloud.firestore {
           'appointment_cancelled', 'appointment_reminder_sent', 'lead_archived',
           'appointment_attended', 'appointment_missed', 'follow_up_contacted',
           'lead_claimed', 'lead_reassigned',
+          'purchase_created', 'purchase_updated', 'purchase_cancelled',
           'birthday_benefit_planned', 'birthday_congratulated',
           'walk_in_created', 'walk_in_called', 'walk_in_in_service',
           'walk_in_completed', 'walk_in_gave_up',
@@ -376,7 +377,8 @@ service cloud.firestore {
 
     function validLeadPurchaseStatus(leadId, data) {
       return data.keys().hasOnly([
-          'leadId', 'storeId', 'capturedByUid', 'saleStatus', 'saleDate', 'updatedAt'
+          'leadId', 'storeId', 'capturedByUid', 'saleStatus', 'saleDate',
+          'purchaseCount', 'purchaseTotal', 'updatedAt'
         ])
         && data.leadId == leadId
         && data.storeId is string
@@ -386,7 +388,57 @@ service cloud.firestore {
         && (data.saleDate == '' || data.saleDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
         && ((data.saleStatus == 'confirmed' && data.saleDate != '')
           || (data.saleStatus == 'pending' && data.saleDate == ''))
+        && (!('purchaseCount' in data) || (data.purchaseCount is int && data.purchaseCount >= 0))
+        && (!('purchaseTotal' in data) || (data.purchaseTotal is number && data.purchaseTotal >= 0))
         && data.updatedAt == request.time;
+    }
+
+    function validLeadPurchase(purchaseId, data) {
+      return data.keys().hasOnly([
+          'leadId', 'leadName', 'storeId', 'capturedByUid', 'capturedByName',
+          'responsibleUid', 'responsibleName', 'saleDate', 'orderNumber',
+          'saleValue', 'notes', 'source', 'status', 'createdByUid',
+          'createdByName', 'createdAt', 'updatedByUid', 'updatedByName',
+          'updatedAt', 'cancelledByUid', 'cancelledByName', 'cancelledAt',
+          'schemaVersion'
+        ])
+        && purchaseId.size() >= 8
+        && data.leadId is string
+        && data.leadName is string
+        && data.leadName.size() >= 2
+        && data.leadName.size() <= 120
+        && data.storeId is string
+        && data.capturedByUid is string
+        && data.capturedByName is string
+        && data.responsibleUid is string
+        && data.responsibleName is string
+        && data.responsibleName.size() >= 2
+        && data.responsibleName.size() <= 120
+        && data.saleDate is string
+        && data.saleDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.orderNumber is string
+        && data.orderNumber.size() <= 40
+        && data.saleValue is number
+        && data.saleValue >= 0
+        && data.notes is string
+        && data.notes.size() <= 500
+        && data.source in ['manual', 'savwin']
+        && data.status in ['confirmed', 'cancelled']
+        && data.createdByUid is string
+        && data.createdByName is string
+        && data.createdAt is timestamp
+        && data.updatedByUid == request.auth.uid
+        && data.updatedByName is string
+        && data.updatedAt == request.time
+        && ((data.status == 'confirmed'
+            && !('cancelledByUid' in data)
+            && !('cancelledByName' in data)
+            && !('cancelledAt' in data))
+          || (data.status == 'cancelled'
+            && data.cancelledByUid == request.auth.uid
+            && data.cancelledByName is string
+            && data.cancelledAt == request.time))
+        && data.schemaVersion == 1;
     }
 
     function validLeadSaleEvent(data) {
@@ -964,7 +1016,11 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if signedIn() && request.auth.uid == userId
-        || isAdmin();
+        || isAdmin()
+        || (isManager() && (
+          managerHasStore(resource.data.storeId)
+          || (('storeIds' in resource.data) && resource.data.storeIds.hasAny(permittedStoreIds()))
+        ));
 
       allow create: if signedIn()
         && request.auth.uid == userId
@@ -990,7 +1046,10 @@ service cloud.firestore {
         ));
       allow delete: if false;
       allow list: if isAdmin()
-        || managerHasStore(resource.data.storeId);
+        || (isManager() && (
+          managerHasStore(resource.data.storeId)
+          || (('storeIds' in resource.data) && resource.data.storeIds.hasAny(permittedStoreIds()))
+        ));
     }
 
     match /roleProfiles/{roleProfileId} {
@@ -1164,6 +1223,45 @@ service cloud.firestore {
           );
         allow update, delete: if false;
       }
+    }
+
+    match /leadPurchases/{purchaseId} {
+      allow get, list: if activeUser() && (
+        isAdmin()
+        || (resource.data.responsibleUid == request.auth.uid && hasPermission('sales.confirm_manual'))
+        || (managerHasStore(resource.data.storeId) && hasPermission('sales.confirm_manual'))
+      );
+      allow create: if activeUser()
+        && hasPermission('sales.confirm_manual')
+        && validLeadPurchase(purchaseId, request.resource.data)
+        && (isAdmin() || managerHasStore(request.resource.data.storeId))
+        && request.resource.data.status == 'confirmed'
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/leads/$(request.resource.data.leadId))
+        && get(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.storeId == request.resource.data.storeId
+        && get(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.capturedByUid == request.resource.data.capturedByUid
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid))
+        && get(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid)).data.active == true
+        && (get(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid)).data.storeId == request.resource.data.storeId
+          || ('storeIds' in get(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid)).data
+            && request.resource.data.storeId in get(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid)).data.storeIds));
+      allow update: if activeUser()
+        && hasPermission('sales.confirm_manual')
+        && validLeadPurchase(purchaseId, request.resource.data)
+        && (isAdmin() || managerHasStore(resource.data.storeId))
+        && resource.data.status == 'confirmed'
+        && request.resource.data.leadId == resource.data.leadId
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.capturedByUid == resource.data.capturedByUid
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid))
+        && get(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid)).data.active == true
+        && (get(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid)).data.storeId == request.resource.data.storeId
+          || ('storeIds' in get(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid)).data
+            && request.resource.data.storeId in get(/databases/$(database)/documents/users/$(request.resource.data.responsibleUid)).data.storeIds));
+      allow delete: if false;
     }
 
     match /leadPurchaseStatuses/{leadId} {

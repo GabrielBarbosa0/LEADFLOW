@@ -1,23 +1,55 @@
 import { escapeHtml, toLocalDateInput } from '../../shared/formatters.js';
 
+function currency(value) {
+  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function purchaseCard(purchase) {
+  const cancelled = purchase.status === 'cancelled';
+  return `<article class="manual-purchase-card ${cancelled ? 'is-cancelled' : ''}">
+    <div class="manual-purchase-card-main">
+      <span class="status-badge status-${cancelled ? 'danger' : 'success'}">${cancelled ? 'Cancelada' : 'Confirmada'}</span>
+      <strong>${escapeHtml(currency(purchase.saleValue))}</strong>
+      <span>${escapeHtml(purchase.saleDate.split('-').reverse().join('/'))}${purchase.orderNumber ? ` · OS ${escapeHtml(purchase.orderNumber)}` : ''}</span>
+      <small><i data-lucide="user-round"></i>${escapeHtml(purchase.responsibleName || 'Colaborador não informado')}</small>
+    </div>
+    ${purchase.legacy ? '<span class="manual-purchase-legacy">Registro anterior</span>' : `<div class="manual-purchase-card-actions">
+      ${cancelled ? '' : `<button class="icon-button" type="button" data-edit-purchase="${escapeHtml(purchase.id)}" title="Editar compra" aria-label="Editar compra"><i data-lucide="pencil"></i></button>
+      <button class="icon-button purchase-cancel-button" type="button" data-cancel-purchase="${escapeHtml(purchase.id)}" title="Cancelar compra" aria-label="Cancelar compra"><i data-lucide="ban"></i></button>`}
+    </div>`}
+  </article>`;
+}
+
 export function manualSaleDialog({ state, lead }) {
   if (!state?.leadId || !lead) return '';
-  const record = state.record || {};
-  const confirmed = lead.saleStatus === 'confirmed';
-  const value = Number(record.manualSaleValue || 0);
+  const bundle = state.record || { purchases: [], members: [] };
+  const purchases = bundle.purchases || [];
+  const active = purchases.filter((purchase) => purchase.status !== 'cancelled');
+  const editing = purchases.find((purchase) => purchase.id === state.editingId && !purchase.legacy) || null;
+  const total = active.reduce((sum, purchase) => sum + Number(purchase.saleValue || 0), 0);
+  const selectedResponsible = editing?.responsibleUid || state.profileUid || bundle.members[0]?.uid || '';
+  const memberOptions = bundle.members.map((member) => `<option value="${escapeHtml(member.uid)}" ${member.uid === selectedResponsible ? 'selected' : ''}>${escapeHtml(member.displayName)}</option>`).join('');
   const error = state.error ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(state.error)}</span></div>` : '';
   const content = state.loading
-    ? '<div class="manual-sale-loading">Carregando confirmacao...</div>'
-    : `<form id="manual-sale-form" novalidate>
+    ? '<div class="manual-sale-loading">Carregando compras...</div>'
+    : `<div class="manual-purchase-summary"><div><span>Compras confirmadas</span><strong>${active.length}</strong></div><div><span>Valor registrado</span><strong>${escapeHtml(currency(total))}</strong></div></div>
+      <section class="manual-purchase-list" aria-label="Compras do cliente">
+        <header><h3>Histórico de compras</h3><button class="button button-secondary" type="button" data-new-purchase><i data-lucide="plus"></i><span>Nova compra</span></button></header>
+        ${purchases.length ? purchases.map(purchaseCard).join('') : '<div class="manual-purchase-empty"><i data-lucide="shopping-bag"></i><span>Nenhuma compra registrada.</span></div>'}
+      </section>
+      <form id="manual-sale-form" novalidate>
+        <h3>${editing ? 'Editar compra' : 'Registrar nova compra'}</h3>
         ${error}
-        <div class="field" data-field="saleDate"><label for="manual-sale-date">Data da compra <span aria-hidden="true">*</span></label><input id="manual-sale-date" name="saleDate" type="date" max="${toLocalDateInput(new Date())}" value="${escapeHtml(record.manualSaleDate || lead.saleDate || toLocalDateInput(new Date()))}" required /><small class="field-error"></small></div>
-        <div class="field-row manual-sale-fields"><div class="field" data-field="orderNumber"><label for="manual-sale-order">OS ou pedido</label><input id="manual-sale-order" name="orderNumber" maxlength="40" value="${escapeHtml(record.manualOrderNumber || '')}" placeholder="Opcional" /><small class="field-error"></small></div><div class="field" data-field="saleValue"><label for="manual-sale-value">Valor da venda</label><input id="manual-sale-value" name="saleValue" inputmode="decimal" value="${value ? escapeHtml(value.toFixed(2).replace('.', ',')) : ''}" placeholder="Opcional" /><small class="field-error"></small></div></div>
-        <div class="field" data-field="notes"><label for="manual-sale-notes">Observacao</label><textarea id="manual-sale-notes" name="notes" maxlength="500" rows="3" placeholder="Opcional">${escapeHtml(record.manualNotes || '')}</textarea><small class="field-error"></small></div>
-        <div class="confirmation-dialog-actions manual-sale-actions ${confirmed ? 'has-three-actions' : ''}"><button class="button button-secondary" type="button" data-close-manual-sale>Voltar</button>${confirmed ? '<button class="button button-danger" type="button" data-remove-manual-sale><i data-lucide="undo-2"></i><span>Desfazer confirmação</span></button>' : ''}<button class="button button-primary" type="submit" ${state.saving ? 'disabled' : ''}><i data-lucide="badge-check"></i><span>${state.saving ? 'Salvando...' : confirmed ? 'Atualizar compra' : 'Confirmar compra'}</span></button></div>
+        <div class="field-row manual-sale-primary-fields">
+          <div class="field" data-field="saleDate"><label for="manual-sale-date">Data da compra <span aria-hidden="true">*</span></label><input id="manual-sale-date" name="saleDate" type="date" max="${toLocalDateInput(new Date())}" value="${escapeHtml(editing?.saleDate || toLocalDateInput(new Date()))}" required /><small class="field-error"></small></div>
+          <div class="field" data-field="responsibleUid"><label for="manual-sale-responsible">Responsável pela venda <span aria-hidden="true">*</span></label><select id="manual-sale-responsible" name="responsibleUid" required><option value="">Selecione</option>${memberOptions}</select><small class="field-error"></small></div>
+        </div>
+        <div class="field-row manual-sale-fields"><div class="field" data-field="orderNumber"><label for="manual-sale-order">OS ou pedido</label><input id="manual-sale-order" name="orderNumber" maxlength="40" value="${escapeHtml(editing?.orderNumber || '')}" placeholder="Opcional" /><small class="field-error"></small></div><div class="field" data-field="saleValue"><label for="manual-sale-value">Valor da venda</label><input id="manual-sale-value" name="saleValue" inputmode="decimal" value="${editing?.saleValue ? escapeHtml(Number(editing.saleValue).toFixed(2).replace('.', ',')) : ''}" placeholder="Opcional" /><small class="field-error"></small></div></div>
+        <div class="field" data-field="notes"><label for="manual-sale-notes">Observação</label><textarea id="manual-sale-notes" name="notes" maxlength="500" rows="3" placeholder="Opcional">${escapeHtml(editing?.notes || '')}</textarea><small class="field-error"></small></div>
+        <div class="confirmation-dialog-actions manual-sale-actions"><button class="button button-secondary" type="button" data-close-manual-sale>Voltar</button>${editing ? '<button class="button button-secondary" type="button" data-new-purchase>Cancelar edição</button>' : ''}<button class="button button-primary" type="submit" ${state.saving ? 'disabled' : ''}><i data-lucide="badge-check"></i><span>${state.saving ? 'Salvando...' : editing ? 'Atualizar compra' : 'Registrar compra'}</span></button></div>
       </form>`;
   return `<dialog id="manual-sale-dialog" class="confirmation-dialog manual-sale-dialog" aria-labelledby="manual-sale-title">
-    <div class="confirmation-dialog-icon manual-sale-icon"><i data-lucide="badge-dollar-sign"></i></div>
-    <div class="confirmation-dialog-copy"><p class="eyebrow">VENDA MANUAL</p><h2 id="manual-sale-title">${confirmed ? 'Compra confirmada' : 'Confirmar compra'}</h2><p><strong>${escapeHtml(lead.fullName)}</strong>. Os detalhes ficam visiveis apenas para a equipe autorizada.</p></div>
+    <div class="manual-sale-heading"><div class="confirmation-dialog-icon manual-sale-icon"><i data-lucide="badge-dollar-sign"></i></div><div class="confirmation-dialog-copy"><p class="eyebrow">VENDAS DO CLIENTE</p><h2 id="manual-sale-title">Compras de ${escapeHtml(lead.fullName)}</h2><p>Cada compra mantém sua própria OS, valor e colaborador responsável.</p></div></div>
     ${content}
   </dialog>`;
 }

@@ -165,7 +165,7 @@ describe('leads feature modules', () => {
       managementMode: true, canManage: true, profileRole: 'manager', scheduleState: scheduleState(),
       appointmentTimeMarkup: '<div></div>', canDelete: false
     };
-    expect(leadDetailView(options)).toContain('Confirmada');
+    expect(leadDetailView(options)).toContain('1 confirmada');
     expect(leadDetailView(options)).not.toContain('data-open-manual-sale');
     expect(leadDetailView({ ...options, canConfirmSale: true })).toContain('data-open-manual-sale="lead-1"');
   });

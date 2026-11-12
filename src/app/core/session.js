@@ -118,7 +118,7 @@ export function resetSessionState(state, {
   };
   state.leadDetailDialog = { leadId: '' };
   state.leadHistoryDialogOpen = false;
-  state.saleConfirmation = { leadId: '', loading: false, saving: false, error: '', record: null };
+  state.saleConfirmation = { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '' };
   state.offlineCapture = { loaded: false, enabled: false };
   state.followUps = {
     loaded: false,

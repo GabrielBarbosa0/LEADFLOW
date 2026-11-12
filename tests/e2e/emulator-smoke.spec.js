@@ -263,21 +263,24 @@ test('loads the real appointment flow for an internal collaborator', async ({ pa
   }
 });
 
-test('confirms and removes a manual sale as an internal collaborator', async ({ page }, testInfo) => {
+test('registers multiple purchases with responsible collaborators and preserves cancellation history', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
   await signIn(page, 'colaborador@leadflow.test');
 
   await page.goto('/#/leads');
   await page.getByRole('button', { name: /Ver cadastro de Cliente Encaixe Aguardando/ }).click();
   const leadDetail = page.locator('#edit-lead-form');
-  const confirmSaleButton = leadDetail.getByRole('button', { name: 'Confirmar compra' });
-  await expect(confirmSaleButton).toBeVisible();
-  await expect(confirmSaleButton.locator('svg.lucide-badge-dollar-sign')).toBeVisible();
-  await confirmSaleButton.click();
+  const registerSaleButton = leadDetail.getByRole('button', { name: 'Registrar compra' });
+  await expect(registerSaleButton).toBeVisible();
+  await expect(registerSaleButton.locator('svg.lucide-badge-dollar-sign')).toBeVisible();
+  await registerSaleButton.click();
 
   const saleDialog = page.locator('#manual-sale-dialog');
   await expect(saleDialog).toBeVisible();
   await expect(saleDialog.locator('.manual-sale-icon svg.lucide-badge-dollar-sign')).toBeVisible();
+  await expect(saleDialog.getByRole('heading', { name: 'Compras de Cliente Encaixe Aguardando' })).toBeVisible();
+  await expect(saleDialog.getByLabel('OS ou pedido')).toBeVisible();
+  await expect(saleDialog.getByLabel('Valor da venda')).toBeVisible();
   const [orderBox, valueBox] = await Promise.all([
     saleDialog.getByLabel('OS ou pedido').boundingBox(),
     saleDialog.getByLabel('Valor da venda').boundingBox()
@@ -288,29 +291,59 @@ test('confirms and removes a manual sale as an internal collaborator', async ({ 
   expect(Math.abs(orderBox.width - valueBox.width)).toBeLessThanOrEqual(1);
   await saleDialog.getByLabel('OS ou pedido').fill('E2E-001');
   await saleDialog.getByLabel('Valor da venda').fill('450,90');
-  await saleDialog.getByLabel('Observacao').fill('Confirmacao temporaria do teste automatizado.');
-  await saleDialog.getByRole('button', { name: 'Confirmar compra' }).click();
+  await saleDialog.getByLabel('Observação').fill('Primeira compra do teste automatizado.');
+  await saleDialog.getByRole('button', { name: 'Registrar compra' }).click();
 
-  await expect(page.getByText('Compra confirmada e captador atualizado.')).toBeVisible();
-  await expect(page.locator('.lead-sale-summary').getByText('Confirmada', { exact: true })).toBeVisible();
-  await leadDetail.getByRole('button', { name: 'Ver confirmacao da compra' }).click();
-  await expect(saleDialog.getByLabel('OS ou pedido')).toHaveValue('E2E-001');
-  const saleActions = saleDialog.locator('.confirmation-dialog-actions > .button');
-  await expect(saleActions).toHaveCount(3);
-  const actionRows = await saleActions.evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().y));
-  expect(Math.max(...actionRows) - Math.min(...actionRows)).toBeLessThanOrEqual(1);
-  const [observationBox, saleActionsBox] = await Promise.all([
-    saleDialog.getByLabel('Observacao').boundingBox(),
-    saleDialog.locator('.confirmation-dialog-actions').boundingBox()
-  ]);
-  expect(observationBox).not.toBeNull();
-  expect(saleActionsBox).not.toBeNull();
-  expect(saleActionsBox.y - (observationBox.y + observationBox.height)).toBeLessThanOrEqual(20);
+  await expect(page.getByText('Compra registrada e vinculada ao colaborador.')).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(1);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 450,90', { exact: true })).toBeVisible();
+
+  await saleDialog.getByLabel('Responsável pela venda').selectOption({ label: 'Colaborador Interno Teste' });
+  await saleDialog.getByLabel('OS ou pedido').fill('E2E-002');
+  await saleDialog.getByLabel('Valor da venda').fill('275,00');
+  await saleDialog.getByLabel('Observação').fill('Segunda compra vinculada a outro colaborador.');
+  await saleDialog.getByRole('button', { name: 'Registrar compra' }).click();
+
+  await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(2);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('2', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 725,90', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-list').getByText('Colaborador Interno Teste', { exact: true })).toBeVisible();
 
   page.once('dialog', (dialog) => dialog.accept());
-  await saleDialog.getByRole('button', { name: 'Desfazer confirmação' }).click();
-  await expect(page.getByText('Confirmacao de compra desfeita.')).toBeVisible();
-  await expect(page.locator('.lead-sale-summary').getByText('Nao confirmada', { exact: true })).toBeVisible();
+  await saleDialog.getByRole('button', { name: 'Cancelar compra' }).first().click();
+  await expect(page.getByText('Compra cancelada. O histórico foi preservado.')).toBeVisible();
+  await expect(saleDialog.getByText('Cancelada', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(2);
+});
+
+test('keeps the purchases dialog responsive on mobile and desktop', async ({ page }, testInfo) => {
+  await signIn(page, 'colaborador@leadflow.test');
+  await page.goto('/#/leads');
+  await page.getByRole('button', { name: /Ver cadastro de Cliente Encaixe Aguardando/ }).click();
+  await page.locator('#edit-lead-form').getByRole('button', { name: /Registrar compra|Ver compras do cliente/ }).click();
+
+  const dialog = page.locator('#manual-sale-dialog');
+  await expect(dialog.getByLabel('Data da compra')).toBeVisible();
+  await expect(dialog.getByLabel('Responsável pela venda')).toBeVisible();
+  const [dateBox, responsibleBox, dialogBox] = await Promise.all([
+    dialog.getByLabel('Data da compra').boundingBox(),
+    dialog.getByLabel('Responsável pela venda').boundingBox(),
+    dialog.boundingBox()
+  ]);
+  expect(dateBox).not.toBeNull();
+  expect(responsibleBox).not.toBeNull();
+  expect(dialogBox).not.toBeNull();
+  expect(dialogBox.x).toBeGreaterThanOrEqual(0);
+  expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(page.viewportSize().width + 1);
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  if (testInfo.project.name === 'mobile-chrome') {
+    expect(Math.abs(dateBox.x - responsibleBox.x)).toBeLessThanOrEqual(1);
+    expect(responsibleBox.y).toBeGreaterThan(dateBox.y + dateBox.height);
+  } else {
+    expect(Math.abs(dateBox.y - responsibleBox.y)).toBeLessThanOrEqual(1);
+  }
 });
 
 test('keeps the confirmation period beside a compact back button', async ({ page }) => {

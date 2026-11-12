@@ -2175,6 +2175,30 @@ describe('lead responsibility transfers', () => {
 });
 
 describe('private lead sale tracking', () => {
+  const purchase = (overrides = {}) => ({
+    leadId: 'lead-test',
+    leadName: 'Cliente Exemplo',
+    storeId: 'loja-06',
+    capturedByUid: 'captor-uid',
+    capturedByName: 'Captador Teste',
+    responsibleUid: 'internal-uid',
+    responsibleName: 'Colaborador Interno Multi-loja',
+    saleDate: '2026-11-11',
+    orderNumber: 'OS-123',
+    saleValue: 450,
+    notes: 'Compra registrada manualmente.',
+    source: 'manual',
+    status: 'confirmed',
+    createdByUid: 'manager-uid',
+    createdByName: 'Gestor Teste',
+    createdAt: serverTimestamp(),
+    updatedByUid: 'manager-uid',
+    updatedByName: 'Gestor Teste',
+    updatedAt: serverTimestamp(),
+    schemaVersion: 1,
+    ...overrides
+  });
+
   const tracking = (overrides = {}) => ({
     leadId: 'lead-test',
     storeId: 'loja-06',
@@ -2263,5 +2287,63 @@ describe('private lead sale tracking', () => {
       createdByUid: 'internal-uid', createdByName: 'Colaborador Interno Multi-loja',
       updatedByUid: 'internal-uid', updatedByName: 'Colaborador Interno Multi-loja'
     })));
+  });
+
+  it('registers multiple purchases and permits a responsible collaborator with secondary store access', async () => {
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(getDoc(doc(db, 'users', 'internal-uid')));
+    await assertSucceeds(setDoc(doc(db, 'leadPurchases', 'purchase-0001'), purchase()));
+    await assertSucceeds(setDoc(doc(db, 'leadPurchases', 'purchase-0002'), purchase({
+      saleDate: '2026-11-12', orderNumber: 'OS-124', saleValue: 275
+    })));
+    await assertSucceeds(getDocs(query(
+      collection(db, 'leadPurchases'),
+      where('leadId', '==', 'lead-test'),
+      where('storeId', '==', 'loja-06')
+    )));
+    await assertSucceeds(setDoc(doc(db, 'leadPurchaseStatuses', 'lead-test'), {
+      leadId: 'lead-test', storeId: 'loja-06', capturedByUid: 'captor-uid',
+      saleStatus: 'confirmed', saleDate: '2026-11-12', purchaseCount: 2,
+      purchaseTotal: 725, updatedAt: serverTimestamp()
+    }));
+  });
+
+  it('preserves a cancelled purchase and rejects physical deletion', async () => {
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(setDoc(doc(db, 'leadPurchases', 'purchase-0001'), purchase()));
+    await assertSucceeds(updateDoc(doc(db, 'leadPurchases', 'purchase-0001'), {
+      status: 'cancelled', updatedByUid: 'manager-uid', updatedByName: 'Gestor Teste',
+      updatedAt: serverTimestamp(), cancelledByUid: 'manager-uid',
+      cancelledByName: 'Gestor Teste', cancelledAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(db, 'leadPurchases', 'purchase-0001'), {
+      status: 'confirmed', updatedByUid: 'manager-uid', updatedByName: 'Gestor Teste',
+      updatedAt: serverTimestamp(), cancelledByUid: null, cancelledByName: null, cancelledAt: null
+    }));
+    await assertFails(deleteDoc(doc(db, 'leadPurchases', 'purchase-0001')));
+  });
+
+  it('rejects a purchase assigned to a collaborator outside the lead store', async () => {
+    await testEnvironment.withSecurityRulesDisabled((context) => setDoc(doc(context.firestore(), 'users', 'outside-uid'), {
+      email: 'outside@example.com', displayName: 'Colaborador Outra Loja', role: 'manager',
+      roleProfileId: 'system-captor', storeId: 'loja-05', storeIds: ['loja-05'], active: true
+    }));
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertFails(setDoc(doc(db, 'leadPurchases', 'purchase-0001'), purchase({
+      responsibleUid: 'outside-uid', responsibleName: 'Colaborador Outra Loja'
+    })));
+  });
+
+  it('records purchase lifecycle events in the immutable lead history', async () => {
+    const db = authenticatedDb('manager-uid', 'manager@example.com');
+    await assertSucceeds(setDoc(doc(db, 'leads', 'lead-test', 'history', 'purchase-created'), {
+      leadId: 'lead-test', storeId: 'loja-06', eventType: 'purchase_created', funnelStage: 'captured',
+      reasonCode: 'manual', description: 'Compra registrada para Colaborador Interno Multi-loja, OS/pedido OS-123.',
+      actorUid: 'manager-uid', actorName: 'Gestor Teste', actorRole: 'manager',
+      occurredAtClient: '2026-11-11T12:00:00.000Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
+    }));
+    await assertFails(updateDoc(doc(db, 'leads', 'lead-test', 'history', 'purchase-created'), {
+      description: 'Historico alterado indevidamente.'
+    }));
   });
 });
