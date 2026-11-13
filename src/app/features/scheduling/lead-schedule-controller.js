@@ -44,6 +44,7 @@ export async function ensureLeadDetailSchedule({ state, routeParam, findLead, re
   const lead = findLead(routeParam());
   if (!lead?.storeId || (state.leadDetailSchedule.leadId === lead.id && state.leadDetailSchedule.storeId === lead.storeId)) return;
   Object.assign(state.leadDetailSchedule, { loading: true, leadId: lead.id, appointmentDate: lead.appointmentDate || '', appointments: [], services: [], serviceId: lead.appointmentServiceId || '', triage: {}, error: '' });
+  render();
   try {
     const [settings, services] = await Promise.all([loadStoreSchedule(state.profile, lead.storeId), loadAppointmentServices(state.profile)]);
     state.leadDetailSchedule.storeId = lead.storeId;

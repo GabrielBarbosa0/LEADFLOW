@@ -718,6 +718,50 @@ describe('lead correction rules', () => {
     }));
   });
 
+  it.each([
+    ['internal collaborator', 'internal-uid', 'internal@example.com', 'system-captor'],
+    ['manager', 'manager-uid', 'manager@example.com', 'system-manager']
+  ])('lets a %s edit a newly created lead while its system permissions are stale', async (_, uid, email, roleProfileId) => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await updateDoc(doc(db, 'users', uid), {
+        roleProfileId,
+        permissions: ['leads.create', 'leads.view_own'],
+        permissionSchemaVersion: 6
+      });
+      await updateDoc(doc(db, 'leads', 'lead-test'), {
+        capturedByUid: uid,
+        capturedByName: uid === 'manager-uid' ? 'Gestor Teste' : 'Colaborador Interno Multi-loja',
+        storeId: 'loja-02'
+      });
+    });
+
+    const db = authenticatedDb(uid, email);
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {
+      preferredName: 'Cliente atualizado',
+      updatedAtServer: Timestamp.now()
+    }));
+  });
+
+  it.each([
+    ['internal collaborator', 'internal-uid', 'internal@example.com', 'system-captor'],
+    ['manager', 'manager-uid', 'manager@example.com', 'system-manager']
+  ])('lets a %s edit a store lead while its system permissions are stale', async (_, uid, email, roleProfileId) => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'users', uid), {
+        roleProfileId,
+        permissions: ['leads.create', 'leads.view_stores'],
+        permissionSchemaVersion: 6
+      });
+    });
+
+    const db = authenticatedDb(uid, email);
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {
+      preferredName: 'Cliente da equipe atualizado',
+      updatedAtServer: Timestamp.now()
+    }));
+  });
+
   it('accepts a transport request with at most one companion', async () => {
     const db = authenticatedDb('captor-uid', 'captor@example.com');
     await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {
@@ -1341,6 +1385,7 @@ describe('appointment calendar queries', () => {
       const db = context.firestore();
       await updateDoc(doc(db, 'users', 'manager-uid'), {
         roleProfileId: 'system-receptionist',
+        permissionSchemaVersion: 7,
         permissions: [
           'leads.create', 'leads.view_own', 'leads.edit_own',
           'appointments.view', 'appointments.attendance'

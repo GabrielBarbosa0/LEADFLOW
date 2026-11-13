@@ -2,8 +2,9 @@ import { DEFAULT_STORE_SCHEDULE, transportHoursForDate } from '../../../utils/sc
 import { escapeHtml } from '../../shared/formatters.js';
 import { leadFormValues } from './capture-form.js';
 
-function transportStatus(settings, appointmentDate, needsTransport) {
+function transportStatus(settings, appointmentDate, needsTransport, loading = false) {
   if (!needsTransport) return '';
+  if (loading) return 'Carregando a disponibilidade do transporte...';
   if (!settings.transportEnabled) return 'O transporte ainda não está configurado para esta loja.';
   if (!appointmentDate) return 'Escolha a data para consultar a disponibilidade do transporte.';
   const hours = transportHoursForDate(settings, appointmentDate);
@@ -12,7 +13,7 @@ function transportStatus(settings, appointmentDate, needsTransport) {
     : 'Não há transporte disponível nesta data.';
 }
 
-export function transportFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, idPrefix = 'transport', locked = false) {
+export function transportFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, idPrefix = 'transport', locked = false, loading = false) {
   const needsTransport = values.needsTransport === true || values.needsTransport === 'true';
   const legacyCompanionCount = values.hasCompanion === true || values.hasCompanion === 'true' ? 1 : 0;
   const companionCount = needsTransport ? Math.min(settings.maxCompanions, Number(values.companionCount ?? legacyCompanionCount) || 0) : 0;
@@ -20,7 +21,7 @@ export function transportFields(values = {}, settings = DEFAULT_STORE_SCHEDULE, 
     `<option value="${count}" ${companionCount === count ? 'selected' : ''}>${count === 0 ? 'Sem acompanhante' : `${count} ${count === 1 ? 'acompanhante' : 'acompanhantes'}`}</option>`
   )).join('');
   const appointmentDate = values.appointmentDate || '';
-  const status = transportStatus(settings, appointmentDate, needsTransport);
+  const status = transportStatus(settings, appointmentDate, needsTransport, loading);
   return `<section class="transport-section" data-transport-section>
     ${locked ? `<input type="hidden" name="needsTransport" value="${needsTransport}" /><input type="hidden" name="companionCount" value="${companionCount}" />` : ''}
     <div class="field-row transport-fields">
