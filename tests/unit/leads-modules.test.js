@@ -101,6 +101,19 @@ describe('leads feature modules', () => {
     expect(markup).toContain('Compra confirmada');
   });
 
+  it('filters customers by city and renders unique city options', () => {
+    const leads = [
+      sampleLead({ id: 'lead-1', city: 'Surubim' }),
+      sampleLead({ id: 'lead-2', city: 'Carpina' }),
+      sampleLead({ id: 'lead-3', city: 'surubim' })
+    ];
+    expect(filterLeadRecords(leads, { city: 'SURUBIM' }).map((lead) => lead.id)).toEqual(['lead-1', 'lead-3']);
+    const markup = leadsView({ leads, filters: { city: 'Carpina' } });
+    expect(markup).toContain('id="lead-city-filter"');
+    expect(markup.match(/value="Surubim"/g)).toHaveLength(1);
+    expect(markup).toContain('<option value="Carpina" selected>Carpina</option>');
+  });
+
   it('shows a marker for a Captar import', () => {
     const markup = leadsView({ leads: [sampleLead({ recordOrigin: 'captar_import' })] });
     expect(markup).toContain('Importado do Captar');

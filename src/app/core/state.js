@@ -21,7 +21,8 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       storeId: '',
       startDate: '',
       endDate: '',
-      saleStatus: ''
+      saleStatus: '',
+      city: ''
     },
     leadSearch: {
       query: '',

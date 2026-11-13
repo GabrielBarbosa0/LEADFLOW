@@ -46,16 +46,23 @@ test('keeps report search and appointment actions aligned across responsive widt
     await page.setViewportSize({ width, height: 898 });
     await page.goto('/#/leads');
     await expect(page.locator('#lead-store-filter')).toContainText('Todas as lojas');
+    const cityFilter = page.locator('#lead-city-filter');
+    await expect(cityFilter).toContainText('Cidade de Teste');
+    await cityFilter.selectOption({ label: 'Cidade de Teste' });
+    await expect(page.locator('[data-lead-filters-clear]')).toBeEnabled();
+    await page.locator('[data-lead-filters-clear]').click();
+    await expect(cityFilter).toHaveValue('');
     const leadFilterBoxes = await page.locator('.lead-list-filters > .field').evaluateAll((fields) => fields.map((field) => {
       const { x, y, width: fieldWidth } = field.getBoundingClientRect();
       return { x, y, width: fieldWidth };
     }));
-    expect(leadFilterBoxes).toHaveLength(4);
-    if (width > 560) {
+    expect(leadFilterBoxes).toHaveLength(5);
+    if (width > 680) {
       expect(Math.max(...leadFilterBoxes.map(({ y }) => y)) - Math.min(...leadFilterBoxes.map(({ y }) => y))).toBeLessThanOrEqual(1);
       expect(Math.max(...leadFilterBoxes.map(({ width: fieldWidth }) => fieldWidth)) - Math.min(...leadFilterBoxes.map(({ width: fieldWidth }) => fieldWidth))).toBeLessThanOrEqual(1);
     } else {
       expect(leadFilterBoxes[1].y).toBeGreaterThan(leadFilterBoxes[0].y);
+      expect(Math.abs(leadFilterBoxes[3].y - leadFilterBoxes[4].y)).toBeLessThanOrEqual(1);
     }
 
     await page.goto('/#/management');

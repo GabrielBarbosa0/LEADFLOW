@@ -2,6 +2,20 @@ import { formatBrazilianPhone } from '../../../utils/phone.js';
 import { leadOriginLabel } from '../../../utils/lead-origin.js';
 import { escapeHtml, offlineSyncDetail, syncLabel } from '../../shared/formatters.js';
 
+function normalizeCity(value = '') {
+  return String(value).trim().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('pt-BR');
+}
+
+function availableCities(leads = []) {
+  const cities = new Map();
+  leads.forEach((lead) => {
+    const city = String(lead.city || '').trim();
+    const key = normalizeCity(city);
+    if (key && !cities.has(key)) cities.set(key, city);
+  });
+  return [...cities.values()].sort((first, second) => first.localeCompare(second, 'pt-BR'));
+}
+
 export function filterLeadRecords(leads = [], filters = {}) {
   const query = String(filters.query || '').trim().toLocaleLowerCase('pt-BR');
   const phoneQuery = query.replace(/\D/g, '');
@@ -15,6 +29,7 @@ export function filterLeadRecords(leads = [], filters = {}) {
     if (filters.endDate && capturedDate > filters.endDate) return false;
     if (filters.saleStatus === 'confirmed' && lead.saleStatus !== 'confirmed') return false;
     if (filters.saleStatus === 'pending' && lead.saleStatus === 'confirmed') return false;
+    if (filters.city && normalizeCity(lead.city) !== normalizeCity(filters.city)) return false;
     return true;
   });
 }
@@ -22,8 +37,9 @@ export function filterLeadRecords(leads = [], filters = {}) {
 export function leadsView({ leads, filters = {}, allowedStores = [], dataError = '', canCreate = false }) {
   const filtered = filterLeadRecords(leads, filters);
   const visibleIds = new Set(filtered.map((lead) => lead.id));
-  const filtersActive = Boolean(filters.query || filters.storeId || filters.startDate || filters.endDate || filters.saleStatus);
+  const filtersActive = Boolean(filters.query || filters.storeId || filters.startDate || filters.endDate || filters.saleStatus || filters.city);
   const storeOptions = allowedStores.map((store) => `<option value="${escapeHtml(store.id)}" ${filters.storeId === store.id ? 'selected' : ''}>${escapeHtml(store.displayLabel || store.label)}</option>`).join('');
+  const cityOptions = availableCities(leads).map((city) => `<option value="${escapeHtml(city)}" ${normalizeCity(filters.city) === normalizeCity(city) ? 'selected' : ''}>${escapeHtml(city)}</option>`).join('');
   const rows = leads.map((lead) => {
     const [label, tone] = syncLabel(lead);
     const originLabel = leadOriginLabel(lead);
@@ -44,6 +60,7 @@ export function leadsView({ leads, filters = {}, allowedStores = [], dataError =
       <div class="field"><label for="lead-start-date">Data inicial</label><input id="lead-start-date" type="date" value="${escapeHtml(filters.startDate || '')}" /></div>
       <div class="field"><label for="lead-end-date">Data final</label><input id="lead-end-date" type="date" value="${escapeHtml(filters.endDate || '')}" /></div>
       <div class="field"><label for="lead-sale-filter">Compra</label><select id="lead-sale-filter"><option value="">Todos</option><option value="confirmed" ${filters.saleStatus === 'confirmed' ? 'selected' : ''}>Compraram</option><option value="pending" ${filters.saleStatus === 'pending' ? 'selected' : ''}>Sem confirmacao</option></select></div>
+      <div class="field"><label for="lead-city-filter">Cidade</label><select id="lead-city-filter"><option value="">Todas</option>${cityOptions}</select></div>
     </section>
     ${dataError ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(dataError)}</span></div>` : ''}
     <section class="lead-list">${rows}${empty}</section>`;

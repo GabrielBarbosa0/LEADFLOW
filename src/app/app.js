@@ -1351,6 +1351,7 @@ function bindPageEvents() {
     const startInput = leadFilters.querySelector('#lead-start-date');
     const endInput = leadFilters.querySelector('#lead-end-date');
     const saleInput = leadFilters.querySelector('#lead-sale-filter');
+    const cityInput = leadFilters.querySelector('#lead-city-filter');
     const clearButton = leadFilters.querySelector('[data-lead-filters-clear]');
     const applyLeadFilters = () => {
       state.leadFilters = {
@@ -1358,7 +1359,8 @@ function bindPageEvents() {
         storeId: storeInput?.value || '',
         startDate: startInput?.value || '',
         endDate: endInput?.value || '',
-        saleStatus: saleInput?.value || ''
+        saleStatus: saleInput?.value || '',
+        city: cityInput?.value || ''
       };
       const visibleIds = new Set(filterLeadRecords(state.leads, state.leadFilters).map((lead) => lead.id));
       document.querySelectorAll('[data-lead-list-row]').forEach((row) => { row.hidden = !visibleIds.has(row.dataset.openLeadId); });
@@ -1369,9 +1371,9 @@ function bindPageEvents() {
       if (clearButton) clearButton.disabled = !Object.values(state.leadFilters).some(Boolean);
     };
     queryInput?.addEventListener('input', applyLeadFilters);
-    [storeInput, startInput, endInput, saleInput].forEach((input) => input?.addEventListener('change', applyLeadFilters));
+    [storeInput, startInput, endInput, saleInput, cityInput].forEach((input) => input?.addEventListener('change', applyLeadFilters));
     clearButton?.addEventListener('click', () => {
-      [queryInput, storeInput, startInput, endInput, saleInput].forEach((input) => { if (input) input.value = ''; });
+      [queryInput, storeInput, startInput, endInput, saleInput, cityInput].forEach((input) => { if (input) input.value = ''; });
       applyLeadFilters();
       queryInput?.focus();
     });
