@@ -48,6 +48,7 @@ function sampleLead(overrides = {}) {
 
 function scheduleState(overrides = {}) {
   return {
+    leadId: 'lead-1',
     storeId: 'loja-06',
     settings: { ...DEFAULT_STORE_SCHEDULE },
     services: [{ id: 'exam', name: 'Exame de vista', durationMinutes: 20, storeIds: ['loja-06'], active: true }],
@@ -154,6 +155,26 @@ describe('leads feature modules', () => {
     expect(markup).toContain('class="field-row credit-details-fields"');
     expect(markup.indexOf('demographic-fields')).toBeLessThan(markup.indexOf('credit-details-fields'));
     expect(markup.indexOf('credit-details-fields')).toBeLessThan(markup.indexOf('preferred-postal-fields'));
+  });
+
+  it('does not reuse another lead appointment date while schedule data loads', () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const lead = sampleLead({ id: 'lead-current', appointmentDate: '', appointmentTime: '' });
+    const staleSchedule = scheduleState({ leadId: 'lead-previous', appointmentDate: '2026-11-28' });
+    const markup = leadDetailView({
+      lead,
+      managementMode: false,
+      canManage: false,
+      profileRole: 'manager',
+      scheduleState: staleSchedule,
+      appointmentTimeMarkup: leadDetailAppointmentTimeField({ lead, scheduleState: staleSchedule, profile: {}, online: true }),
+      canDelete: false
+    });
+
+    expect(markup).toContain('id="edit-appointmentDate"');
+    expect(markup).not.toContain('value="2026-11-28"');
+    expect(markup).toContain('Escolha primeiro uma data');
+    expect(markup).toMatch(/id="edit-notes"[^>]*disabled/);
   });
 
   it('shows the Captar origin in the lead detail summary', () => {

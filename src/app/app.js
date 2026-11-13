@@ -1189,7 +1189,7 @@ function bindPageEvents() {
         if (result.notFound) navigate('leads');
         return;
       }
-      if (values.appointmentDate && values.appointmentTime && result.writePromise) {
+      if (result.writePromise) {
         try {
           await result.writePromise;
         } catch (error) {
@@ -2394,10 +2394,10 @@ export async function startApp() {
         const lead = await loadSearchLead(result.id);
         if (!lead) throw new Error('not-found');
         if (lead.capturedByUid === state.profile?.uid && hasAccess('leads.view_own')) {
-          if (!state.leads.some((item) => item.id === lead.id)) state.leads = [lead, ...state.leads];
+          state.leads = [lead, ...state.leads.filter((item) => item.id !== lead.id)];
           navigate('lead', lead.id);
         } else if (result.canClaim || hasAccess('leads.view_stores')) {
-          if (!state.leads.some((item) => item.id === lead.id)) state.leads = [lead, ...state.leads];
+          state.leads = [lead, ...state.leads.filter((item) => item.id !== lead.id)];
           navigate('lead', lead.id);
         } else if (canManage()) {
           state.management.activeLead = lead;

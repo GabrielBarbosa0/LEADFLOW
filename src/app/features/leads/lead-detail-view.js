@@ -52,9 +52,13 @@ export function leadDetailView({
     : `<div class="lead-sale-summary">${purchaseSummaryContent}</div>`;
   const managerReschedule = managementMode && profileRole === 'manager' && !canEditClinical;
   const offlineEdit = !navigator.onLine;
-  const locked = managerReschedule || offlineEdit || readOnly ? 'disabled' : '';
+  const scheduleLoading = scheduleState.loading || scheduleState.leadId !== lead.id;
+  const locked = managerReschedule || offlineEdit || readOnly || scheduleLoading ? 'disabled' : '';
   const appointmentCancelled = lead.appointmentStatus === 'cancelled' || lead.appointmentAttendance === 'cancelled';
   const scheduleLocked = readOnly;
+  const appointmentDate = scheduleState.leadId === lead.id
+    ? scheduleState.appointmentDate
+    : lead.appointmentDate || '';
   const renderedAppointmentTimeMarkup = scheduleLocked
     ? appointmentTimeMarkup.replace(/<select\b(?![^>]*\bdisabled\b)/g, '<select disabled').replace(/<input\b(?![^>]*\bdisabled\b)/g, '<input disabled')
     : appointmentTimeMarkup;
@@ -112,16 +116,16 @@ export function leadDetailView({
       ${showAmetropiaFields ? `<fieldset class="field ametropia-field" ${locked}><legend>Ametropias</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${ametropiaOptions(lead.ametropiaIds || [])}</div></fieldset>` : ''}
       <fieldset class="field ametropia-field" ${locked}><legend>Patologias e condições de saúde</legend><small>Marque todas que se aplicam.</small><div class="ametropia-options">${pathologyOptions(lead.pathologyIds || [])}</div></fieldset>
       ${eyeTriageFields(lead, scheduleState.settings, 'edit-lead-eye')}
-      ${transportFields(lead, scheduleState.settings, 'edit-lead-transport', Boolean(locked) || scheduleState.loading, scheduleState.loading)}
+      ${transportFields(lead, scheduleState.settings, 'edit-lead-transport', Boolean(locked), scheduleLoading)}
       ${appointmentCancelled ? `<div class="notice notice-warning lead-cancelled-notice"><i data-lucide="calendar-x"></i><div><strong>Este agendamento foi cancelado.</strong><span>${readOnly ? 'Assuma o lead ou solicite a transferência para poder reagendar.' : 'Escolha uma nova data ou horário e salve para reagendar. O atendimento anterior permanece no histórico.'}</span>${canClaimLead ? `<button class="button button-primary" type="button" data-claim-lead="${escapeHtml(lead.id)}"><i data-lucide="handshake"></i><span>Assumir este lead</span></button>` : ''}</div></div>` : ''}
       <div class="field-row appointment-fields">
-        <div class="field" data-field="appointmentDate"><label for="edit-appointmentDate">Data do pré-agendamento</label><input id="edit-appointmentDate" name="appointmentDate" type="date" min="${toLocalDateInput(new Date())}" value="${escapeHtml(scheduleState.appointmentDate || lead.appointmentDate)}" ${offlineEdit || scheduleLocked ? 'disabled' : ''} /><small class="schedule-date-status">${offlineEdit ? 'Conecte-se para escolher uma data.' : ''}</small><small class="field-error"></small></div>
+        <div class="field" data-field="appointmentDate"><label for="edit-appointmentDate">Data do pré-agendamento</label><input id="edit-appointmentDate" name="appointmentDate" type="date" min="${toLocalDateInput(new Date())}" value="${escapeHtml(appointmentDate)}" ${offlineEdit || scheduleLocked ? 'disabled' : ''} /><small class="schedule-date-status">${offlineEdit ? 'Conecte-se para escolher uma data.' : ''}</small><small class="field-error"></small></div>
         ${renderedAppointmentTimeMarkup}
       </div>
       <div class="field" data-field="notes"><label for="edit-notes">Observação rápida</label><textarea id="edit-notes" name="notes" maxlength="500" rows="3" ${locked}>${escapeHtml(lead.notes)}</textarea><small class="field-hint"><span id="edit-notes-count">${String(lead.notes || '').length}</span>/500</small><small class="field-error"></small></div>
       <div class="lead-detail-actions">
         ${canConfirmSale ? `<button class="button button-secondary button-block" type="button" data-open-manual-sale="${escapeHtml(lead.id)}" ${offlineEdit ? 'disabled' : ''}><i data-lucide="badge-dollar-sign"></i><span>${lead.saleStatus === 'confirmed' ? 'Ver compras do cliente' : 'Registrar compra'}</span></button>` : ''}
-        ${readOnly ? '' : `<button class="button button-primary button-block" type="submit" ${offlineEdit || scheduleState.loading ? 'disabled' : ''}><i data-lucide="save"></i><span>${managerReschedule ? 'Salvar reagendamento' : 'Salvar alterações'}</span></button>`}
+        ${readOnly ? '' : `<button class="button button-primary button-block" type="submit" ${offlineEdit || scheduleLoading ? 'disabled' : ''}><i data-lucide="save"></i><span>${managerReschedule ? 'Salvar reagendamento' : 'Salvar alterações'}</span></button>`}
         ${canCancelAppointment ? `<button class="button button-danger button-block" type="button" data-cancel-appointment="${escapeHtml(lead.id)}" ${offlineEdit ? 'disabled' : ''}><i data-lucide="calendar-x"></i><span>Cancelar agendamento</span></button>` : ''}
         ${canTransferLead ? `<button class="button button-secondary button-block" type="button" data-transfer-lead="${escapeHtml(lead.id)}"><i data-lucide="repeat-2"></i><span>Transferir responsável</span></button>` : ''}
         ${canDelete ? `<button class="button button-danger button-block" type="button" data-delete-lead="${escapeHtml(lead.id)}"><i data-lucide="trash-2"></i><span>Excluir lead</span></button>` : ''}

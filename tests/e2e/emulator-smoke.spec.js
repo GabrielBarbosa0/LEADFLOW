@@ -644,6 +644,33 @@ test('lets another collaborator explicitly claim a cancelled lead', async ({ pag
   await expect(form.getByRole('button', { name: /Salvar altera/ })).toBeVisible();
 });
 
+test('lets internal staff edit a complete unscheduled lead without inheriting a date', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo de gravação executado uma vez por seed.');
+  await signIn(page, 'balcao@leadflow.test');
+
+  const openLead = async () => {
+    await page.goto('/#/search');
+    await expect(page.getByLabel('Nome ou CPF')).toBeVisible();
+    await page.waitForTimeout(750);
+    await page.getByLabel('Nome ou CPF').fill('Cliente Sem Agendamento');
+    await page.getByRole('button', { name: 'Pesquisar' }).click();
+    await page.getByRole('button', { name: 'Abrir cadastro de Cliente Sem Agendamento' }).click();
+    const form = page.locator('#edit-lead-form');
+    await expect(form.getByRole('button', { name: 'Salvar alterações' })).toBeEnabled();
+    return form;
+  };
+
+  let form = await openLead();
+  await expect(form.getByLabel('Data do pré-agendamento')).toHaveValue('');
+  await form.getByLabel('Observação rápida').fill('Observação salva pelo colaborador interno');
+  await form.getByRole('button', { name: 'Salvar alterações' }).click();
+  await expect(page).toHaveURL(/#\/leads$/);
+
+  form = await openLead();
+  await expect(form.getByLabel('Data do pré-agendamento')).toHaveValue('');
+  await expect(form.getByLabel('Observação rápida')).toHaveValue('Observação salva pelo colaborador interno');
+});
+
 test('lets a MEI schedule an unscheduled lead transferred by a store manager', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
   await signIn(page, 'gestor@leadflow.test');
