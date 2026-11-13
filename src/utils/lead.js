@@ -707,3 +707,32 @@ export function createLeadUpdate(input) {
     }
   };
 }
+
+const APPOINTMENT_VALIDATION_FIELDS = new Set([
+  'appointmentDate',
+  'appointmentTime',
+  'appointmentServiceId',
+  'needsTransport'
+]);
+
+export function createAppointmentScheduleUpdate(input = {}) {
+  const validation = validateLeadInput(input, { requireBirthDate: false });
+  const errors = Object.fromEntries(Object.entries(validation.errors)
+    .filter(([field]) => APPOINTMENT_VALIDATION_FIELDS.has(field)));
+  if (Object.keys(errors).length) return { isValid: false, errors, data: null };
+
+  return {
+    isValid: true,
+    errors: {},
+    data: {
+      appointmentDate: String(input.appointmentDate || '').trim(),
+      appointmentTime: String(input.appointmentTime || '').trim(),
+      appointmentSchedulingMode: input.schedulingMode === 'free' || input.appointmentSchedulingMode === 'free'
+        ? 'free'
+        : 'controlled',
+      appointmentDurationMinutes: Number(input.appointmentDurationMinutes) || 20,
+      appointmentServiceId: String(input.appointmentServiceId || '').trim(),
+      appointmentServiceName: String(input.appointmentServiceName || 'Exame de vista').trim().slice(0, 80)
+    }
+  };
+}

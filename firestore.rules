@@ -906,11 +906,18 @@ service cloud.firestore {
         && validAppointmentCancellation();
     }
 
-    function isOwnerAppointmentReschedule() {
-      return resource.data.capturedByUid == request.auth.uid
-        && userHasStore(resource.data.storeId)
-        && hasPermission('leads.create')
-        && validAppointmentReschedule();
+    function isAuthorizedAppointmentReschedule() {
+      return isAppointmentRescheduleUpdate()
+        && activeUser()
+        && validAppointmentReschedule()
+        && (
+          (resource.data.capturedByUid == request.auth.uid
+            && userHasStore(resource.data.storeId)
+            && hasPermission('leads.create'))
+          || (isManager()
+            && managerHasStore(resource.data.storeId)
+            && hasPermission('appointments.attendance'))
+        );
     }
 
     function canCancelAppointments() {
@@ -1152,28 +1159,24 @@ service cloud.firestore {
         || isAdmin()
       );
 
-      allow update: if isAdmin() || (
+      allow update: if isAdmin()
+      || isAuthorizedAppointmentReschedule()
+      || (
         isLeadOwnershipUpdate() && (isCancelledLeadClaim() || isManagerLeadReassignment())
       ) || (
         activeUser()
+        && !isAppointmentRescheduleUpdate()
         && leadIdentityIsUnchanged()
         && (
           (leadArchiveFieldsAreUnchanged() && (
-            (isAppointmentRescheduleUpdate() && (
-              isOwnerAppointmentReschedule()
-              || (isManager()
-                && managerHasStore(resource.data.storeId)
-                && hasPermission('appointments.attendance')
-                && validAppointmentReschedule())
-            ))
-            || (!isAppointmentRescheduleUpdate() && isAppointmentCancellationUpdate() && (
+            (isAppointmentCancellationUpdate() && (
               isOwnerAppointmentCancellation()
               || (isManager()
                 && managerHasStore(resource.data.storeId)
                 && canCancelAppointments()
                 && validAppointmentCancellation())
             ))
-            || (!isAppointmentRescheduleUpdate() && !isAppointmentCancellationUpdate() && (
+            || (!isAppointmentCancellationUpdate() && (
               isManagerAttendanceUpdate()
               || isOwnerAppointmentUpdate()
               || isOwnerLeadUpdate()
@@ -1397,7 +1400,14 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/leads/$(request.resource.data.leadId)).data.capturedByUid == request.resource.data.capturedByUid;
       allow delete: if isAdmin()
         || (activeUser() && (
-          ((resource.data.capturedByUid == request.auth.uid || managerHasStore(resource.data.storeId))
+          (existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
+            && canRescheduleAppointments()
+            && (
+              getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDate != resource.data.appointmentDate
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
+              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
+            ))
+          || ((resource.data.capturedByUid == request.auth.uid || managerHasStore(resource.data.storeId))
             && canCancelAppointments()
             && existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
             && getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled')
@@ -1411,13 +1421,6 @@ service cloud.firestore {
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
               || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentStatus == 'cancelled'
-            ))
-          || (existsAfter(/databases/$(database)/documents/leads/$(resource.data.leadId))
-            && canRescheduleAppointments()
-            && (
-              getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDate != resource.data.appointmentDate
-              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentTime != resource.data.appointmentTime
-              || getAfter(/databases/$(database)/documents/leads/$(resource.data.leadId)).data.appointmentDurationMinutes != resource.data.durationMinutes
             ))
         ));
     }
