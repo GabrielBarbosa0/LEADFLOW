@@ -44,7 +44,7 @@ export function leadSearchView({ search }) {
   return `<section class="lead-search-page">
     <form id="lead-appointment-search" class="lead-search-form" novalidate>
       <label for="lead-appointment-search-input">Nome ou CPF</label>
-      <div class="lead-search-control"><i data-lucide="search"></i><input id="lead-appointment-search-input" name="query" type="search" value="${escapeHtml(search.query)}" autocomplete="off" placeholder="Digite o nome ou CPF" aria-describedby="lead-search-error" required /><button class="button button-primary" type="submit" ${search.loading ? 'disabled' : ''}><i data-lucide="search"></i><span>Pesquisar</span></button></div>
+      <div class="lead-search-control"><i data-lucide="search"></i><input id="lead-appointment-search-input" name="query" type="search" value="${escapeHtml(search.query)}" autocomplete="off" placeholder="Digite o nome ou CPF" aria-describedby="lead-search-error" required /><button class="button button-primary lead-search-submit" type="submit" aria-label="Pesquisar" title="Pesquisar" ${search.loading ? 'disabled' : ''}><i data-lucide="search"></i></button></div>
       <small id="lead-search-error" class="lead-search-error" aria-live="polite"></small>
     </form>
     <div class="lead-search-content" aria-live="polite">${content}</div>

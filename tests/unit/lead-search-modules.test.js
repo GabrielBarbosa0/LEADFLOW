@@ -58,4 +58,13 @@ describe('lead appointment search', () => {
     expect(markup).toContain('CPF 529.982.247-25');
     expect(markup).toContain('data-search-open-lead="scheduled"');
   });
+
+  it('renders a compact icon-only search command with an accessible name', () => {
+    const markup = leadSearchView({
+      search: { query: '', loading: false, searched: false, error: '', results: [] }
+    });
+    expect(markup).toContain('class="button button-primary lead-search-submit"');
+    expect(markup).toContain('aria-label="Pesquisar"');
+    expect(markup).not.toContain('<span>Pesquisar</span>');
+  });
 });

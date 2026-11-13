@@ -2031,7 +2031,10 @@ svg {
 }
 
 .lead-search-control .button {
+  width: 46px;
+  min-width: 46px;
   min-height: 44px;
+  padding: 0;
   margin-right: 4px;
 }
 
@@ -8432,9 +8435,9 @@ svg {
   }
 
   .lead-search-control {
-    grid-template-columns: 20px minmax(0, 1fr);
-    grid-template-rows: 52px 46px;
-    gap: 8px 10px;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    grid-template-rows: 52px;
+    gap: 10px;
     min-height: 0;
     padding: 0;
     border: 0;
@@ -8449,7 +8452,7 @@ svg {
   }
 
   .lead-search-control input {
-    grid-column: 1 / -1;
+    grid-column: 1;
     grid-row: 1;
     height: 52px;
     padding: 0 14px 0 46px;
@@ -8464,9 +8467,12 @@ svg {
   }
 
   .lead-search-control .button {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-height: 46px;
+    grid-column: 2;
+    grid-row: 1;
+    width: 48px;
+    min-width: 48px;
+    height: 52px;
+    min-height: 52px;
     margin: 0;
     border-radius: 7px;
   }

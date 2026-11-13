@@ -472,9 +472,23 @@ test('requires formal confirmation when an internal collaborator reschedules a c
 
   await page.goto('/#/search');
   await expect(page.getByLabel('Nome ou CPF')).toBeVisible();
+  const searchButton = page.getByRole('button', { name: 'Pesquisar' });
+  await expect(searchButton).toBeVisible();
+  const searchDimensions = await page.locator('#lead-appointment-search').evaluate((form) => {
+    const inputBox = form.querySelector('input').getBoundingClientRect();
+    const buttonBox = form.querySelector('button[type="submit"]').getBoundingClientRect();
+    return {
+      centerDifference: Math.abs((inputBox.y + inputBox.height / 2) - (buttonBox.y + buttonBox.height / 2)),
+      buttonWidth: buttonBox.width
+    };
+  });
+  expect(searchDimensions.centerDifference).toBeLessThanOrEqual(1);
+  expect(searchDimensions.buttonWidth).toBeLessThanOrEqual(48);
+  await expect(searchButton.locator('svg.lucide-search')).toBeVisible();
+  await expect(searchButton.locator('span')).toHaveCount(0);
   await page.waitForTimeout(750);
   await page.getByLabel('Nome ou CPF').fill('Cliente Cancelado');
-  await page.getByRole('button', { name: 'Pesquisar' }).click();
+  await searchButton.click();
   await expect(page.getByText('Cancelado', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Abrir cadastro de Cliente Cancelado' }).click();
 
