@@ -37,5 +37,7 @@ describe('manual sale confirmation', () => {
     expect(withForm).toContain('Registrar nova compra');
     expect(withForm).toContain('id="manual-sale-value" name="saleValue" inputmode="decimal" value="" required');
     expect(withForm).not.toContain('placeholder="Opcional"');
+    expect(withForm).toContain('aria-label="Fechar formulário de compra"');
+    expect(withForm).not.toContain('data-close-purchase-form>Voltar</button>');
   });
 });

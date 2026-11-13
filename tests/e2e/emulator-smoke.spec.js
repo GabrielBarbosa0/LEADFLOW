@@ -310,7 +310,7 @@ test('registers multiple purchases with responsible collaborators and preserves 
   saleFormDialog = page.locator('#manual-sale-form-dialog');
   await expect(saleFormDialog.getByRole('heading', { name: 'Editar compra' })).toBeVisible();
   await expect(saleFormDialog.getByLabel('OS ou pedido')).toHaveValue('E2E-001');
-  await saleFormDialog.getByRole('button', { name: 'Voltar' }).click();
+  await saleFormDialog.getByRole('button', { name: 'Fechar formulário de compra' }).click();
   await expect(page.locator('#manual-sale-form-dialog')).toHaveCount(0);
 
   await saleDialog.getByRole('button', { name: 'Nova compra' }).click();
