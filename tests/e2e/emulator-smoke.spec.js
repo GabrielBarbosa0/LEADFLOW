@@ -436,14 +436,33 @@ test('keeps the confirmation period beside a compact back button', async ({ page
   await expect(backButton).toBeVisible();
   await expect(backButton).toHaveAttribute('aria-label', 'Voltar ao início');
   await expect(backButton.locator('span')).toHaveCount(0);
+  const metrics = page.locator('.confirmation-metrics .metric');
+  const summary = page.locator('.confirmation-metrics');
+  await expect(metrics).toHaveCount(3);
   await expect.poll(async () => {
-    const [periodBox, backBox] = await Promise.all([period.boundingBox(), backButton.boundingBox()]);
-    if (!periodBox || !backBox) return null;
+    const [periodBox, backBox, summaryBox, firstBox, secondBox, thirdBox] = await Promise.all([
+      period.boundingBox(),
+      backButton.boundingBox(),
+      summary.boundingBox(),
+      metrics.nth(0).boundingBox(),
+      metrics.nth(1).boundingBox(),
+      metrics.nth(2).boundingBox()
+    ]);
+    if (!periodBox || !backBox || !summaryBox || !firstBox || !secondBox || !thirdBox) return null;
     return {
       sameRow: Math.abs(periodBox.y - backBox.y) < 2,
-      backWidth: Math.round(backBox.width)
+      backWidth: Math.round(backBox.width),
+      cardsSameRow: Math.max(firstBox.y, secondBox.y, thirdBox.y) - Math.min(firstBox.y, secondBox.y, thirdBox.y) < 2,
+      cardsSameWidth: Math.max(firstBox.width, secondBox.width, thirdBox.width) - Math.min(firstBox.width, secondBox.width, thirdBox.width) < 2,
+      fillsSummary: Math.abs((thirdBox.x + thirdBox.width) - (summaryBox.x + summaryBox.width)) < 2
     };
-  }).toEqual({ sameRow: true, backWidth: 54 });
+  }).toEqual({
+    sameRow: true,
+    backWidth: 54,
+    cardsSameRow: true,
+    cardsSameWidth: true,
+    fillsSummary: true
+  });
 });
 
 test('validates and completes appointment cancellation for an internal collaborator', async ({ page }, testInfo) => {
