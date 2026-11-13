@@ -7046,6 +7046,36 @@ svg {
     flex-direction: row;
   }
 
+  .app-main.layout-kanban {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .kanban-board {
+    width: 100%;
+    grid-auto-columns: calc(100% - 2px);
+    gap: 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .kanban-board::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kanban-column {
+    height: max(420px, calc(100dvh - 220px));
+    max-height: 700px;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .kanban-scrollbar-dock {
+    display: none;
+  }
+
 }
 
 @media (max-width: 560px) {

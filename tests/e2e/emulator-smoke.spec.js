@@ -740,6 +740,44 @@ test('opens the lead archive workflow only from active management records', asyn
   }
 });
 
+test('keeps the kanban usable with one swipeable column on mobile', async ({ page }) => {
+  await signIn(page, 'admin@leadflow.test');
+  await page.getByRole('button', { name: /Painel de gestão/ }).click();
+  await page.getByRole('button', { name: 'Kanban' }).click();
+  await expect(page).toHaveURL(/#\/kanban$/);
+
+  const board = page.getByRole('region', { name: 'Kanban do funil' });
+  const columns = board.locator('.kanban-column');
+  await expect(board).toBeVisible();
+  await expect(columns.first()).toBeVisible();
+
+  if ((page.viewportSize()?.width || 0) <= 600) {
+    const dimensions = await board.evaluate((element) => {
+      const firstColumn = element.querySelector('.kanban-column');
+      const boardBounds = element.getBoundingClientRect();
+      const columnBounds = firstColumn.getBoundingClientRect();
+      return {
+        boardLeft: boardBounds.left,
+        boardRight: boardBounds.right,
+        boardWidth: boardBounds.width,
+        columnWidth: columnBounds.width,
+        overflowX: getComputedStyle(element).overflowX,
+        dockDisplay: getComputedStyle(document.querySelector('.kanban-scrollbar-dock')).display
+      };
+    });
+    expect(dimensions.boardLeft).toBeGreaterThanOrEqual(0);
+    expect(dimensions.boardRight).toBeLessThanOrEqual(page.viewportSize().width);
+    expect(dimensions.columnWidth).toBeGreaterThanOrEqual(dimensions.boardWidth - 4);
+    expect(dimensions.overflowX).toBe('auto');
+    expect(dimensions.dockDisplay).toBe('none');
+
+    await board.evaluate((element) => { element.scrollLeft = element.clientWidth; });
+    await expect.poll(() => board.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  } else {
+    await expect(page.locator('.kanban-scrollbar-dock')).toBeVisible();
+  }
+});
+
 test('keeps team access cards compact on mobile', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
 
