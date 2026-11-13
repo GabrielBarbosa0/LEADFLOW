@@ -33,12 +33,9 @@ function currentPermissions(access, systemProfile) {
   if (access.role === 'admin') {
     return [...(SYSTEM_ROLE_PROFILES.get('system-admin')?.permissions || [])];
   }
-  const storedVersion = Number(access.permissionSchemaVersion) || 0;
-  if (systemProfile && storedVersion < PERMISSION_SCHEMA_VERSION) {
-    return [...systemProfile.permissions];
-  }
+  if (systemProfile) return [...systemProfile.permissions];
   if (Array.isArray(access.permissions)) return [...access.permissions];
-  return [...(systemProfile?.permissions || [])];
+  return [];
 }
 
 function canonicalAccessProfile(email, access, authUser) {

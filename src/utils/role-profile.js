@@ -86,9 +86,7 @@ export function systemRoleProfileForId(profileId) {
 export function permissionsForProfile(profile) {
   if (profile?.role === 'admin') return [...ALL_PERMISSION_IDS];
   const systemProfile = systemRoleProfileForId(profile?.roleProfileId);
-  if (systemProfile && Number(profile?.permissionSchemaVersion || 0) < PERMISSION_SCHEMA_VERSION) {
-    return [...systemProfile.permissions];
-  }
+  if (systemProfile) return [...systemProfile.permissions];
   if (Array.isArray(profile?.permissions)) return profile.permissions;
   return [...systemRoleProfileForRole(profile?.role).permissions];
 }

@@ -84,6 +84,19 @@ describe('role profiles', () => {
     expect(hasPermission(legacyTelemarketing, 'external.operations.read')).toBe(true);
   });
 
+  it('uses canonical permissions when a system profile has a current but incomplete list', () => {
+    const partiallySynchronizedManager = {
+      role: 'manager',
+      roleProfileId: 'system-manager',
+      permissionSchemaVersion: PERMISSION_SCHEMA_VERSION,
+      permissions: ['appointments.view', 'appointments.cancel']
+    };
+
+    expect(hasPermission(partiallySynchronizedManager, 'leads.edit_own')).toBe(true);
+    expect(hasPermission(partiallySynchronizedManager, 'leads.edit_all')).toBe(true);
+    expect(hasPermission(partiallySynchronizedManager, 'leads.delete')).toBe(true);
+  });
+
   it('gives managers visibility into external operations', () => {
     const manager = SYSTEM_ROLE_PROFILES.find((profile) => profile.id === 'system-manager');
     expect(manager).toMatchObject({ name: 'Gestor', baseRole: 'manager' });

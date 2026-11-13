@@ -20,6 +20,7 @@ import { httpsCallable } from 'firebase/functions';
 import { auth, authPersistenceReady, db, functions, isFirebaseConfigured } from './client.js';
 import {
   PERMISSION_SCHEMA_VERSION,
+  permissionsForProfile,
   systemRoleProfileForId,
   systemRoleProfileForRole
 } from '../utils/role-profile.js';
@@ -274,7 +275,7 @@ export async function loadAuthorizedProfile(firebaseUser) {
     uid: firebaseUser.uid,
     ...profile,
     roleProfileName: roleProfile.name,
-    permissions: Array.isArray(profile.permissions) ? profile.permissions : roleProfile.permissions
+    permissions: permissionsForProfile(profile)
   };
 }
 
