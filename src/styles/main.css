@@ -3063,10 +3063,21 @@ svg {
 }
 
 .management-archive-dialog > form {
+  width: 100%;
+  min-width: 0;
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   max-height: inherit;
+}
+
+.management-archive-dialog > form > header > div,
+.management-archive-body,
+.archive-selection-summary,
+.archive-lead-list,
+.archive-lead-option > span,
+.archive-select-all > span {
+  min-width: 0;
 }
 
 .management-archive-dialog > form > header,
@@ -3190,6 +3201,70 @@ svg {
   margin-top: 3px;
   color: var(--muted);
   font-size: 0.72rem;
+}
+
+.archive-select-all > span,
+.archive-helper,
+.archive-lead-option strong,
+.archive-lead-option small {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .management-archive-dialog {
+    width: calc(100% - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .management-archive-dialog > form {
+    max-height: calc(100dvh - 18px);
+  }
+
+  .management-archive-dialog > form > header,
+  .management-archive-dialog > form > footer {
+    padding: 14px;
+  }
+
+  .management-archive-dialog > form > header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .management-archive-dialog > form > header .icon-button {
+    flex: 0 0 auto;
+  }
+
+  .management-archive-body {
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .archive-selection-summary {
+    padding: 11px 12px;
+  }
+
+  .management-archive-dialog > form > footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 9px;
+  }
+
+  .management-archive-dialog > form > footer > strong {
+    line-height: 1.2;
+  }
+
+  .management-archive-dialog .role-details-actions {
+    width: 100%;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .management-archive-dialog .role-details-actions .button {
+    width: 100%;
+    min-width: 0;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
 }
 
 .filter-title {

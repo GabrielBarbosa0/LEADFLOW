@@ -723,6 +723,21 @@ test('opens the lead archive workflow only from active management records', asyn
   await expect(dialog.getByRole('heading', { name: 'Arquivar leads' })).toBeVisible();
   await expect(dialog.getByText('O histórico é preservado.')).toBeVisible();
   await expect(dialog.locator('input[name="leadId"]').first()).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Fechar' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Cancelar' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Arquivar selecionados' })).toBeVisible();
+  if ((page.viewportSize()?.width || 0) <= 600) {
+    const viewportWidth = page.viewportSize().width;
+    const horizontalBounds = await dialog.evaluate((element) => ({
+      left: element.getBoundingClientRect().left,
+      right: element.getBoundingClientRect().right,
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth
+    }));
+    expect(horizontalBounds.left).toBeGreaterThanOrEqual(0);
+    expect(horizontalBounds.right).toBeLessThanOrEqual(viewportWidth);
+    expect(horizontalBounds.scrollWidth).toBeLessThanOrEqual(horizontalBounds.clientWidth + 1);
+  }
 });
 
 test('keeps team access cards compact on mobile', async ({ page }) => {
