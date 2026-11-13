@@ -291,7 +291,8 @@ test('validates and completes appointment cancellation for an internal collabora
   }
 });
 
-test('requires formal confirmation when an internal collaborator reschedules a cancelled appointment', async ({ page }) => {
+test('lets an internal collaborator formally reschedule a legacy cancelled appointment', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
   await signIn(page, 'balcao@leadflow.test');
 
   await page.goto('/#/search');
@@ -325,8 +326,42 @@ test('requires formal confirmation when an internal collaborator reschedules a c
   await dialog.getByLabel('Motivo do reagendamento').selectOption('other');
   await dialog.getByRole('button', { name: 'Confirmar reagendamento' }).click();
   await expect(dialog.getByText('Descreva o motivo do reagendamento.')).toBeVisible();
-  await dialog.getByRole('button', { name: 'Voltar' }).click();
+  await dialog.getByLabel('Motivo do reagendamento').selectOption('client_request');
+  await dialog.getByRole('button', { name: 'Confirmar reagendamento' }).click();
   await expect(dialog).toHaveCount(0);
+  await expect(page.getByText('Agendamento reagendado e histórico atualizado.')).toBeVisible();
+});
+
+test('lets a manager reschedule a legacy appointment from the exam agenda', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
+  await signIn(page, 'gestor@leadflow.test');
+
+  await page.getByRole('button', { name: /Agenda de exames/ }).click();
+  await expect(page.locator('.agenda-layout')).toHaveAttribute('aria-busy', 'false');
+  const appointmentDay = page.locator('.calendar-day.has-appointments', { hasText: 'Cliente Reagendado' });
+  await expect(appointmentDay).toHaveCount(1);
+  await appointmentDay.click();
+  await expect(page.getByText('Cliente Reagendado', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Abrir cadastro de Cliente Reagendado' }).click();
+
+  const form = page.locator('#lead-detail-dialog #edit-lead-form');
+  const dateInput = form.getByLabel('Data do pré-agendamento');
+  const currentDate = await dateInput.inputValue();
+  const targetDate = new Date(`${currentDate}T12:00:00.000Z`);
+  targetDate.setUTCDate(targetDate.getUTCDate() + 8);
+  if (targetDate.getUTCDay() === 0) targetDate.setUTCDate(targetDate.getUTCDate() + 1);
+  await dateInput.fill(targetDate.toISOString().slice(0, 10));
+  const time = form.getByLabel('Horário disponível');
+  await expect(time).toBeEnabled();
+  await time.selectOption({ index: 1 });
+  await form.getByRole('button', { name: 'Salvar alterações' }).click();
+
+  const dialog = page.locator('#appointment-reschedule-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Motivo do reagendamento').selectOption('schedule_conflict');
+  await dialog.getByRole('button', { name: 'Confirmar reagendamento' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText('Agendamento reagendado e histórico atualizado.')).toBeVisible();
 });
 
 test('shows the simplified lead history without a duplicated funnel heading', async ({ page }) => {

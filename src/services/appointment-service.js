@@ -7,7 +7,7 @@ import { activeLeads } from '../utils/lead-archive.js';
 import { appointmentBlockTimes, appointmentSlotId } from '../utils/schedule.js';
 import { appointmentCancellationReasonLabel, validateAppointmentCancellation } from '../utils/appointment-cancellation.js';
 import { appointmentRescheduleReasonLabel, validateAppointmentReschedule } from '../utils/appointment-reschedule.js';
-import { createLeadUpdate } from '../utils/lead.js';
+import { createAppointmentScheduleUpdate } from '../utils/lead.js';
 import { hasPermission } from '../utils/role-profile.js';
 import { addLeadHistoryEvents } from './lead-history-service.js';
 
@@ -115,7 +115,7 @@ export function canRescheduleAppointment(profile, lead) {
 export async function rescheduleAppointment(profile, lead, input, reasonValues) {
   const reasonValidation = validateAppointmentReschedule(reasonValues);
   if (!reasonValidation.isValid) return reasonValidation;
-  const leadValidation = createLeadUpdate(input);
+  const leadValidation = createAppointmentScheduleUpdate(input);
   if (!leadValidation.isValid) return leadValidation;
   if (!isFirebaseConfigured || !canRescheduleAppointment(profile, lead)) {
     const error = new Error('Reagendamento não autorizado.');

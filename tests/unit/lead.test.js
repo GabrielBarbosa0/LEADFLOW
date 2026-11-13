@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { birthMonthDay, calculateAge, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPaymentTypeForPrice, examPricing, formatBrazilianPostalCode, normalizePostalCode, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
+import { birthMonthDay, calculateAge, createAppointmentScheduleUpdate, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPaymentTypeForPrice, examPricing, formatBrazilianPostalCode, normalizePostalCode, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
 
 const validInput = {
   fullName: 'Cliente Exemplo',
@@ -84,6 +84,46 @@ describe('lead validation', () => {
     expect(validateLeadInput({ ...validInput, strategyType: 'invalid' }).errors.strategyType).toBeDefined();
     expect(validateLeadInput({ ...validInput, strategyType: '' }).errors.strategyType).toBe('Selecione o tipo de estratégia.');
     expect(createLeadUpdate({ ...validInput, strategyType: '' }).data).toBeNull();
+  });
+
+  it('validates a reschedule without requiring unrelated legacy lead fields', () => {
+    const legacyInput = {
+      appointmentDate: '2026-11-16',
+      appointmentTime: '09:20',
+      appointmentServiceId: 'service-eye-exam',
+      appointmentServiceName: 'Exame de vista',
+      appointmentDurationMinutes: 20,
+      schedulingMode: 'controlled'
+    };
+
+    expect(createLeadUpdate(legacyInput).isValid).toBe(false);
+    expect(createAppointmentScheduleUpdate(legacyInput)).toEqual({
+      isValid: true,
+      errors: {},
+      data: {
+        appointmentDate: '2026-11-16',
+        appointmentTime: '09:20',
+        appointmentSchedulingMode: 'controlled',
+        appointmentDurationMinutes: 20,
+        appointmentServiceId: 'service-eye-exam',
+        appointmentServiceName: 'Exame de vista'
+      }
+    });
+  });
+
+  it('keeps schedule-specific validation during a reschedule', () => {
+    const result = createAppointmentScheduleUpdate({
+      appointmentDate: '2026-11-16',
+      appointmentTime: '',
+      schedulingMode: 'controlled'
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toMatchObject({
+      appointmentDate: expect.any(String),
+      appointmentTime: expect.any(String),
+      appointmentServiceId: expect.any(String)
+    });
   });
 
   it('stores a different purchase holder without replacing the customer', () => {
