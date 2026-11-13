@@ -2334,6 +2334,27 @@ svg {
   font-size: 0.75rem;
 }
 
+.lead-sale-summary-button {
+  width: 100%;
+  min-height: 100%;
+  padding: 14px 16px;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.lead-sale-summary-button:hover,
+.lead-sale-summary-button:focus-visible {
+  background: #f4f8fd;
+}
+
+.lead-sale-summary-button:disabled {
+  cursor: not-allowed;
+}
+
 .lead-history-summary {
   width: 100%;
   min-height: 100%;

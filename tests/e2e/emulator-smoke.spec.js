@@ -332,6 +332,12 @@ test('registers multiple purchases with responsible collaborators and preserves 
   await expect(saleDialog.getByText('Cancelada', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(2);
+
+  await saleDialog.getByRole('button', { name: 'Fechar compras' }).click();
+  const purchaseSummaryShortcut = page.locator('.lead-detail-summary').getByRole('button', { name: 'Ver compras do cliente' });
+  await expect(purchaseSummaryShortcut).toContainText('1 confirmada');
+  await purchaseSummaryShortcut.click();
+  await expect(saleDialog).toBeVisible();
 });
 
 test('keeps the purchases dialog responsive on mobile and desktop', async ({ page }, testInfo) => {

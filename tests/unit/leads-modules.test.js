@@ -167,7 +167,10 @@ describe('leads feature modules', () => {
     };
     expect(leadDetailView(options)).toContain('1 confirmada');
     expect(leadDetailView(options)).not.toContain('data-open-manual-sale');
-    expect(leadDetailView({ ...options, canConfirmSale: true })).toContain('data-open-manual-sale="lead-1"');
+    const authorizedMarkup = leadDetailView({ ...options, canConfirmSale: true });
+    expect(authorizedMarkup).toContain('data-open-manual-sale="lead-1"');
+    expect(authorizedMarkup).toContain('class="lead-sale-summary lead-sale-summary-button"');
+    expect(authorizedMarkup).toContain('aria-label="Ver compras do cliente"');
   });
 
   it('warns and offers ownership of a cancelled lead in read-only mode', () => {

@@ -46,6 +46,10 @@ export function leadDetailView({
   const originLabel = leadOriginLabel(lead);
   const purchaseCount = Number(lead.purchaseCount || (lead.saleStatus === 'confirmed' ? 1 : 0));
   const purchaseSummary = `${purchaseCount} ${purchaseCount === 1 ? 'confirmada' : 'confirmadas'}`;
+  const purchaseSummaryContent = `<span>Compras</span><strong class="${lead.saleStatus === 'confirmed' ? 'sale-confirmed' : ''}">${lead.saleStatus === 'confirmed' ? purchaseSummary : 'Nenhuma'}</strong>${lead.saleStatus === 'confirmed' && lead.saleDate ? `<small>Última em ${escapeHtml(lead.saleDate.split('-').reverse().join('/'))}</small>` : ''}`;
+  const purchaseSummaryCard = canConfirmSale && lead.saleStatus === 'confirmed'
+    ? `<button class="lead-sale-summary lead-sale-summary-button" type="button" data-open-manual-sale="${escapeHtml(lead.id)}" aria-label="Ver compras do cliente" aria-haspopup="dialog" ${!navigator.onLine ? 'disabled' : ''}>${purchaseSummaryContent}</button>`
+    : `<div class="lead-sale-summary">${purchaseSummaryContent}</div>`;
   const managerReschedule = managementMode && profileRole === 'manager' && !canEditClinical;
   const offlineEdit = !navigator.onLine;
   const locked = managerReschedule || offlineEdit || readOnly ? 'disabled' : '';
@@ -70,7 +74,7 @@ export function leadDetailView({
     <section class="lead-detail-summary" aria-label="Informações do cadastro">
       <div><span>Status</span><strong class="status-badge status-${syncTone}">${syncStatus}</strong></div>
       <div><span>Loja</span><strong>${escapeHtml(storeLabel(lead.storeId))}</strong></div>
-      <div class="lead-sale-summary"><span>Compras</span><strong class="${lead.saleStatus === 'confirmed' ? 'sale-confirmed' : ''}">${lead.saleStatus === 'confirmed' ? purchaseSummary : 'Nenhuma'}</strong>${lead.saleStatus === 'confirmed' && lead.saleDate ? `<small>Última em ${escapeHtml(lead.saleDate.split('-').reverse().join('/'))}</small>` : ''}</div>
+      ${purchaseSummaryCard}
       ${originLabel ? `<div><span>Origem do registro</span><strong class="lead-origin-badge"><i data-lucide="archive"></i>${escapeHtml(originLabel)}</strong></div>` : ''}
       <button class="lead-history-summary" type="button" data-open-lead-history aria-haspopup="dialog"><span>Histórico do lead</span><strong>Ver histórico</strong><small>Ver todas as alterações</small></button>
     </section>
