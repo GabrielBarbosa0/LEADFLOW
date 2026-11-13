@@ -18,7 +18,10 @@ export function selectedLeadDetailService(lead, scheduleState) {
 }
 
 export function leadDetailAppointmentTimeField({ lead, scheduleState, profile, online = navigator.onLine }) {
-  const { settings, appointmentDate, appointments, appointmentLoading, error } = scheduleState;
+  const { settings, appointments, appointmentLoading, error } = scheduleState;
+  const appointmentDate = scheduleState.leadId === lead.id
+    ? scheduleState.appointmentDate
+    : lead.appointmentDate || '';
   const currentValues = {
     ...lead,
     ...(scheduleState.triage || {})

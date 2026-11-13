@@ -762,6 +762,63 @@ describe('lead correction rules', () => {
     }));
   });
 
+  it.each([
+    ['internal collaborator', 'internal-uid', 'internal@example.com', 'system-captor'],
+    ['manager', 'manager-uid', 'manager@example.com', 'system-manager']
+  ])('lets a %s edit a complete unscheduled lead without exhausting rule evaluation', async (_, uid, email, roleProfileId) => {
+    const result = createLeadDocument({
+      fullName: 'Cliente completo sem agendamento',
+      phone: '(81) 99999-5678',
+      customerRg: '',
+      customerCpf: '',
+      birthDate: '1985-04-12',
+      sex: 'female',
+      strategyType: 'external',
+      interestId: 'eye-exam',
+      ametropiaIds: ['unknown'],
+      pathologyIds: ['none'],
+      eyeSurgeryStatus: 'no',
+      careRouteOverride: 'automatic',
+      examPaymentMethods: ['pix'],
+      needsTransport: 'false',
+      hasCompanion: 'false',
+      appointmentDate: '',
+      appointmentTime: '',
+      appointmentServiceId: 'eye-exam',
+      appointmentServiceName: 'Exame de vista',
+      appointmentDurationMinutes: 20,
+      schedulingMode: 'controlled',
+      notes: ''
+    }, {
+      uid: 'captor-uid',
+      displayName: 'Captador Teste',
+      storeId: 'loja-02'
+    }, 'installation-test', new Date('2026-11-13T12:00:00.000Z'));
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await Promise.all([
+        setDoc(doc(db, 'leads', 'complete-unscheduled-lead'), {
+          ...result.data,
+          createdAtServer: Timestamp.now(),
+          updatedAtServer: Timestamp.now(),
+          funnelUpdatedAtServer: Timestamp.now()
+        }),
+        updateDoc(doc(db, 'users', uid), {
+          roleProfileId,
+          permissionSchemaVersion: 8,
+          permissions: ['leads.create', 'leads.view_own', 'leads.edit_own', 'leads.edit_all']
+        })
+      ]);
+    });
+
+    const db = authenticatedDb(uid, email);
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'complete-unscheduled-lead'), {
+      notes: 'Observacao atualizada pela equipe',
+      updatedAtServer: Timestamp.now()
+    }));
+  });
+
   it('accepts a transport request with at most one companion', async () => {
     const db = authenticatedDb('captor-uid', 'captor@example.com');
     await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {

@@ -184,6 +184,7 @@ describe('capture feature modules', () => {
     const markup = leadDetailAppointmentTimeField({
       lead,
       scheduleState: {
+        leadId: 'lead-1',
         settings,
         appointmentDate: '2026-10-30',
         appointments: [],

@@ -534,53 +534,88 @@ service cloud.firestore {
       ]);
     }
 
+    function validTransportOnlyLeadUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'needsTransport', 'hasCompanion', 'companionCount', 'transportSeats',
+          'updatedAtServer'
+        ])
+        && (!('companionCount' in request.resource.data) || (
+          request.resource.data.companionCount is int
+          && request.resource.data.companionCount >= 0
+          && request.resource.data.companionCount <= 5
+        ))
+        && request.resource.data.transportSeats is int
+        && request.resource.data.transportSeats >= 0
+        && request.resource.data.transportSeats <= 6
+        && (request.resource.data.needsTransport || !request.resource.data.hasCompanion)
+        && (!('companionCount' in request.resource.data)
+          || request.resource.data.hasCompanion == (request.resource.data.companionCount > 0))
+        && request.resource.data.transportSeats == (request.resource.data.needsTransport
+          ? (('companionCount' in request.resource.data)
+            ? request.resource.data.companionCount + 1
+            : (request.resource.data.hasCompanion ? 2 : 1))
+          : 0);
+    }
+
     function validLeadUpdateShape() {
-      return request.resource.data.fullName is string
-        && request.resource.data.fullName.size() >= 2
-        && request.resource.data.fullName.size() <= 120
-        && request.resource.data.phone is string
-        && request.resource.data.phone.size() >= 12
-        && request.resource.data.phone.size() <= 14
-        && request.resource.data.phoneSearch is string
-        && request.resource.data.phoneSearch.matches('^\\d{10,11}$')
-        && request.resource.data.notes is string
-        && request.resource.data.notes.size() <= 500
-        && (!('appointmentDate' in request.resource.data)
-          || request.resource.data.appointmentDate == ''
-          || request.resource.data.appointmentDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
-        && (!('appointmentTime' in request.resource.data)
-          || request.resource.data.appointmentTime == ''
-          || request.resource.data.appointmentTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$'))
-        && (!('appointmentDate' in request.resource.data)
-          || !('appointmentTime' in request.resource.data)
-          || ((request.resource.data.appointmentDate == '')
-            == (request.resource.data.appointmentTime == '')))
-        && (!('appointmentAttendance' in request.resource.data)
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return validTransportOnlyLeadUpdate() || (
+        (!changed.hasAny(['fullName']) || (
+          request.resource.data.fullName is string
+          && request.resource.data.fullName.size() >= 2
+          && request.resource.data.fullName.size() <= 120
+        ))
+        && (!changed.hasAny(['phone', 'phoneSearch']) || (
+          request.resource.data.phone is string
+          && request.resource.data.phone.size() >= 12
+          && request.resource.data.phone.size() <= 14
+          && request.resource.data.phoneSearch is string
+          && request.resource.data.phoneSearch.matches('^\\d{10,11}$')
+        ))
+        && (!changed.hasAny(['notes']) || (
+          request.resource.data.notes is string
+          && request.resource.data.notes.size() <= 500
+        ))
+        && (!changed.hasAny(['appointmentDate', 'appointmentTime']) || (
+          request.resource.data.appointmentDate is string
+          && (request.resource.data.appointmentDate == ''
+            || request.resource.data.appointmentDate.matches('^\\d{4}-\\d{2}-\\d{2}$'))
+          && request.resource.data.appointmentTime is string
+          && (request.resource.data.appointmentTime == ''
+            || request.resource.data.appointmentTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$'))
+          && ((request.resource.data.appointmentDate == '')
+            == (request.resource.data.appointmentTime == ''))
+        ))
+        && (!changed.hasAny(['appointmentAttendance'])
           || request.resource.data.appointmentAttendance in ['pending', 'attended', 'missed', 'cancelled'])
-        && (!('appointmentStatus' in request.resource.data)
+        && (!changed.hasAny(['appointmentStatus'])
           || request.resource.data.appointmentStatus in ['scheduled', 'cancelled'])
-        && (!('customerRg' in request.resource.data)
-          || (request.resource.data.customerRg is string
-            && request.resource.data.customerRg.size() <= 20))
-        && (!('addressReference' in request.resource.data)
-          || (request.resource.data.addressReference is string
-            && request.resource.data.addressReference.size() <= 160))
-        && (!('productPaymentMethods' in request.resource.data)
-          || (request.resource.data.productPaymentMethods is list
+        && (!changed.hasAny(['customerRg']) || (
+          request.resource.data.customerRg is string
+          && request.resource.data.customerRg.size() <= 20
+        ))
+        && (!changed.hasAny(['addressReference']) || (
+          request.resource.data.addressReference is string
+          && request.resource.data.addressReference.size() <= 160
+        ))
+        && (!changed.hasAny(['productPaymentMethods']) || (
+          request.resource.data.productPaymentMethods is list
             && request.resource.data.productPaymentMethods.size() <= 6
             && request.resource.data.productPaymentMethods.hasOnly([
               'cash', 'pix', 'debit-card', 'credit-card', 'bank-slip', 'other'
-            ])))
-        && (!('ametropiaIds' in request.resource.data)
-          || (request.resource.data.ametropiaIds is list
+            ])
+        ))
+        && (!changed.hasAny(['ametropiaIds']) || (
+          request.resource.data.ametropiaIds is list
             && request.resource.data.ametropiaIds.size() <= 4
             && request.resource.data.ametropiaIds.hasOnly([
               'myopia', 'hyperopia', 'astigmatism', 'presbyopia', 'none', 'unknown'
             ])
             && (!request.resource.data.ametropiaIds.hasAny(['none', 'unknown'])
-              || request.resource.data.ametropiaIds.size() == 1)))
-        && (!('pathologyIds' in request.resource.data)
-          || (request.resource.data.pathologyIds is list
+              || request.resource.data.ametropiaIds.size() == 1)
+        ))
+        && (!changed.hasAny(['pathologyIds']) || (
+          request.resource.data.pathologyIds is list
             && request.resource.data.pathologyIds.size() <= 10
             && request.resource.data.pathologyIds.hasOnly([
               'cataract', 'glaucoma', 'diabetes', 'hypertension', 'keratoconus',
@@ -588,31 +623,24 @@ service cloud.firestore {
               'other', 'none', 'unknown'
             ])
             && (!request.resource.data.pathologyIds.hasAny(['none', 'unknown'])
-              || request.resource.data.pathologyIds.size() == 1)))
-        && (!('companionCount' in request.resource.data)
-          || (request.resource.data.companionCount is int
-            && request.resource.data.companionCount >= 0
-            && request.resource.data.companionCount <= 5))
-        && (!('transportSeats' in request.resource.data)
-          || (request.resource.data.transportSeats is int
-            && request.resource.data.transportSeats >= 0
-            && request.resource.data.transportSeats <= 6))
-        && (!('needsTransport' in request.resource.data)
-          || !('hasCompanion' in request.resource.data)
-          || request.resource.data.needsTransport
-          || !request.resource.data.hasCompanion)
-        && (!('companionCount' in request.resource.data)
-          || !('hasCompanion' in request.resource.data)
-          || request.resource.data.hasCompanion
-            == (request.resource.data.companionCount > 0))
-        && (!('needsTransport' in request.resource.data)
-          || !('hasCompanion' in request.resource.data)
-          || !('transportSeats' in request.resource.data)
-          || request.resource.data.transportSeats == (request.resource.data.needsTransport
-            ? (('companionCount' in request.resource.data)
+              || request.resource.data.pathologyIds.size() == 1)
+        ))
+        && (!changed.hasAny(['needsTransport', 'hasCompanion', 'companionCount', 'transportSeats']) || (
+          request.resource.data.companionCount is int
+          && request.resource.data.companionCount >= 0
+          && request.resource.data.companionCount <= 5
+          && request.resource.data.transportSeats is int
+          && request.resource.data.transportSeats >= 0
+          && request.resource.data.transportSeats <= 6
+          && (request.resource.data.needsTransport || !request.resource.data.hasCompanion)
+          && request.resource.data.hasCompanion == (request.resource.data.companionCount > 0)
+          && request.resource.data.transportSeats == (request.resource.data.needsTransport
+            ? (request.resource.data.companionCount is int
               ? request.resource.data.companionCount + 1
               : (request.resource.data.hasCompanion ? 2 : 1))
-            : 0));
+            : 0)
+        ))
+      );
     }
 
     function ownerAttendanceChangeIsValid() {
@@ -1081,8 +1109,8 @@ service cloud.firestore {
             || (!isAppointmentCancellationUpdate() && (
               isStaleSystemManagerLeadUpdate()
               || isManagerAttendanceUpdate()
-              || isOwnerAppointmentUpdate()
               || isOwnerLeadUpdate()
+              || isOwnerAppointmentUpdate()
               || isCaptorFollowUpContactUpdate()
               || isManagerLeadUpdate()
             ))
