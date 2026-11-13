@@ -8,8 +8,10 @@ describe('manual sale confirmation', () => {
     expect(parseManualSaleValue('')).toBe(0);
   });
 
-  it('requires a non-future date and limits private notes', () => {
+  it('requires a non-future date, a responsible collaborator and a positive sale value', () => {
     expect(validateManualSale({ saleDate: '', saleValue: '' }).errors.saleDate).toBeTruthy();
+    expect(validateManualSale({ saleDate: '2026-11-11', saleValue: '', responsibleUid: 'seller-1' }).errors.saleValue).toBeTruthy();
+    expect(validateManualSale({ saleDate: '2026-11-11', saleValue: '0', responsibleUid: 'seller-1' }).errors.saleValue).toBeTruthy();
     expect(validateManualSale({ saleDate: '2999-01-01' }).errors.saleDate).toContain('futura');
     const result = validateManualSale({ saleDate: '2026-11-11', orderNumber: 'OS-10', saleValue: '450,90', responsibleUid: 'seller-1', notes: 'Pago no balcao' });
     expect(result).toMatchObject({ isValid: true, data: { saleValue: 450.9, orderNumber: 'OS-10', responsibleUid: 'seller-1' } });
@@ -33,5 +35,7 @@ describe('manual sale confirmation', () => {
     const withForm = manualSaleDialog({ state: { ...baseState, formOpen: true }, lead: { fullName: 'Cliente Teste' } });
     expect(withForm).toContain('id="manual-sale-form-dialog"');
     expect(withForm).toContain('Registrar nova compra');
+    expect(withForm).toContain('id="manual-sale-value" name="saleValue" inputmode="decimal" value="" required');
+    expect(withForm).not.toContain('placeholder="Opcional"');
   });
 });

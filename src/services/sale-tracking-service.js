@@ -34,12 +34,13 @@ export function validateManualSale(values = {}) {
   const orderNumber = String(values.orderNumber || '').trim();
   const notes = String(values.notes || '').trim();
   const responsibleUid = String(values.responsibleUid || '').trim();
-  const saleValue = parseManualSaleValue(values.saleValue);
+  const rawSaleValue = String(values.saleValue ?? '').trim();
+  const saleValue = parseManualSaleValue(rawSaleValue);
   const errors = {};
   if (!/^\d{4}-\d{2}-\d{2}$/.test(saleDate)) errors.saleDate = 'Informe a data da compra.';
   if (saleDate > new Date().toISOString().slice(0, 10)) errors.saleDate = 'A data da compra nao pode ser futura.';
   if (orderNumber.length > 40) errors.orderNumber = 'Use no maximo 40 caracteres.';
-  if (!Number.isFinite(saleValue) || saleValue < 0) errors.saleValue = 'Informe um valor valido.';
+  if (!rawSaleValue || !Number.isFinite(saleValue) || saleValue <= 0) errors.saleValue = 'Informe o valor da venda.';
   if (!responsibleUid) errors.responsibleUid = 'Selecione o colaborador responsavel.';
   if (notes.length > 500) errors.notes = 'Use no maximo 500 caracteres.';
   return { isValid: Object.keys(errors).length === 0, errors, data: { saleDate, orderNumber, saleValue, responsibleUid, notes } };
