@@ -39,6 +39,22 @@ service cloud.firestore {
         ]);
     }
 
+    function staleSystemLeadEditPermission(permission) {
+      return ('roleProfileId' in userProfile())
+        && (!('permissionSchemaVersion' in userProfile())
+          || userProfile().permissionSchemaVersion < 7)
+        && (
+          (permission == 'leads.edit_own' && userProfile().roleProfileId in [
+            'system-captor', 'system-receptionist', 'system-telemarketing',
+            'system-external-leader', 'system-mei', 'system-manager', 'system-supervisor'
+          ])
+          || (permission == 'leads.edit_all' && userProfile().roleProfileId in [
+            'system-captor', 'system-receptionist', 'system-telemarketing',
+            'system-manager', 'system-supervisor'
+          ])
+        );
+    }
+
     function hasPermission(permission) {
       return isPrimaryAdmin() || (activeUser() && (
         userProfile().role == 'admin'
@@ -56,6 +72,8 @@ service cloud.firestore {
           && (!('roleProfileId' in userProfile())
             || userProfile().roleProfileId != 'system-telemarketing')
           && legacyPermission(permission))
+        || (permission in ['leads.edit_own', 'leads.edit_all']
+          && staleSystemLeadEditPermission(permission))
       ));
     }
 
@@ -957,8 +975,9 @@ service cloud.firestore {
     }
 
     function isManagerLeadUpdate() {
-      return isManager()
-        && managerHasStore(resource.data.storeId)
+      return userProfile().role == 'manager'
+        && (userProfile().storeId == resource.data.storeId
+          || ('storeIds' in userProfile() && resource.data.storeId in userProfile().storeIds))
         && (
           (hasPermission('leads.edit_all') && validLeadUpdateShape())
           || (
@@ -981,6 +1000,15 @@ service cloud.firestore {
               'appointmentAttendance', 'updatedAtServer'
             ]))
         );
+    }
+
+    function isStaleSystemManagerLeadUpdate() {
+      return ('roleProfileId' in userProfile())
+        && userProfile().role == 'manager'
+        && staleSystemLeadEditPermission('leads.edit_all')
+        && (userProfile().storeId == resource.data.storeId
+          || ('storeIds' in userProfile() && resource.data.storeId in userProfile().storeIds))
+        && validLeadUpdateShape();
     }
 
     function isManagerLeadArchive() {
@@ -1177,7 +1205,8 @@ service cloud.firestore {
                 && validAppointmentCancellation())
             ))
             || (!isAppointmentCancellationUpdate() && (
-              isManagerAttendanceUpdate()
+              isStaleSystemManagerLeadUpdate()
+              || isManagerAttendanceUpdate()
               || isOwnerAppointmentUpdate()
               || isOwnerLeadUpdate()
               || isCaptorFollowUpContactUpdate()

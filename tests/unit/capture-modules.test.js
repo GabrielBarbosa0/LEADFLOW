@@ -146,6 +146,13 @@ describe('capture feature modules', () => {
     expect(markup).toContain('Transporte disponível das 08:00 às 12:00.');
   });
 
+  it('does not report missing transport while the store schedule is loading', () => {
+    const markup = transportFields({ needsTransport: true }, undefined, 'transport', true, true);
+
+    expect(markup).toContain('Carregando a disponibilidade do transporte...');
+    expect(markup).not.toContain('O transporte ainda não está configurado para esta loja.');
+  });
+
   it('uses the care route schedule and supports free scheduling', () => {
     const settings = { ...DEFAULT_STORE_SCHEDULE, schedulingMode: 'free' };
     expect(careRouteAppointmentSchedule(settings, 'optometrist')).toBeTruthy();
