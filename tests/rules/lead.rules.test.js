@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, runTransaction, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, orderBy, query, runTransaction, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { createLeadDocument } from '../../src/utils/lead.js';
 
 const projectId = 'demo-fascinlead-leads';
@@ -2308,7 +2308,7 @@ describe('private lead sale tracking', () => {
     }));
   });
 
-  it('preserves a cancelled purchase and rejects physical deletion', async () => {
+  it('permits editing, reactivating and logically deleting a cancelled purchase while rejecting physical deletion', async () => {
     const db = authenticatedDb('manager-uid', 'manager@example.com');
     await assertSucceeds(setDoc(doc(db, 'leadPurchases', 'purchase-0001'), purchase()));
     await assertSucceeds(updateDoc(doc(db, 'leadPurchases', 'purchase-0001'), {
@@ -2316,9 +2316,20 @@ describe('private lead sale tracking', () => {
       updatedAt: serverTimestamp(), cancelledByUid: 'manager-uid',
       cancelledByName: 'Gestor Teste', cancelledAt: serverTimestamp()
     }));
-    await assertFails(updateDoc(doc(db, 'leadPurchases', 'purchase-0001'), {
+    await assertSucceeds(updateDoc(doc(db, 'leadPurchases', 'purchase-0001'), {
+      notes: 'Compra cancelada revisada.',
+      status: 'cancelled', updatedByUid: 'manager-uid', updatedByName: 'Gestor Teste',
+      updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(updateDoc(doc(db, 'leadPurchases', 'purchase-0001'), {
       status: 'confirmed', updatedByUid: 'manager-uid', updatedByName: 'Gestor Teste',
-      updatedAt: serverTimestamp(), cancelledByUid: null, cancelledByName: null, cancelledAt: null
+      updatedAt: serverTimestamp(), cancelledByUid: deleteField(),
+      cancelledByName: deleteField(), cancelledAt: deleteField()
+    }));
+    await assertSucceeds(updateDoc(doc(db, 'leadPurchases', 'purchase-0001'), {
+      status: 'deleted', updatedByUid: 'manager-uid', updatedByName: 'Gestor Teste',
+      updatedAt: serverTimestamp(), deletedByUid: 'manager-uid',
+      deletedByName: 'Gestor Teste', deletedAt: serverTimestamp()
     }));
     await assertFails(deleteDoc(doc(db, 'leadPurchases', 'purchase-0001')));
   });

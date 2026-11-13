@@ -5,7 +5,7 @@ import { loadRoleProfiles } from '../services/role-profile-service.js';
 import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
 import { APPOINTMENTS_QUERY_LIMIT, canCancelAppointment, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, rescheduleAppointment, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
 import { canClaimCancelledLead, canTransferLead, claimCancelledLead, loadAssignableLeadOwners, transferLead } from '../services/lead-assignment-service.js';
-import { canConfirmManualSale, confirmManualSale, loadLeadSaleTracking, removeManualSaleConfirmation, subscribeToManualSaleStatuses, validateManualSale } from '../services/sale-tracking-service.js';
+import { canConfirmManualSale, confirmManualSale, deleteManualSaleConfirmation, loadLeadSaleTracking, reactivateManualSaleConfirmation, removeManualSaleConfirmation, subscribeToManualSaleStatuses, validateManualSale } from '../services/sale-tracking-service.js';
 import { createQuickWalkIn, createWalkIn, loadWalkInCaptors, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { demoExternalOperations, loadExternalOperations } from '../services/external-operations-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
@@ -832,6 +832,42 @@ function bindPageEvents() {
         showToast('Compra cancelada. O histórico foi preservado.', 'success', 'undo-2');
       } catch {
         state.saleConfirmation.error = 'Nao foi possivel cancelar a compra.';
+      } finally {
+        state.saleConfirmation.saving = false;
+        render();
+      }
+    }));
+    manualSaleDialog.querySelectorAll('[data-reactivate-purchase]').forEach((button) => button.addEventListener('click', async () => {
+      if (!window.confirm('Reativar esta compra? Ela voltara a entrar nos totais do cliente.')) return;
+      const lead = manualSaleLead();
+      state.saleConfirmation.saving = true;
+      try {
+        const result = await reactivateManualSaleConfirmation(state.profile, lead, button.dataset.reactivatePurchase);
+        applyManualSaleUpdate(result.data);
+        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
+        state.saleConfirmation.editingId = '';
+        state.saleConfirmation.error = '';
+        showToast('Compra reativada e incluida novamente nos totais.', 'success', 'rotate-ccw');
+      } catch {
+        state.saleConfirmation.error = 'Nao foi possivel reativar a compra.';
+      } finally {
+        state.saleConfirmation.saving = false;
+        render();
+      }
+    }));
+    manualSaleDialog.querySelectorAll('[data-delete-purchase]').forEach((button) => button.addEventListener('click', async () => {
+      if (!window.confirm('Excluir esta compra do historico visivel? A auditoria da exclusao sera preservada.')) return;
+      const lead = manualSaleLead();
+      state.saleConfirmation.saving = true;
+      try {
+        const result = await deleteManualSaleConfirmation(state.profile, lead, button.dataset.deletePurchase);
+        applyManualSaleUpdate(result.data);
+        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
+        state.saleConfirmation.editingId = '';
+        state.saleConfirmation.error = '';
+        showToast('Compra excluida. A auditoria foi preservada.', 'success', 'trash-2');
+      } catch {
+        state.saleConfirmation.error = 'Nao foi possivel excluir a compra.';
       } finally {
         state.saleConfirmation.saving = false;
         render();

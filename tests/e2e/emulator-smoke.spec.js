@@ -304,7 +304,7 @@ test('registers multiple purchases with responsible collaborators and preserves 
   await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(1);
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 450,90', { exact: true })).toBeVisible();
-  await expect(saleDialog.getByRole('button', { name: 'Cancelar compra' }).locator('svg.lucide-circle-x')).toBeVisible();
+  await expect(saleDialog.getByRole('button', { name: 'Cancelar compra' }).locator('svg.lucide-circle-minus')).toBeVisible();
 
   await saleDialog.getByRole('button', { name: 'Editar compra' }).click();
   saleFormDialog = page.locator('#manual-sale-form-dialog');
@@ -332,6 +332,30 @@ test('registers multiple purchases with responsible collaborators and preserves 
   await expect(saleDialog.getByText('Cancelada', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(2);
+  const cancelledCard = saleDialog.locator('.manual-purchase-card.is-cancelled');
+  await expect(cancelledCard.getByRole('button', { name: 'Editar compra' })).toBeVisible();
+  await expect(cancelledCard.getByRole('button', { name: 'Reativar compra' })).toBeVisible();
+  await expect(saleDialog.getByRole('button', { name: 'Excluir compra' })).toHaveCount(2);
+
+  await cancelledCard.getByRole('button', { name: 'Editar compra' }).click();
+  saleFormDialog = page.locator('#manual-sale-form-dialog');
+  await saleFormDialog.getByLabel('Observação').fill('Compra cancelada revisada antes da reativação.');
+  await saleFormDialog.getByRole('button', { name: 'Atualizar compra' }).click();
+  await expect(saleDialog.locator('.manual-purchase-card.is-cancelled')).toHaveCount(1);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await saleDialog.getByRole('button', { name: 'Reativar compra' }).click();
+  await expect(saleDialog.locator('.manual-purchase-card.is-cancelled')).toHaveCount(0);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('2', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 725,90', { exact: true })).toBeVisible();
+
+  const secondPurchase = saleDialog.locator('.manual-purchase-card').filter({ hasText: 'E2E-002' });
+  page.once('dialog', (dialog) => dialog.accept());
+  await secondPurchase.getByRole('button', { name: 'Excluir compra' }).click();
+  await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(1);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 450,90', { exact: true })).toBeVisible();
 
   await saleDialog.getByRole('button', { name: 'Fechar compras' }).click();
   const purchaseSummaryShortcut = page.locator('.lead-detail-summary').getByRole('button', { name: 'Ver compras do cliente' });
@@ -348,6 +372,7 @@ test('keeps the purchases dialog responsive on mobile and desktop', async ({ pag
 
   const historyDialog = page.locator('#manual-sale-dialog');
   await expect(historyDialog).toBeVisible();
+  await expect(historyDialog).toHaveCSS('height', '544px');
   await expect(historyDialog.getByLabel('Data da compra')).toHaveCount(0);
   expect(await historyDialog.locator('.manual-purchase-scroll').evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
   await historyDialog.getByRole('button', { name: 'Nova compra' }).click();

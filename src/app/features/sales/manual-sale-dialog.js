@@ -6,6 +6,14 @@ function currency(value) {
 
 function purchaseCard(purchase) {
   const cancelled = purchase.status === 'cancelled';
+  const purchaseId = escapeHtml(purchase.id);
+  const actions = purchase.legacy
+    ? `<button class="icon-button purchase-delete-button" type="button" data-delete-purchase="${purchaseId}" title="Excluir compra" aria-label="Excluir compra"><i data-lucide="trash-2"></i></button>`
+    : `<button class="icon-button" type="button" data-edit-purchase="${purchaseId}" title="Editar compra" aria-label="Editar compra"><i data-lucide="pencil"></i></button>
+      ${cancelled
+        ? `<button class="icon-button purchase-reactivate-button" type="button" data-reactivate-purchase="${purchaseId}" title="Reativar compra" aria-label="Reativar compra"><i data-lucide="rotate-ccw"></i></button>`
+        : `<button class="icon-button purchase-cancel-button" type="button" data-cancel-purchase="${purchaseId}" title="Cancelar compra" aria-label="Cancelar compra"><i data-lucide="circle-minus"></i></button>`}
+      <button class="icon-button purchase-delete-button" type="button" data-delete-purchase="${purchaseId}" title="Excluir compra" aria-label="Excluir compra"><i data-lucide="trash-2"></i></button>`;
   return `<article class="manual-purchase-card ${cancelled ? 'is-cancelled' : ''}">
     <div class="manual-purchase-card-main">
       <span class="status-badge status-${cancelled ? 'danger' : 'success'}">${cancelled ? 'Cancelada' : 'Confirmada'}</span>
@@ -13,10 +21,7 @@ function purchaseCard(purchase) {
       <span>${escapeHtml(purchase.saleDate.split('-').reverse().join('/'))}${purchase.orderNumber ? ` · OS ${escapeHtml(purchase.orderNumber)}` : ''}</span>
       <small><i data-lucide="user-round"></i>${escapeHtml(purchase.responsibleName || 'Colaborador não informado')}</small>
     </div>
-    ${purchase.legacy ? '<span class="manual-purchase-legacy">Registro anterior</span>' : `<div class="manual-purchase-card-actions">
-      ${cancelled ? '' : `<button class="icon-button" type="button" data-edit-purchase="${escapeHtml(purchase.id)}" title="Editar compra" aria-label="Editar compra"><i data-lucide="pencil"></i></button>
-      <button class="icon-button purchase-cancel-button" type="button" data-cancel-purchase="${escapeHtml(purchase.id)}" title="Cancelar compra" aria-label="Cancelar compra"><i data-lucide="circle-x"></i></button>`}
-    </div>`}
+    <div class="manual-purchase-card-actions">${actions}</div>
   </article>`;
 }
 

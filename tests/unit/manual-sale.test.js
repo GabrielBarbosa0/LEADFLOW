@@ -23,13 +23,19 @@ describe('manual sale confirmation', () => {
       id: 'purchase-1', saleDate: '2026-11-11', saleValue: 450,
       orderNumber: 'OS-1', responsibleName: 'Colaborador Teste', status: 'confirmed'
     };
+    const cancelledPurchase = {
+      ...purchase, id: 'purchase-2', orderNumber: 'OS-2', status: 'cancelled'
+    };
     const baseState = {
       leadId: 'lead-1', loading: false, saving: false, error: '', editingId: '',
-      profileUid: 'seller-1', record: { purchases: [purchase], members: [{ uid: 'seller-1', displayName: 'Colaborador Teste' }] }
+      profileUid: 'seller-1', record: { purchases: [purchase, cancelledPurchase], members: [{ uid: 'seller-1', displayName: 'Colaborador Teste' }] }
     };
     const historyOnly = manualSaleDialog({ state: { ...baseState, formOpen: false }, lead: { fullName: 'Cliente Teste' } });
     expect(historyOnly).toContain('id="manual-sale-dialog"');
-    expect(historyOnly).toContain('data-lucide="circle-x"');
+    expect(historyOnly).toContain('data-lucide="circle-minus"');
+    expect(historyOnly).toContain('data-reactivate-purchase="purchase-2"');
+    expect(historyOnly.match(/data-edit-purchase=/g)).toHaveLength(2);
+    expect(historyOnly.match(/data-delete-purchase=/g)).toHaveLength(2);
     expect(historyOnly).not.toContain('id="manual-sale-form-dialog"');
 
     const withForm = manualSaleDialog({ state: { ...baseState, formOpen: true }, lead: { fullName: 'Cliente Teste' } });

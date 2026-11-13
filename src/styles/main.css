@@ -2683,7 +2683,7 @@ svg {
 
 .manual-sale-dialog {
   width: min(calc(100% - 32px), 760px);
-  height: min(680px, calc(100dvh - 32px));
+  height: min(544px, calc(100dvh - 32px));
   max-height: calc(100dvh - 32px);
   overflow: hidden;
 }
@@ -2794,8 +2794,11 @@ svg {
 }
 
 .manual-purchase-card.is-cancelled {
-  opacity: 0.65;
   background: var(--surface-subtle);
+}
+
+.manual-purchase-card.is-cancelled .manual-purchase-card-main {
+  opacity: 0.65;
 }
 
 .manual-purchase-card-main {
@@ -2825,6 +2828,14 @@ svg {
 }
 
 .purchase-cancel-button {
+  color: var(--danger);
+}
+
+.purchase-reactivate-button {
+  color: var(--success-dark);
+}
+
+.purchase-delete-button {
   color: var(--danger);
 }
 
@@ -2912,6 +2923,10 @@ svg {
 
   .manual-purchase-card-main > span:not(.status-badge) {
     grid-column: 1 / -1;
+  }
+
+  .manual-purchase-card {
+    align-items: flex-start;
   }
 
   .manual-sale-form-dialog .confirmation-dialog-actions .button {

@@ -28,6 +28,8 @@ export const FUNNEL_EVENT_LABELS = Object.freeze({
   purchase_created: 'Compra registrada',
   purchase_updated: 'Compra atualizada',
   purchase_cancelled: 'Compra cancelada',
+  purchase_reactivated: 'Compra reativada',
+  purchase_deleted: 'Compra excluída',
   birthday_benefit_planned: 'Beneficio de aniversario planejado',
   birthday_congratulated: 'Cliente parabenizado',
   walk_in_created: 'Encaixe criado',

@@ -47,7 +47,7 @@ export function validateManualSale(values = {}) {
 }
 
 function activePurchase(item) {
-  return item.status !== 'cancelled';
+  return item.status === 'confirmed';
 }
 
 function sortPurchases(items) {
@@ -93,9 +93,10 @@ export async function loadLeadSaleTracking(profile, lead) {
     getDoc(doc(db, 'leadSales', lead.id)),
     loadSaleAssignees(profile, lead)
   ]);
-  const purchases = purchasesSnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  const storedPurchases = purchasesSnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  const purchases = storedPurchases.filter((item) => item.status !== 'deleted');
   const legacy = legacyPurchase(lead, legacySnapshot.exists() ? legacySnapshot.data() : null);
-  if (legacy && !purchases.length) purchases.push(legacy);
+  if (legacy && !storedPurchases.length) purchases.push(legacy);
   return { purchases: sortPurchases(purchases), members };
 }
 
@@ -171,7 +172,11 @@ async function purchaseSummary(lead, override = null) {
 }
 
 function purchaseHistoryWrite(profile, lead, purchase, eventType) {
-  const labels = { purchase_created: 'Compra registrada', purchase_updated: 'Compra atualizada', purchase_cancelled: 'Compra cancelada' };
+  const labels = {
+    purchase_created: 'Compra registrada', purchase_updated: 'Compra atualizada',
+    purchase_cancelled: 'Compra cancelada', purchase_reactivated: 'Compra reativada',
+    purchase_deleted: 'Compra excluida'
+  };
   const order = purchase.orderNumber ? `, OS/pedido ${purchase.orderNumber}` : '';
   return {
     reference: doc(db, 'leads', lead.id, 'history', createId()),
@@ -198,13 +203,19 @@ export async function confirmManualSale(profile, lead, values, purchaseId = '') 
   }
   const existing = existingSnapshot?.data() || {};
   const actorName = String(profile.displayName || 'Usuario');
+  const lifecycle = existing.status === 'cancelled'
+    ? {
+        status: 'cancelled', cancelledByUid: existing.cancelledByUid,
+        cancelledByName: existing.cancelledByName, cancelledAt: existing.cancelledAt
+      }
+    : { status: 'confirmed' };
   const purchase = {
     leadId: current.id, leadName: String(current.fullName || ''), storeId: current.storeId,
     capturedByUid: String(current.capturedByUid || ''), capturedByName: String(current.capturedByName || ''),
     responsibleUid: responsible.uid, responsibleName: String(responsible.displayName || 'Colaborador'),
     saleDate: validation.data.saleDate, orderNumber: validation.data.orderNumber,
     saleValue: validation.data.saleValue, notes: validation.data.notes,
-    source: 'manual', status: 'confirmed',
+    source: 'manual', ...lifecycle,
     createdByUid: String(existing.createdByUid || profile.uid), createdByName: String(existing.createdByName || actorName),
     createdAt: existing.createdAt || serverTimestamp(), updatedByUid: profile.uid,
     updatedByName: actorName, updatedAt: serverTimestamp(), schemaVersion: 1
@@ -235,6 +246,70 @@ export async function removeManualSaleConfirmation(profile, lead, purchaseId) {
   const history = purchaseHistoryWrite(profile, current, { id: purchaseId, ...cancelled }, 'purchase_cancelled');
   const batch = writeBatch(db);
   batch.set(reference, cancelled);
+  batch.set(doc(db, 'leadPurchaseStatuses', current.id), summary);
+  batch.set(history.reference, history.data);
+  await batch.commit();
+  return { isValid: true, data: { ...current, saleStatus: summary.saleStatus, saleDate: summary.saleDate, purchaseCount: summary.purchaseCount, purchaseTotal: summary.purchaseTotal } };
+}
+
+export async function reactivateManualSaleConfirmation(profile, lead, purchaseId) {
+  const current = await currentLead(profile, lead);
+  const reference = doc(db, 'leadPurchases', purchaseId);
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists() || snapshot.data().leadId !== current.id) throw saleError('not-found', 'Compra nao encontrada.');
+  const existing = snapshot.data();
+  if (existing.status !== 'cancelled') throw saleError('invalid-status', 'A compra nao esta cancelada.');
+  const { cancelledByUid, cancelledByName, cancelledAt, deletedByUid, deletedByName, deletedAt, ...preserved } = existing;
+  const reactivated = {
+    ...preserved, status: 'confirmed', updatedByUid: profile.uid,
+    updatedByName: String(profile.displayName || 'Usuario'), updatedAt: serverTimestamp()
+  };
+  const summary = await purchaseSummary(current, { id: purchaseId, ...reactivated });
+  const history = purchaseHistoryWrite(profile, current, { id: purchaseId, ...reactivated }, 'purchase_reactivated');
+  const batch = writeBatch(db);
+  batch.set(reference, reactivated);
+  batch.set(doc(db, 'leadPurchaseStatuses', current.id), summary);
+  batch.set(history.reference, history.data);
+  await batch.commit();
+  return { isValid: true, data: { ...current, saleStatus: summary.saleStatus, saleDate: summary.saleDate, purchaseCount: summary.purchaseCount, purchaseTotal: summary.purchaseTotal } };
+}
+
+export async function deleteManualSaleConfirmation(profile, lead, purchaseId) {
+  const current = await currentLead(profile, lead);
+  const actorName = String(profile.displayName || 'Usuario');
+  if (purchaseId === `legacy-${current.id}`) {
+    const reference = doc(db, 'leadSales', current.id);
+    const snapshot = await getDoc(reference);
+    const existing = snapshot.exists() ? snapshot.data() : null;
+    if (!existing || existing.matchStatus !== 'manual_confirmed') throw saleError('not-found', 'Compra nao encontrada.');
+    const deleted = {
+      ...existing, matchStatus: 'manual_reverted', updatedByUid: profile.uid,
+      updatedByName: actorName, updatedAt: serverTimestamp()
+    };
+    const legacy = legacyPurchase(current, existing);
+    const summary = await purchaseSummary(current);
+    const history = purchaseHistoryWrite(profile, current, legacy, 'purchase_deleted');
+    const batch = writeBatch(db);
+    batch.set(reference, deleted);
+    batch.set(doc(db, 'leadPurchaseStatuses', current.id), summary);
+    batch.set(history.reference, history.data);
+    await batch.commit();
+    return { isValid: true, data: { ...current, saleStatus: summary.saleStatus, saleDate: summary.saleDate, purchaseCount: summary.purchaseCount, purchaseTotal: summary.purchaseTotal } };
+  }
+
+  const reference = doc(db, 'leadPurchases', purchaseId);
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists() || snapshot.data().leadId !== current.id || snapshot.data().status === 'deleted') {
+    throw saleError('not-found', 'Compra nao encontrada.');
+  }
+  const deleted = {
+    ...snapshot.data(), status: 'deleted', updatedByUid: profile.uid, updatedByName: actorName,
+    updatedAt: serverTimestamp(), deletedByUid: profile.uid, deletedByName: actorName, deletedAt: serverTimestamp()
+  };
+  const summary = await purchaseSummary(current, { id: purchaseId, ...deleted });
+  const history = purchaseHistoryWrite(profile, current, { id: purchaseId, ...deleted }, 'purchase_deleted');
+  const batch = writeBatch(db);
+  batch.set(reference, deleted);
   batch.set(doc(db, 'leadPurchaseStatuses', current.id), summary);
   batch.set(history.reference, history.data);
   await batch.commit();
