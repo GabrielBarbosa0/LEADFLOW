@@ -184,6 +184,14 @@ describe('leads feature modules', () => {
     expect(authorizedMarkup).toContain('data-open-manual-sale="lead-1"');
     expect(authorizedMarkup).toContain('class="lead-sale-summary lead-sale-summary-button"');
     expect(authorizedMarkup).toContain('aria-label="Ver compras do cliente"');
+    expect(authorizedMarkup).toContain('class="button button-secondary button-block"');
+    const registrationMarkup = leadDetailView({
+      ...options,
+      lead: sampleLead({ saleStatus: '' }),
+      canConfirmSale: true
+    });
+    expect(registrationMarkup).toContain('<span>Registrar compra</span>');
+    expect(registrationMarkup).toContain('class="button button-secondary button-block"');
   });
 
   it('warns and offers ownership of a cancelled lead in read-only mode', () => {

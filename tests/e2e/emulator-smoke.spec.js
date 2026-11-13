@@ -279,6 +279,8 @@ test('registers multiple purchases with responsible collaborators and preserves 
   const leadDetail = page.locator('#edit-lead-form');
   const registerSaleButton = leadDetail.getByRole('button', { name: 'Registrar compra' });
   await expect(registerSaleButton).toBeVisible();
+  await expect(registerSaleButton).toHaveClass(/button-secondary/);
+  await expect(registerSaleButton).not.toHaveClass(/button-primary/);
   await expect(registerSaleButton.locator('svg.lucide-badge-dollar-sign')).toBeVisible();
   await registerSaleButton.click();
 
