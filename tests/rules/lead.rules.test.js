@@ -765,6 +765,38 @@ describe('lead correction rules', () => {
   it.each([
     ['internal collaborator', 'internal-uid', 'internal@example.com', 'system-captor'],
     ['manager', 'manager-uid', 'manager@example.com', 'system-manager']
+  ])('lets a partially synchronized %s edit regular lead data', async (_, uid, email, roleProfileId) => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'users', uid), {
+        roleProfileId,
+        permissions: ['appointments.view', 'appointments.attendance', 'appointments.cancel'],
+        permissionSchemaVersion: 8
+      });
+    });
+
+    const db = authenticatedDb(uid, email);
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {
+      fullName: 'Cliente corrigido pelo gestor',
+      phone: '+5581988887777',
+      phoneSearch: '81988887777',
+      customerCpf: '12345678901',
+      customerRg: '1234567',
+      birthDate: '1985-04-12',
+      birthMonthDay: '04-12',
+      notes: 'Observacao atualizada depois da troca de perfil',
+      updatedAtServer: Timestamp.now()
+    }));
+    await assertSucceeds(updateDoc(doc(db, 'leads', 'lead-test'), {
+      needsTransport: true,
+      hasCompanion: false,
+      transportSeats: 1,
+      updatedAtServer: Timestamp.now()
+    }));
+  });
+
+  it.each([
+    ['internal collaborator', 'internal-uid', 'internal@example.com', 'system-captor'],
+    ['manager', 'manager-uid', 'manager@example.com', 'system-manager']
   ])('lets a %s edit a complete unscheduled lead without exhausting rule evaluation', async (_, uid, email, roleProfileId) => {
     const result = createLeadDocument({
       fullName: 'Cliente completo sem agendamento',
