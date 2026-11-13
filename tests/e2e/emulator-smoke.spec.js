@@ -765,7 +765,7 @@ test('opens the lead archive workflow only from active management records', asyn
   await expect(dialog.locator('input[name="leadId"]').first()).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Fechar' })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Cancelar' })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Arquivar selecionados' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Arquivar' })).toBeVisible();
   if ((page.viewportSize()?.width || 0) <= 600) {
     const viewportWidth = page.viewportSize().width;
     const horizontalBounds = await dialog.evaluate((element) => ({
