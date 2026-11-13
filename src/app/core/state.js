@@ -186,7 +186,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       leadId: ''
     },
     leadHistoryDialogOpen: false,
-    saleConfirmation: { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '', formOpen: false },
+    saleConfirmation: { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '', formOpen: false, action: '', actionPurchaseId: '' },
     leadAssignment: {
       leadId: '',
       mode: '',

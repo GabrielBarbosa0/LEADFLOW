@@ -2705,6 +2705,11 @@ svg {
   background: var(--success-soft);
 }
 
+.manual-sale-action-dialog.is-success .confirmation-dialog-icon {
+  color: var(--success-dark);
+  background: var(--success-soft);
+}
+
 .manual-sale-heading {
   display: flex;
   align-items: flex-start;

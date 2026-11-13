@@ -45,5 +45,14 @@ describe('manual sale confirmation', () => {
     expect(withForm).not.toContain('placeholder="Opcional"');
     expect(withForm).toContain('aria-label="Fechar formulário de compra"');
     expect(withForm).not.toContain('data-close-purchase-form>Voltar</button>');
+
+    const withAction = manualSaleDialog({
+      state: { ...baseState, formOpen: false, action: 'reactivate', actionPurchaseId: 'purchase-2' },
+      lead: { fullName: 'Cliente Teste' }
+    });
+    expect(withAction).toContain('id="manual-sale-action-dialog"');
+    expect(withAction).toContain('Reativar esta compra?');
+    expect(withAction).toContain('data-confirm-purchase-action="reactivate"');
+    expect(withAction).toContain('data-close-purchase-action>Manter compra</button>');
   });
 });

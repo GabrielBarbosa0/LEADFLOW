@@ -409,13 +409,20 @@ function applyManualSaleUpdate(updated) {
 }
 
 function closeManualSaleDialog() {
-  state.saleConfirmation = { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '', formOpen: false };
+  state.saleConfirmation = { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '', formOpen: false, action: '', actionPurchaseId: '' };
   render();
 }
 
 function closeManualSaleForm() {
   state.saleConfirmation.formOpen = false;
   state.saleConfirmation.editingId = '';
+  state.saleConfirmation.error = '';
+  render();
+}
+
+function closeManualSaleActionDialog() {
+  state.saleConfirmation.action = '';
+  state.saleConfirmation.actionPurchaseId = '';
   state.saleConfirmation.error = '';
   render();
 }
@@ -819,59 +826,23 @@ function bindPageEvents() {
       state.saleConfirmation.error = '';
       render();
     }));
-    manualSaleDialog.querySelectorAll('[data-cancel-purchase]').forEach((button) => button.addEventListener('click', async () => {
-      if (!window.confirm('Cancelar esta compra? O registro permanecera no historico.')) return;
-      const lead = manualSaleLead();
-      state.saleConfirmation.saving = true;
-      try {
-        const result = await removeManualSaleConfirmation(state.profile, lead, button.dataset.cancelPurchase);
-        applyManualSaleUpdate(result.data);
-        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
-        state.saleConfirmation.editingId = '';
-        state.saleConfirmation.error = '';
-        showToast('Compra cancelada. O histórico foi preservado.', 'success', 'undo-2');
-      } catch {
-        state.saleConfirmation.error = 'Nao foi possivel cancelar a compra.';
-      } finally {
-        state.saleConfirmation.saving = false;
-        render();
-      }
+    manualSaleDialog.querySelectorAll('[data-cancel-purchase]').forEach((button) => button.addEventListener('click', () => {
+      state.saleConfirmation.action = 'cancel';
+      state.saleConfirmation.actionPurchaseId = button.dataset.cancelPurchase;
+      state.saleConfirmation.error = '';
+      render();
     }));
-    manualSaleDialog.querySelectorAll('[data-reactivate-purchase]').forEach((button) => button.addEventListener('click', async () => {
-      if (!window.confirm('Reativar esta compra? Ela voltara a entrar nos totais do cliente.')) return;
-      const lead = manualSaleLead();
-      state.saleConfirmation.saving = true;
-      try {
-        const result = await reactivateManualSaleConfirmation(state.profile, lead, button.dataset.reactivatePurchase);
-        applyManualSaleUpdate(result.data);
-        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
-        state.saleConfirmation.editingId = '';
-        state.saleConfirmation.error = '';
-        showToast('Compra reativada e incluida novamente nos totais.', 'success', 'rotate-ccw');
-      } catch {
-        state.saleConfirmation.error = 'Nao foi possivel reativar a compra.';
-      } finally {
-        state.saleConfirmation.saving = false;
-        render();
-      }
+    manualSaleDialog.querySelectorAll('[data-reactivate-purchase]').forEach((button) => button.addEventListener('click', () => {
+      state.saleConfirmation.action = 'reactivate';
+      state.saleConfirmation.actionPurchaseId = button.dataset.reactivatePurchase;
+      state.saleConfirmation.error = '';
+      render();
     }));
-    manualSaleDialog.querySelectorAll('[data-delete-purchase]').forEach((button) => button.addEventListener('click', async () => {
-      if (!window.confirm('Excluir esta compra do historico visivel? A auditoria da exclusao sera preservada.')) return;
-      const lead = manualSaleLead();
-      state.saleConfirmation.saving = true;
-      try {
-        const result = await deleteManualSaleConfirmation(state.profile, lead, button.dataset.deletePurchase);
-        applyManualSaleUpdate(result.data);
-        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
-        state.saleConfirmation.editingId = '';
-        state.saleConfirmation.error = '';
-        showToast('Compra excluida. A auditoria foi preservada.', 'success', 'trash-2');
-      } catch {
-        state.saleConfirmation.error = 'Nao foi possivel excluir a compra.';
-      } finally {
-        state.saleConfirmation.saving = false;
-        render();
-      }
+    manualSaleDialog.querySelectorAll('[data-delete-purchase]').forEach((button) => button.addEventListener('click', () => {
+      state.saleConfirmation.action = 'delete';
+      state.saleConfirmation.actionPurchaseId = button.dataset.deletePurchase;
+      state.saleConfirmation.error = '';
+      render();
     }));
   }
   const manualSaleFormDialog = document.querySelector('#manual-sale-form-dialog');
@@ -912,6 +883,58 @@ function bindPageEvents() {
         state.saleConfirmation.error = error?.code === 'permission-denied'
           ? 'Seu perfil nao pode confirmar esta compra.'
           : error?.code === 'offline' ? 'Conecte-se para confirmar a compra.' : 'Nao foi possivel salvar a confirmacao.';
+      } finally {
+        state.saleConfirmation.saving = false;
+        render();
+      }
+    });
+  }
+  const manualSaleActionDialog = document.querySelector('#manual-sale-action-dialog');
+  if (manualSaleActionDialog) {
+    requestAnimationFrame(() => {
+      if (manualSaleActionDialog.isConnected && !manualSaleActionDialog.open) manualSaleActionDialog.showModal();
+    });
+    manualSaleActionDialog.addEventListener('cancel', (event) => { event.preventDefault(); closeManualSaleActionDialog(); });
+    manualSaleActionDialog.addEventListener('click', (event) => {
+      if (isDialogBackdropClick(event, manualSaleActionDialog)) closeManualSaleActionDialog();
+    });
+    manualSaleActionDialog.querySelector('[data-close-purchase-action]')?.addEventListener('click', closeManualSaleActionDialog);
+    manualSaleActionDialog.querySelector('[data-confirm-purchase-action]')?.addEventListener('click', async (event) => {
+      const action = event.currentTarget.dataset.confirmPurchaseAction;
+      const purchaseId = state.saleConfirmation.actionPurchaseId;
+      const lead = manualSaleLead();
+      const operations = {
+        cancel: {
+          execute: removeManualSaleConfirmation,
+          success: 'Compra cancelada. O histórico foi preservado.',
+          failure: 'Nao foi possivel cancelar a compra.', icon: 'circle-minus'
+        },
+        reactivate: {
+          execute: reactivateManualSaleConfirmation,
+          success: 'Compra reativada e incluida novamente nos totais.',
+          failure: 'Nao foi possivel reativar a compra.', icon: 'rotate-ccw'
+        },
+        delete: {
+          execute: deleteManualSaleConfirmation,
+          success: 'Compra excluida. A auditoria foi preservada.',
+          failure: 'Nao foi possivel excluir a compra.', icon: 'trash-2'
+        }
+      };
+      const operation = operations[action];
+      if (!operation || !purchaseId) return;
+      state.saleConfirmation.saving = true;
+      event.currentTarget.disabled = true;
+      try {
+        const result = await operation.execute(state.profile, lead, purchaseId);
+        applyManualSaleUpdate(result.data);
+        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
+        state.saleConfirmation.editingId = '';
+        state.saleConfirmation.action = '';
+        state.saleConfirmation.actionPurchaseId = '';
+        state.saleConfirmation.error = '';
+        showToast(operation.success, 'success', operation.icon);
+      } catch {
+        state.saleConfirmation.error = operation.failure;
       } finally {
         state.saleConfirmation.saving = false;
         render();
@@ -2287,7 +2310,7 @@ export async function startApp() {
       const lead = [...state.leads, ...state.management.records, ...state.appointments.records, state.management.activeLead]
         .find((item) => item?.id === leadId);
       if (!canConfirmManualSale(state.profile, lead)) return;
-      state.saleConfirmation = { leadId, loading: true, saving: false, error: '', record: null, editingId: '', formOpen: false };
+      state.saleConfirmation = { leadId, loading: true, saving: false, error: '', record: null, editingId: '', formOpen: false, action: '', actionPurchaseId: '' };
       render();
       try {
         state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, lead);

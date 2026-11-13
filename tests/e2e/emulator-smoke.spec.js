@@ -326,8 +326,16 @@ test('registers multiple purchases with responsible collaborators and preserves 
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 725,90', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-list').getByText('Colaborador Interno Teste', { exact: true })).toBeVisible();
 
-  page.once('dialog', (dialog) => dialog.accept());
   await saleDialog.getByRole('button', { name: 'Cancelar compra' }).first().click();
+  let actionDialog = page.locator('#manual-sale-action-dialog');
+  await expect(actionDialog.getByRole('heading', { name: 'Cancelar esta compra?' })).toBeVisible();
+  await actionDialog.getByRole('button', { name: 'Manter compra' }).click();
+  await expect(page.locator('#manual-sale-action-dialog')).toHaveCount(0);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('2', { exact: true })).toBeVisible();
+
+  await saleDialog.getByRole('button', { name: 'Cancelar compra' }).first().click();
+  actionDialog = page.locator('#manual-sale-action-dialog');
+  await actionDialog.getByRole('button', { name: 'Cancelar compra' }).click();
   await expect(page.getByText('Compra cancelada. O histórico foi preservado.')).toBeVisible();
   await expect(saleDialog.getByText('Cancelada', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
@@ -344,15 +352,19 @@ test('registers multiple purchases with responsible collaborators and preserves 
   await expect(saleDialog.locator('.manual-purchase-card.is-cancelled')).toHaveCount(1);
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
 
-  page.once('dialog', (dialog) => dialog.accept());
   await saleDialog.getByRole('button', { name: 'Reativar compra' }).click();
+  actionDialog = page.locator('#manual-sale-action-dialog');
+  await expect(actionDialog.getByRole('heading', { name: 'Reativar esta compra?' })).toBeVisible();
+  await actionDialog.getByRole('button', { name: 'Reativar compra' }).click();
   await expect(saleDialog.locator('.manual-purchase-card.is-cancelled')).toHaveCount(0);
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('2', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 725,90', { exact: true })).toBeVisible();
 
   const secondPurchase = saleDialog.locator('.manual-purchase-card').filter({ hasText: 'E2E-002' });
-  page.once('dialog', (dialog) => dialog.accept());
   await secondPurchase.getByRole('button', { name: 'Excluir compra' }).click();
+  actionDialog = page.locator('#manual-sale-action-dialog');
+  await expect(actionDialog.getByRole('heading', { name: 'Excluir esta compra?' })).toBeVisible();
+  await actionDialog.getByRole('button', { name: 'Excluir compra' }).click();
   await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(1);
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
   await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 450,90', { exact: true })).toBeVisible();
