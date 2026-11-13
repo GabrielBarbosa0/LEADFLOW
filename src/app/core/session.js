@@ -156,7 +156,14 @@ export function resetSessionState(state, {
     saving: false,
     error: '',
     accesses: [],
-    storeIds: []
+    storeIds: [],
+    query: '',
+    storeFilter: '',
+    roleFilter: '',
+    statusFilter: '',
+    editorOpen: false,
+    editingEmail: '',
+    pendingDeleteEmail: ''
   };
   state.goals = {
     loading: false,

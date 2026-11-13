@@ -5776,7 +5776,7 @@ svg {
 
 .access-list-filters {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px) 44px;
+  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(135px, 190px)) 44px;
   align-items: end;
   gap: 12px;
   margin-bottom: 18px;
@@ -5962,10 +5962,14 @@ svg {
 
 @container (max-width: 580px) {
   .access-list-filters {
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 44px;
   }
 
   .access-list-search {
+    grid-column: 1 / -1;
+  }
+
+  .access-list-store-filter {
     grid-column: 1 / -1;
   }
 
@@ -5993,10 +5997,6 @@ svg {
 }
 
 @container (max-width: 380px) {
-  .access-list-filters {
-    grid-template-columns: minmax(0, 1fr) 44px;
-  }
-
   .access-row {
     grid-template-columns: 1fr;
   }

@@ -814,16 +814,34 @@ test('keeps team access cards compact on mobile', async ({ page }) => {
   expect(roleOptions).toEqual(['Colaborador Interno', 'Colaborador Externo', 'MEI', 'Gestor', 'Administrador']);
   await page.locator('[data-access-editor-close]').first().click();
 
+  const roleFilter = page.locator('[data-access-role-filter]');
+  const statusFilter = page.locator('[data-access-status-filter]');
+  const clearFilters = page.locator('[data-access-clear-filters]');
+  await expect(roleFilter).toContainText('Colaborador Externo');
+  await roleFilter.selectOption({ label: 'Colaborador Externo' });
+  await expect(page.locator('.access-row:visible')).toHaveCount(1);
+  await expect(page.locator('.access-row:visible')).toContainText('Colaborador Externo Teste');
+  await clearFilters.click();
+  await statusFilter.selectOption('inactive');
+  await expect(page.locator('.access-row:visible')).toHaveCount(1);
+  await expect(page.locator('.access-row:visible')).toContainText('Usuario Bloqueado');
+  await clearFilters.click();
+
   if ((page.viewportSize()?.width || 0) <= 600) {
     const cardBox = await firstCard.boundingBox();
     const detailBoxes = await firstCard.locator('.access-detail').evaluateAll((details) => (
       details.map((detail) => detail.getBoundingClientRect()).map(({ x, y, width, height }) => ({ x, y, width, height }))
     ));
     const actionsBox = await firstCard.locator('.access-actions').boundingBox();
+    const filterBoxes = await page.locator('[data-access-role-filter], [data-access-status-filter], .access-clear-filters').evaluateAll((items) => (
+      items.map((item) => item.getBoundingClientRect()).map(({ bottom, right }) => ({ bottom, right }))
+    ));
 
     expect(cardBox.height).toBeLessThan(190);
     expect(Math.max(...detailBoxes.map((box) => box.y)) - Math.min(...detailBoxes.map((box) => box.y))).toBeLessThan(4);
     expect(actionsBox.y).toBeGreaterThan(detailBoxes[0].y + detailBoxes[0].height);
+    expect(Math.max(...filterBoxes.map((box) => box.bottom)) - Math.min(...filterBoxes.map((box) => box.bottom))).toBeLessThanOrEqual(1);
+    expect(Math.max(...filterBoxes.map((box) => box.right))).toBeLessThanOrEqual(page.viewportSize().width);
   }
 
   const searchInput = page.locator('[data-access-search]');

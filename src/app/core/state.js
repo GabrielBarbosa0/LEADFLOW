@@ -240,6 +240,8 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       storeIds: [],
       query: '',
       storeFilter: '',
+      roleFilter: '',
+      statusFilter: '',
       editorOpen: false,
       editingEmail: '',
       pendingDeleteEmail: ''
