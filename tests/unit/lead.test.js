@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { birthMonthDay, calculateAge, createAppointmentScheduleUpdate, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPaymentTypeForPrice, examPricing, formatBrazilianPostalCode, normalizePostalCode, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
+import { birthMonthDay, calculateAge, createAppointmentScheduleUpdate, createLeadDocument, createLeadUpdate, createQuickLeadDocument, examPaymentTypeForPrice, examPricing, formatBrazilianPostalCode, normalizePostalCode, normalizeProperName, ophthalmologyTriage, validateLeadInput, validateQuickLeadInput } from '../../src/utils/lead.js';
 
 const validInput = {
   fullName: 'Cliente Exemplo',
@@ -65,6 +65,33 @@ describe('lead validation', () => {
     expect(validateLeadInput({ ...validInput, postalCode: '1234' }).errors.postalCode).toBeDefined();
     expect(validateLeadInput({ ...validInput, score: '1001' }).errors.score).toBeDefined();
     expect(validateLeadInput({ ...validInput, savwinCode: 'A'.repeat(41) }).errors.savwinCode).toBeDefined();
+  });
+
+  it('normalizes names and locations with Portuguese capitalization', () => {
+    expect(normalizeProperName('  joÃO   da silva-santos ')).toBe('João da Silva-Santos');
+    expect(normalizeProperName('SANTA MARIA DO CAMBUCÁ')).toBe('Santa Maria do Cambucá');
+    expect(normalizeProperName('br-232, zona rural')).toBe('BR-232, Zona Rural');
+
+    const result = createLeadDocument({
+      ...validInput,
+      fullName: 'maria de lourdes da silva',
+      preferredName: 'dona maria',
+      street: 'rua josé ferreira souto maior',
+      neighborhood: 'zona rural',
+      city: 'bom jardim',
+      creditFatherName: 'josé dos santos',
+      creditMotherName: 'ana da silva'
+    }, profile, 'installation-test');
+
+    expect(result.data).toMatchObject({
+      fullName: 'Maria de Lourdes da Silva',
+      preferredName: 'Dona Maria',
+      street: 'Rua José Ferreira Souto Maior',
+      neighborhood: 'Zona Rural',
+      city: 'Bom Jardim',
+      creditFatherName: 'José dos Santos',
+      creditMotherName: 'Ana da Silva'
+    });
   });
 
   it('accepts an empty CPF and rejects an invalid one', () => {
