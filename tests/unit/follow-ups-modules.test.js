@@ -61,6 +61,8 @@ describe('follow-ups feature modules', () => {
     expect(markup).toContain('Ana Souza');
     expect(markup).toContain('id="follow-up-captor-dialog"');
     expect(markup).toContain('data-follow-up-whatsapp="lead-1"');
+    expect(markup.match(/data-follow-up-captor-close/g)).toHaveLength(1);
+    expect(markup).not.toContain('data-follow-up-captor-close>Fechar</button>');
   });
 
   it('delegates follow-up click actions to explicit handlers', async () => {
