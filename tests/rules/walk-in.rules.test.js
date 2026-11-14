@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { createQuickLeadDocument } from '../../src/utils/lead.js';
 
 const projectId = 'demo-fascinlead-walk-ins';
 let testEnvironment;
@@ -114,12 +115,23 @@ describe('walk-in queue rules', () => {
     ['internal-uid', 'internal@example.com', 'Colaborador Interno']
   ])('lets %s create a walk-in even while its cached permissions are stale', async (uid, email, displayName) => {
     const db = authenticatedDb(uid, email);
-    await assertSucceeds(setDoc(doc(db, 'appointmentWalkIns', `entry-${uid}`), {
+    const walkInId = `entry-${uid}`;
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'appointmentWalkIns', walkInId), {
       ...validWalkIn(),
       createdByUid: uid,
       createdByName: displayName,
       updatedByUid: uid
-    }));
+    });
+    batch.set(doc(db, 'leads', 'lead-1', 'history', `history-${uid}`), {
+      leadId: 'lead-1', storeId: 'loja-06', eventType: 'walk_in_created',
+      funnelStage: 'awaiting_appointment', reasonCode: 'waiting', description: 'Motivo do encaixe',
+      walkInId, actorUid: uid, actorName: displayName,
+      actorRole: uid === 'internal-uid' ? 'captor' : 'manager',
+      occurredAtClient: '2026-10-30T10:00:00.000Z',
+      occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    await assertSucceeds(batch.commit());
   });
 
   it.each([
@@ -150,16 +162,33 @@ describe('walk-in queue rules', () => {
   it('creates a quick incomplete lead and its walk-in atomically', async () => {
     const db = authenticatedDb('manager-uid', 'manager@example.com');
     const batch = writeBatch(db);
+    const quickLead = createQuickLeadDocument({
+      fullName: 'Cliente de Encaixe', phone: '81999994321', customerCpf: '52998224725'
+    }, {
+      uid: 'manager-uid', displayName: 'Gestor Teste', role: 'manager',
+      storeId: 'loja-06', storeIds: ['loja-06']
+    }, 'test-installation');
+    expect(quickLead.isValid).toBe(true);
     batch.set(doc(db, 'leads', 'quick-lead'), {
-      fullName: 'Cliente de Encaixe', phone: '+5581999994321', phoneSearch: '81999994321',
-      customerCpf: '52998224725', birthDate: '', notes: '', source: 'street', schemaVersion: 1,
-      strategyType: 'spontaneous-visit',
-      registrationMode: 'quick_walk_in', registrationCompleted: false,
-      capturedByUid: 'manager-uid', capturedByName: 'Gestor Teste', storeId: 'loja-06'
+      ...quickLead.data,
+      createdAtServer: serverTimestamp(), updatedAtServer: serverTimestamp(),
+      funnelUpdatedAtServer: serverTimestamp()
     });
     batch.set(doc(db, 'appointmentWalkIns', '2026-10-30__quick-lead'), {
       ...validWalkIn(),
       leadId: 'quick-lead'
+    });
+    batch.set(doc(db, 'leads', 'quick-lead', 'history', 'lead-created'), {
+      leadId: 'quick-lead', storeId: 'loja-06', eventType: 'lead_created',
+      funnelStage: 'captured', reasonCode: '', description: 'Cadastro rapido criado.',
+      actorUid: 'manager-uid', actorName: 'Gestor Teste', actorRole: 'manager',
+      occurredAtClient: '2026-10-30T10:00:00.000Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
+    });
+    batch.set(doc(db, 'leads', 'quick-lead', 'history', 'walk-in-created'), {
+      leadId: 'quick-lead', storeId: 'loja-06', eventType: 'walk_in_created',
+      funnelStage: 'awaiting_appointment', reasonCode: 'waiting', description: 'Motivo do encaixe',
+      walkInId: '2026-10-30__quick-lead', actorUid: 'manager-uid', actorName: 'Gestor Teste', actorRole: 'manager',
+      occurredAtClient: '2026-10-30T10:00:00.000Z', occurredAtServer: serverTimestamp(), schemaVersion: 1
     });
     await assertSucceeds(batch.commit());
   });

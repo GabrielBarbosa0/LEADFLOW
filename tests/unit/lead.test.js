@@ -222,14 +222,14 @@ describe('lead validation', () => {
       fullName: 'Cliente de Encaixe',
       customerCpf: '52998224725',
       birthDate: '',
-      sex: '',
       strategyType: 'spontaneous-visit',
       registrationMode: 'quick_walk_in',
       registrationCompleted: false,
       appointmentDate: '',
       appointmentTime: ''
     });
-    expect(result.data.pathologyIds).toEqual(['unknown']);
+    expect(result.data).not.toHaveProperty('pathologyIds');
+    expect(result.data).not.toHaveProperty('examPrice');
   });
 
   it('limits the address reference to 160 characters', () => {
