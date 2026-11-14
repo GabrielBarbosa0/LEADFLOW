@@ -533,10 +533,14 @@ service cloud.firestore {
     }
 
     function canManageWalkInStore(storeId) {
-      return isAdmin() || (managerHasStore(storeId) && (
+      return isAdmin() || (userHasStore(storeId) && (
         (('roleProfileId' in userProfile())
-          && userProfile().roleProfileId in ['system-manager', 'system-captor', 'system-receptionist', 'system-telemarketing'])
+          && userProfile().roleProfileId in [
+            'system-manager', 'system-supervisor',
+            'system-captor', 'system-receptionist', 'system-telemarketing'
+          ])
         || (!('roleProfileId' in userProfile()) && userProfile().role == 'manager')
+        || (('permissions' in userProfile()) && 'walkins.manage' in userProfile().permissions)
       ));
     }
 

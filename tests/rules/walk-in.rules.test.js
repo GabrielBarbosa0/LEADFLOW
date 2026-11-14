@@ -26,6 +26,26 @@ beforeEach(async () => {
         displayName: 'Gestor Teste', email: 'manager@example.com', role: 'manager',
         permissions: ['appointments.view', 'leads.create'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
       }),
+      setDoc(doc(db, 'users', 'system-manager-uid'), {
+        displayName: 'Gestor Sistema', email: 'system-manager@example.com', role: 'manager',
+        roleProfileId: 'system-manager', permissions: ['appointments.view', 'leads.create'],
+        storeId: 'loja-06', storeIds: ['loja-06'], active: true
+      }),
+      setDoc(doc(db, 'users', 'internal-uid'), {
+        displayName: 'Colaborador Interno', email: 'internal@example.com', role: 'captor',
+        roleProfileId: 'system-captor', permissions: ['appointments.view', 'leads.create'],
+        storeId: 'loja-06', storeIds: ['loja-06'], active: true
+      }),
+      setDoc(doc(db, 'users', 'external-uid'), {
+        displayName: 'Colaborador Externo', email: 'external@example.com', role: 'captor',
+        roleProfileId: 'system-external-leader', permissions: ['appointments.view', 'leads.create'],
+        storeId: 'loja-06', storeIds: ['loja-06'], active: true
+      }),
+      setDoc(doc(db, 'users', 'mei-uid'), {
+        displayName: 'Parceiro MEI', email: 'mei@example.com', role: 'captor',
+        roleProfileId: 'system-mei', permissions: ['appointments.view', 'leads.create'],
+        storeId: 'loja-06', storeIds: ['loja-06'], active: true
+      }),
       setDoc(doc(db, 'users', 'captor-uid'), {
         displayName: 'Captador Teste', email: 'captor@example.com', role: 'captor',
         permissions: ['appointments.view'], storeId: 'loja-06', storeIds: ['loja-06'], active: true
@@ -86,6 +106,32 @@ describe('walk-in queue rules', () => {
     )));
     await assertSucceeds(updateDoc(reference, {
       status: 'called', calledAt: serverTimestamp(), updatedAt: serverTimestamp(), updatedByUid: 'manager-uid'
+    }));
+  });
+
+  it.each([
+    ['system-manager-uid', 'system-manager@example.com', 'Gestor Sistema'],
+    ['internal-uid', 'internal@example.com', 'Colaborador Interno']
+  ])('lets %s create a walk-in even while its cached permissions are stale', async (uid, email, displayName) => {
+    const db = authenticatedDb(uid, email);
+    await assertSucceeds(setDoc(doc(db, 'appointmentWalkIns', `entry-${uid}`), {
+      ...validWalkIn(),
+      createdByUid: uid,
+      createdByName: displayName,
+      updatedByUid: uid
+    }));
+  });
+
+  it.each([
+    ['external-uid', 'external@example.com', 'Colaborador Externo'],
+    ['mei-uid', 'mei@example.com', 'Parceiro MEI']
+  ])('keeps %s blocked from creating walk-ins', async (uid, email, displayName) => {
+    const db = authenticatedDb(uid, email);
+    await assertFails(setDoc(doc(db, 'appointmentWalkIns', `entry-${uid}`), {
+      ...validWalkIn(),
+      createdByUid: uid,
+      createdByName: displayName,
+      updatedByUid: uid
     }));
   });
 
