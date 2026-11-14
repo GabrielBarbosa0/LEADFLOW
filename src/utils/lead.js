@@ -58,6 +58,25 @@ export function formatBrazilianPostalCode(value = '') {
   return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
 }
 
+const LOWERCASE_NAME_PARTICLES = new Set(['da', 'das', 'de', 'do', 'dos', 'e']);
+
+export function normalizeProperName(value = '') {
+  return String(value)
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map((word, index) => {
+      const lower = word.toLocaleLowerCase('pt-BR');
+      const route = /^(br|pe)(-\d+)(.*)$/i.exec(word);
+      if (route) return `${route[1].toLocaleUpperCase('pt-BR')}${route[2]}${route[3]}`;
+      if (index > 0 && LOWERCASE_NAME_PARTICLES.has(lower)) return lower;
+      return lower.replace(/(^|[-'’])(\p{L})/gu, (_, separator, letter) => (
+        `${separator}${letter.toLocaleUpperCase('pt-BR')}`
+      ));
+    })
+    .join(' ');
+}
+
 export const EYE_SURGERY_STATUS_OPTIONS = [
   { id: '', label: 'Selecione' },
   { id: 'yes', label: 'Sim' },
@@ -257,7 +276,7 @@ function diabetesData(input, pathologyIds) {
 
 export function validateLeadInput(input, options = {}) {
   const errors = {};
-  const fullName = input.fullName?.trim() || '';
+  const fullName = normalizeProperName(input.fullName);
   const phone = normalizeBrazilianPhone(input.phone);
   const customerCpf = normalizeCpf(input.customerCpf);
   const customerRg = normalizeRg(input.customerRg);
@@ -281,7 +300,7 @@ export function validateLeadInput(input, options = {}) {
   const storedPurchaseHolder = input.purchaseHolder || {};
   const purchaseHolderType = (input.purchaseHolderType || storedPurchaseHolder.type) === 'other' ? 'other' : 'customer';
   const purchaseHolderName = purchaseHolderType === 'other'
-    ? String(input.purchaseHolderName ?? storedPurchaseHolder.name ?? '').trim()
+    ? normalizeProperName(input.purchaseHolderName ?? storedPurchaseHolder.name)
     : '';
   const purchaseHolderCpf = purchaseHolderType === 'other'
     ? normalizeCpf(input.purchaseHolderCpf ?? storedPurchaseHolder.cpf)
@@ -366,8 +385,8 @@ export function validateLeadInput(input, options = {}) {
   if (productInterest && invalidProductPaymentMethod) {
     errors.productPaymentMethods = 'Selecione somente formas de pagamento válidas.';
   }
-  const creditFatherName = String(input.creditFatherName || '').trim();
-  const creditMotherName = String(input.creditMotherName || '').trim();
+  const creditFatherName = normalizeProperName(input.creditFatherName);
+  const creditMotherName = normalizeProperName(input.creditMotherName);
   const creditAuxiliaryPhoneValue = String(input.creditAuxiliaryPhone || '').trim();
   const creditAuxiliaryPhone = creditAuxiliaryPhoneValue ? normalizeBrazilianPhone(creditAuxiliaryPhoneValue) : null;
   if (creditAuxiliaryPhoneValue && !creditAuxiliaryPhone) {
@@ -428,6 +447,7 @@ export function validateLeadInput(input, options = {}) {
   return {
     errors,
     isValid: Object.keys(errors).length === 0,
+    fullName,
     phone,
     customerCpf,
     customerRg,
@@ -465,7 +485,7 @@ export function validateLeadInput(input, options = {}) {
 
 export function validateQuickLeadInput(input = {}) {
   const errors = {};
-  const fullName = String(input.fullName || '').trim();
+  const fullName = normalizeProperName(input.fullName);
   const phone = normalizeBrazilianPhone(input.phone);
   const customerCpf = normalizeCpf(input.customerCpf);
 
@@ -573,8 +593,8 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
     errors: {},
     isValid: true,
     data: {
-      fullName: input.fullName.trim(),
-      preferredName: input.preferredName?.trim() || '',
+      fullName: validation.fullName,
+      preferredName: normalizeProperName(input.preferredName),
       phone: validation.phone.e164,
       phoneSearch: validation.phone.search,
       customerCpf: validation.customerCpf,
@@ -585,10 +605,10 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
       birthMonthDay: birthMonthDay(validation.birthDate),
       sex: validation.sex,
       postalCode: validation.postalCode,
-      street: input.street?.trim() || '',
+      street: normalizeProperName(input.street),
       streetNumber: normalizeStreetNumber(input.streetNumber),
-      neighborhood: input.neighborhood?.trim() || '',
-      city: input.city?.trim() || '',
+      neighborhood: normalizeProperName(input.neighborhood),
+      city: normalizeProperName(input.city),
       state: (input.state?.trim() || 'PE').toUpperCase().slice(0, 2),
       addressReference: input.addressReference?.trim() || '',
       strategyType: validation.strategyType,
@@ -652,8 +672,8 @@ export function createLeadUpdate(input) {
     errors: {},
     isValid: true,
     data: {
-      fullName: input.fullName.trim(),
-      preferredName: input.preferredName?.trim() || '',
+      fullName: validation.fullName,
+      preferredName: normalizeProperName(input.preferredName),
       phone: validation.phone.e164,
       phoneSearch: validation.phone.search,
       customerCpf: validation.customerCpf,
@@ -664,10 +684,10 @@ export function createLeadUpdate(input) {
       birthMonthDay: birthMonthDay(validation.birthDate),
       sex: validation.sex,
       postalCode: validation.postalCode,
-      street: input.street?.trim() || '',
+      street: normalizeProperName(input.street),
       streetNumber: normalizeStreetNumber(input.streetNumber),
-      neighborhood: input.neighborhood?.trim() || '',
-      city: input.city?.trim() || '',
+      neighborhood: normalizeProperName(input.neighborhood),
+      city: normalizeProperName(input.city),
       state: (input.state?.trim() || 'PE').toUpperCase().slice(0, 2),
       addressReference: input.addressReference?.trim() || '',
       strategyType: validation.strategyType,
