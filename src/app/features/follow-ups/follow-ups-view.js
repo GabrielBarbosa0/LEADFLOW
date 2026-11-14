@@ -105,7 +105,6 @@ export function followUpsView({
         ? selectedCaptorPending.map(renderItem).join('')
         : '<div class="empty-state"><i data-lucide="circle-check"></i><strong>Nenhum contato aguardando</strong><p>Todos os retornos deste captador já tiveram o contato iniciado.</p></div>'}
     </div>
-    <div class="appointment-create-actions"><button class="button button-secondary" type="button" data-follow-up-captor-close>Fechar</button></div>
   </dialog>` : '';
   const items = records.length
     ? (managerView && activeFilter === 'captors'
