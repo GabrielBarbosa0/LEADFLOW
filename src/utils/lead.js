@@ -557,7 +557,7 @@ export function createQuickLeadDocument(input, profile, installationId, now = ne
       capturedByName: profile.displayName,
       storeId: profile.storeId,
       installationId,
-      appVersion: '0.1.0',
+      appVersion: '0.1.2',
       schemaVersion: 1
     }
   };
@@ -637,7 +637,7 @@ export function createLeadDocument(input, profile, installationId, now = new Dat
       capturedByName: profile.displayName,
       storeId: profile.storeId,
       installationId,
-      appVersion: '0.1.0',
+      appVersion: '0.1.2',
       schemaVersion: 1
     }
   };
