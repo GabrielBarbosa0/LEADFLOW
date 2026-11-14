@@ -89,7 +89,30 @@ describe('leads feature modules', () => {
     const markup = leadsView({ leads, filters: { storeId: 'loja-02' }, allowedStores: [{ id: 'loja-02', label: 'Loja 02' }] });
     expect(markup).toContain('id="lead-start-date"');
     expect(markup).toContain('id="lead-end-date"');
+    expect(markup).toContain('<option value="">Todas as lojas</option>');
     expect(markup).toContain('data-lead-filters-clear');
+  });
+
+  it('filters and labels customers with a confirmed purchase', () => {
+    const leads = [sampleLead(), sampleLead({ id: 'lead-2', saleStatus: 'confirmed', saleDate: '2026-11-11' })];
+    expect(filterLeadRecords(leads, { saleStatus: 'confirmed' }).map((lead) => lead.id)).toEqual(['lead-2']);
+    expect(filterLeadRecords(leads, { saleStatus: 'pending' }).map((lead) => lead.id)).toEqual(['lead-1']);
+    const markup = leadsView({ leads, filters: { saleStatus: 'confirmed' } });
+    expect(markup).toContain('id="lead-sale-filter"');
+    expect(markup).toContain('Compra confirmada');
+  });
+
+  it('filters customers by city and renders unique city options', () => {
+    const leads = [
+      sampleLead({ id: 'lead-1', city: 'Surubim' }),
+      sampleLead({ id: 'lead-2', city: 'Carpina' }),
+      sampleLead({ id: 'lead-3', city: 'surubim' })
+    ];
+    expect(filterLeadRecords(leads, { city: 'SURUBIM' }).map((lead) => lead.id)).toEqual(['lead-1', 'lead-3']);
+    const markup = leadsView({ leads, filters: { city: 'Carpina' } });
+    expect(markup).toContain('id="lead-city-filter"');
+    expect(markup.match(/value="Surubim"/g)).toHaveLength(1);
+    expect(markup).toContain('<option value="Carpina" selected>Carpina</option>');
   });
 
   it('shows a marker for a Captar import', () => {
@@ -128,6 +151,30 @@ describe('leads feature modules', () => {
     expect(markup).toContain('name="strategyType" required');
     expect(markup).toContain('Excluir lead');
     expect(markup).toContain('edit-appointment-time-field');
+    expect(markup).toContain('class="lead-detail-actions"');
+    expect(markup).toContain('class="field-row credit-details-fields"');
+    expect(markup.indexOf('demographic-fields')).toBeLessThan(markup.indexOf('credit-details-fields'));
+    expect(markup.indexOf('credit-details-fields')).toBeLessThan(markup.indexOf('preferred-postal-fields'));
+  });
+
+  it('does not reuse another lead appointment date while schedule data loads', () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const lead = sampleLead({ id: 'lead-current', appointmentDate: '', appointmentTime: '' });
+    const staleSchedule = scheduleState({ leadId: 'lead-previous', appointmentDate: '2026-11-28' });
+    const markup = leadDetailView({
+      lead,
+      managementMode: false,
+      canManage: false,
+      profileRole: 'manager',
+      scheduleState: staleSchedule,
+      appointmentTimeMarkup: leadDetailAppointmentTimeField({ lead, scheduleState: staleSchedule, profile: {}, online: true }),
+      canDelete: false
+    });
+
+    expect(markup).toContain('id="edit-appointmentDate"');
+    expect(markup).not.toContain('value="2026-11-28"');
+    expect(markup).toContain('Escolha primeiro uma data');
+    expect(markup).toMatch(/id="edit-notes"[^>]*disabled/);
   });
 
   it('does not reuse another lead appointment date while schedule data loads', () => {
@@ -163,6 +210,29 @@ describe('leads feature modules', () => {
     });
     expect(markup).toContain('Origem do registro');
     expect(markup).toContain('Importado do Captar');
+  });
+
+  it('shows the purchase summary to everyone and the action only to authorized staff', () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const options = {
+      lead: sampleLead({ saleStatus: 'confirmed', saleDate: '2026-11-11' }),
+      managementMode: true, canManage: true, profileRole: 'manager', scheduleState: scheduleState(),
+      appointmentTimeMarkup: '<div></div>', canDelete: false
+    };
+    expect(leadDetailView(options)).toContain('1 confirmada');
+    expect(leadDetailView(options)).not.toContain('data-open-manual-sale');
+    const authorizedMarkup = leadDetailView({ ...options, canConfirmSale: true });
+    expect(authorizedMarkup).toContain('data-open-manual-sale="lead-1"');
+    expect(authorizedMarkup).toContain('class="lead-sale-summary lead-sale-summary-button"');
+    expect(authorizedMarkup).toContain('aria-label="Ver compras do cliente"');
+    expect(authorizedMarkup).toContain('class="button button-secondary button-block"');
+    const registrationMarkup = leadDetailView({
+      ...options,
+      lead: sampleLead({ saleStatus: '' }),
+      canConfirmSale: true
+    });
+    expect(registrationMarkup).toContain('<span>Registrar compra</span>');
+    expect(registrationMarkup).toContain('class="button button-secondary button-block"');
   });
 
   it('warns and offers ownership of a cancelled lead in read-only mode', () => {

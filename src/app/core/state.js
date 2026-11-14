@@ -10,6 +10,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
     loading: true,
     profile: null,
     leads: [],
+    saleStatuses: [],
     authError: '',
     authMessage: '',
     dataError: '',
@@ -19,7 +20,9 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       query: '',
       storeId: '',
       startDate: '',
-      endDate: ''
+      endDate: '',
+      saleStatus: '',
+      city: ''
     },
     leadSearch: {
       query: '',
@@ -184,6 +187,7 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       leadId: ''
     },
     leadHistoryDialogOpen: false,
+    saleConfirmation: { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '', formOpen: false, action: '', actionPurchaseId: '' },
     leadAssignment: {
       leadId: '',
       mode: '',
@@ -236,6 +240,8 @@ export function createAppState({ route, createDefaultManagementFilters, createDe
       storeIds: [],
       query: '',
       storeFilter: '',
+      roleFilter: '',
+      statusFilter: '',
       editorOpen: false,
       editingEmail: '',
       pendingDeleteEmail: ''

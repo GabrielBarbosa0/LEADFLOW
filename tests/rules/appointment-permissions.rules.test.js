@@ -38,7 +38,7 @@ beforeEach(async () => {
       displayName: 'Externa Teste',
       role: 'captor',
       roleProfileId: 'system-external-leader',
-      permissionSchemaVersion: 7,
+      permissionSchemaVersion: 8,
       permissions: [
         'leads.create', 'leads.view_own', 'leads.edit_own', 'appointments.cancel',
         'followups.own', 'goals.view_own', 'appointments.view', 'external.operations.read'
@@ -52,7 +52,7 @@ beforeEach(async () => {
       displayName: 'Interna Teste',
       role: 'manager',
       roleProfileId: 'system-captor',
-      permissionSchemaVersion: 7,
+      permissionSchemaVersion: 8,
       permissions: [
         'leads.create', 'leads.view_own', 'leads.edit_own', 'appointments.cancel',
         'followups.own', 'goals.view_own', 'leads.view_stores', 'management.view',

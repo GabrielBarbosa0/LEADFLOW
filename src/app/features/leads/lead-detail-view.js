@@ -10,7 +10,7 @@ import {
   toLocalDateInput
 } from '../../shared/formatters.js';
 import { birthAgeText } from '../../shared/form-helpers.js';
-import { ametropiaOptions, eyeTriageFields, pathologyOptions, sexOptions, triageConfigFields } from '../capture/capture-triage.js';
+import { ametropiaOptions, creditDetailsFields, eyeTriageFields, pathologyOptions, sexOptions, triageConfigFields } from '../capture/capture-triage.js';
 import { transportFields } from '../capture/capture-transport.js';
 import { productPaymentFields } from '../capture/product-payment.js';
 import { purchaseHolderFields } from '../capture/purchase-holder.js';
@@ -28,6 +28,7 @@ export function leadDetailView({
   canEditClinical = false,
   canClaimLead = false,
   canTransferLead = false,
+  canConfirmSale = false,
   readOnly = false,
   inDialog = false,
   history = { loading: false, error: '', records: [], stage: '' }
@@ -43,6 +44,12 @@ export function leadDetailView({
 
   const [syncStatus, syncTone] = managementMode ? ['Sincronizado', 'success'] : syncLabel(lead);
   const originLabel = leadOriginLabel(lead);
+  const purchaseCount = Number(lead.purchaseCount || (lead.saleStatus === 'confirmed' ? 1 : 0));
+  const purchaseSummary = `${purchaseCount} ${purchaseCount === 1 ? 'confirmada' : 'confirmadas'}`;
+  const purchaseSummaryContent = `<span>Compras</span><strong class="${lead.saleStatus === 'confirmed' ? 'sale-confirmed' : ''}">${lead.saleStatus === 'confirmed' ? purchaseSummary : 'Nenhuma'}</strong>${lead.saleStatus === 'confirmed' && lead.saleDate ? `<small>Última em ${escapeHtml(lead.saleDate.split('-').reverse().join('/'))}</small>` : ''}`;
+  const purchaseSummaryCard = canConfirmSale && lead.saleStatus === 'confirmed'
+    ? `<button class="lead-sale-summary lead-sale-summary-button" type="button" data-open-manual-sale="${escapeHtml(lead.id)}" aria-label="Ver compras do cliente" aria-haspopup="dialog" ${!navigator.onLine ? 'disabled' : ''}>${purchaseSummaryContent}</button>`
+    : `<div class="lead-sale-summary">${purchaseSummaryContent}</div>`;
   const managerReschedule = managementMode && profileRole === 'manager' && !canEditClinical;
   const offlineEdit = !navigator.onLine;
   const scheduleLoading = scheduleState.loading || scheduleState.leadId !== lead.id;
@@ -71,6 +78,7 @@ export function leadDetailView({
     <section class="lead-detail-summary" aria-label="Informações do cadastro">
       <div><span>Status</span><strong class="status-badge status-${syncTone}">${syncStatus}</strong></div>
       <div><span>Loja</span><strong>${escapeHtml(storeLabel(lead.storeId))}</strong></div>
+      ${purchaseSummaryCard}
       ${originLabel ? `<div><span>Origem do registro</span><strong class="lead-origin-badge"><i data-lucide="archive"></i>${escapeHtml(originLabel)}</strong></div>` : ''}
       <button class="lead-history-summary" type="button" data-open-lead-history aria-haspopup="dialog"><span>Histórico do lead</span><strong>Ver histórico</strong><small>Ver todas as alterações</small></button>
     </section>
@@ -88,6 +96,7 @@ export function leadDetailView({
       <div class="field" data-field="phone"><label for="edit-phone">Telefone ou WhatsApp <span aria-hidden="true">*</span></label><input id="edit-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" value="${escapeHtml(formatBrazilianPhone(lead.phoneSearch))}" required ${locked} /><small class="field-error"></small></div>
       <div class="field-row document-fields"><div class="field" data-field="customerRg"><label for="edit-customerRg">RG</label><input id="edit-customerRg" name="customerRg" maxlength="20" autocomplete="off" value="${escapeHtml(lead.customerRg || '')}" placeholder="0.000.000" ${locked} /><small class="field-error"></small></div><div class="field" data-field="customerCpf"><label for="edit-customerCpf">CPF</label><input id="edit-customerCpf" name="customerCpf" inputmode="numeric" autocomplete="off" maxlength="14" value="${escapeHtml(formatBrazilianCpf(lead.customerCpf))}" placeholder="000.000.000-00" ${locked} /><small class="field-error"></small></div></div>
       <div class="field-row demographic-fields"><div class="field" data-field="birthDate"><label for="edit-birthDate">Data de nascimento</label><input id="edit-birthDate" name="birthDate" type="date" autocomplete="bday" max="${toLocalDateInput(new Date())}" value="${escapeHtml(lead.birthDate)}" ${locked} /><small class="birth-age-hint" data-birth-age>${escapeHtml(birthAgeText(lead.birthDate))}</small><small class="field-error"></small></div><div class="field" data-field="sex"><label for="edit-sex">Sexo</label><select id="edit-sex" name="sex" ${locked}>${sexOptions(lead.sex)}</select><small class="field-error"></small></div></div>
+      ${creditDetailsFields(lead, 'edit-lead-credit', Boolean(locked))}
       <div class="field-row preferred-postal-fields"><div class="field"><label for="edit-preferredName">Como prefere ser chamado</label><input id="edit-preferredName" name="preferredName" maxlength="60" value="${escapeHtml(lead.preferredName)}" ${locked} /></div><div class="field" data-field="postalCode"><label for="edit-postalCode">CEP</label><input id="edit-postalCode" name="postalCode" inputmode="numeric" autocomplete="postal-code" maxlength="9" value="${escapeHtml(formatBrazilianPostalCode(lead.postalCode || ''))}" aria-describedby="edit-postal-code-status" placeholder="00000-000" ${locked} /><small id="edit-postal-code-status" class="field-help" data-postal-code-status aria-live="polite"></small><small class="field-error"></small></div></div>
       <div class="field-row address-fields">
         <div class="field address-street" data-field="street"><label for="edit-street">Rua</label><input id="edit-street" name="street" maxlength="120" autocomplete="address-line1" value="${escapeHtml(lead.street)}" ${locked} /><small class="field-error"></small></div>
@@ -114,10 +123,13 @@ export function leadDetailView({
         ${renderedAppointmentTimeMarkup}
       </div>
       <div class="field" data-field="notes"><label for="edit-notes">Observação rápida</label><textarea id="edit-notes" name="notes" maxlength="500" rows="3" ${locked}>${escapeHtml(lead.notes)}</textarea><small class="field-hint"><span id="edit-notes-count">${String(lead.notes || '').length}</span>/500</small><small class="field-error"></small></div>
-      ${readOnly ? '' : `<button class="button button-primary button-block" type="submit" ${offlineEdit || scheduleLoading ? 'disabled' : ''}><i data-lucide="save"></i><span>${managerReschedule ? 'Salvar reagendamento' : 'Salvar alterações'}</span></button>`}
-      ${canCancelAppointment ? `<button class="button button-danger button-block" type="button" data-cancel-appointment="${escapeHtml(lead.id)}" ${offlineEdit ? 'disabled' : ''}><i data-lucide="calendar-x"></i><span>Cancelar agendamento</span></button>` : ''}
-      ${canTransferLead ? `<button class="button button-secondary button-block" type="button" data-transfer-lead="${escapeHtml(lead.id)}"><i data-lucide="repeat-2"></i><span>Transferir responsável</span></button>` : ''}
-      ${canDelete ? `<button class="button button-danger button-block" type="button" data-delete-lead="${escapeHtml(lead.id)}"><i data-lucide="trash-2"></i><span>Excluir lead</span></button>` : ''}
+      <div class="lead-detail-actions">
+        ${canConfirmSale ? `<button class="button button-secondary button-block" type="button" data-open-manual-sale="${escapeHtml(lead.id)}" ${offlineEdit ? 'disabled' : ''}><i data-lucide="badge-dollar-sign"></i><span>${lead.saleStatus === 'confirmed' ? 'Ver compras do cliente' : 'Registrar compra'}</span></button>` : ''}
+        ${readOnly ? '' : `<button class="button button-primary button-block" type="submit" ${offlineEdit || scheduleLoading ? 'disabled' : ''}><i data-lucide="save"></i><span>${managerReschedule ? 'Salvar reagendamento' : 'Salvar alterações'}</span></button>`}
+        ${canCancelAppointment ? `<button class="button button-danger button-block" type="button" data-cancel-appointment="${escapeHtml(lead.id)}" ${offlineEdit ? 'disabled' : ''}><i data-lucide="calendar-x"></i><span>Cancelar agendamento</span></button>` : ''}
+        ${canTransferLead ? `<button class="button button-secondary button-block" type="button" data-transfer-lead="${escapeHtml(lead.id)}"><i data-lucide="repeat-2"></i><span>Transferir responsável</span></button>` : ''}
+        ${canDelete ? `<button class="button button-danger button-block" type="button" data-delete-lead="${escapeHtml(lead.id)}"><i data-lucide="trash-2"></i><span>Excluir lead</span></button>` : ''}
+      </div>
       <p class="form-footnote"><i data-lucide="shield-check"></i> Autor, loja e data original permanecem preservados.</p>
     </form>
     ${canDelete ? `<dialog id="delete-lead-dialog" class="confirmation-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description"><div class="confirmation-dialog-icon"><i data-lucide="trash-2"></i></div><div class="confirmation-dialog-copy"><h2 id="delete-dialog-title">Excluir este lead?</h2><p id="delete-dialog-description">O cadastro de <strong>${escapeHtml(lead.fullName)}</strong> será excluído definitivamente. Essa ação não pode ser desfeita.</p></div><div class="confirmation-dialog-actions"><button class="button button-secondary" type="button" data-close-delete-dialog>Cancelar</button><button class="button button-danger-solid" type="button" data-confirm-delete="${escapeHtml(lead.id)}"><i data-lucide="trash-2"></i><span>Excluir definitivamente</span></button></div></dialog>` : ''}`;

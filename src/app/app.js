@@ -5,6 +5,7 @@ import { loadRoleProfiles } from '../services/role-profile-service.js';
 import { archiveManagementLeads, deleteManagementLead, loadManagementLeads, MANAGEMENT_QUERY_LIMIT, updateManagementLead } from '../services/management-service.js';
 import { APPOINTMENTS_QUERY_LIMIT, canCancelAppointment, cancelAppointment, loadUpcomingAppointments, markAppointmentReminderDone, rescheduleAppointment, setAppointmentAttendance, subscribeToAppointmentConfirmations, subscribeToAppointments, undoAppointmentReminderDone } from '../services/appointment-service.js';
 import { canClaimCancelledLead, canTransferLead, claimCancelledLead, loadAssignableLeadOwners, transferLead } from '../services/lead-assignment-service.js';
+import { canConfirmManualSale, confirmManualSale, deleteManualSaleConfirmation, loadLeadSaleTracking, reactivateManualSaleConfirmation, removeManualSaleConfirmation, subscribeToManualSaleStatuses, validateManualSale } from '../services/sale-tracking-service.js';
 import { createQuickWalkIn, createWalkIn, loadWalkInCaptors, subscribeToWalkIns, transitionWalkIn } from '../services/walk-in-service.js';
 import { demoExternalOperations, loadExternalOperations } from '../services/external-operations-service.js';
 import { loadStoreSchedules, subscribeToStoreSchedule } from '../services/schedule-service.js';
@@ -64,6 +65,7 @@ import { leadAssignmentDialog as renderLeadAssignmentDialog } from './features/l
 import { ensureLeadHistory, stopLeadHistorySubscription } from './features/funnel/lead-history-subscriptions.js';
 import { leadHistoryView } from './features/funnel/lead-history-view.js';
 import { filterLeadRecords, leadsView as renderLeadsView } from './features/leads/leads-view.js';
+import { manualSaleDialog as renderManualSaleDialog } from './features/sales/manual-sale-dialog.js';
 import { validateLeadSearch } from './features/search/lead-search-data.js';
 import { checkCpfActiveAppointment, loadSearchLead, searchLeadAppointments } from './features/search/lead-search-service.js';
 import { leadSearchView as renderLeadSearchView } from './features/search/lead-search-view.js';
@@ -205,7 +207,7 @@ function homeView() {
 function appView() {
   const pages = { home: homeView, new: newLeadView, 'walk-ins': walkInsView, 'external-operations': externalOperationsView, leads: leadsView, search: leadSearchView, lead: leadDetailView, 'follow-ups': followUpsView, management: managementView, 'management-lead': leadDetailView, kanban: kanbanView, dashboard: dashboardView, appointments: appointmentsView, confirmations: confirmationsView, access: accessView, goals: goalsView, settings: settingsView };
   const page = pages[state.route] || homeView;
-  return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${leadAssignmentDialogView()}${appointmentCancellationDialogView()}${appointmentRescheduleDialogView()}`, canManage, hasAccess, pendingFollowUps });
+  return appShellView({ state, page: `${page()}${leadDetailDialogView()}${leadHistoryDialogView()}${leadAssignmentDialogView()}${manualSaleDialogView()}${appointmentCancellationDialogView()}${appointmentRescheduleDialogView()}`, canManage, hasAccess, pendingFollowUps });
 }
 
 function appointmentTimeField() {
@@ -260,7 +262,7 @@ function newLeadView() {
 
 function leadsView() {
   return renderLeadsView({
-    leads: state.leads,
+    leads: state.leads.map(withManualSaleStatus),
     filters: state.leadFilters,
     allowedStores: isAdmin() ? STORES : STORES.filter((store) => captureStoreIds().includes(store.id)),
     dataError: state.dataError,
@@ -290,11 +292,24 @@ function followUpsView() {
 }
 
 function findManagementLead(leadId) {
-  return selectManagementLead(leadId, {
+  const lead = selectManagementLead(leadId, {
     records: state.management.records,
     appointments: state.appointments.records,
     activeLead: state.management.activeLead
   });
+  return withManualSaleStatus(lead);
+}
+
+function withManualSaleStatus(lead) {
+  if (!lead?.id) return lead;
+  const status = state.saleStatuses.find((item) => item.id === lead.id);
+  return status ? {
+    ...lead,
+    saleStatus: status.saleStatus,
+    saleDate: status.saleDate,
+    purchaseCount: Number(status.purchaseCount || (status.saleStatus === 'confirmed' ? 1 : 0)),
+    purchaseTotal: Number(status.purchaseTotal || 0)
+  } : lead;
 }
 
 function selectedLeadDetailService(lead) {
@@ -314,7 +329,7 @@ function leadDetailView() {
   const leadId = currentRouteParam();
   const lead = managementMode
     ? findManagementLead(leadId)
-    : state.leads.find((item) => item.id === leadId);
+    : withManualSaleStatus(state.leads.find((item) => item.id === leadId));
   const readOnly = Boolean(lead
     && lead.capturedByUid !== state.profile?.uid
     && !hasAccess('leads.edit_all'));
@@ -330,6 +345,7 @@ function leadDetailView() {
     canEditClinical: hasAccess('leads.clinical_update'),
     canClaimLead: canClaimCancelledLead(state.profile, lead),
     canTransferLead: canTransferLead(state.profile, lead),
+    canConfirmSale: canConfirmManualSale(state.profile, lead),
     readOnly,
     history: state.leadHistory
   });
@@ -352,6 +368,7 @@ function leadDetailDialogView() {
     canEditClinical: hasAccess('leads.clinical_update'),
     canClaimLead: canClaimCancelledLead(state.profile, lead),
     canTransferLead: canTransferLead(state.profile, lead),
+    canConfirmSale: canConfirmManualSale(state.profile, lead),
     inDialog: true,
     history: state.leadHistory
   })}</dialog>`;
@@ -362,6 +379,61 @@ function leadHistoryDialogView() {
   const lead = existingLeadForDetail(activeLeadDetailId());
   if (!lead) return '';
   return `<dialog id="lead-history-dialog" class="lead-history-dialog" aria-labelledby="lead-history-dialog-title"><header><div><h2 id="lead-history-dialog-title">Histórico do lead</h2><p>${escapeHtml(lead.fullName)}</p></div><div class="lead-history-dialog-actions"><button class="icon-button" type="button" data-close-lead-history title="Fechar" aria-label="Fechar histórico"><i data-lucide="x"></i></button></div></header><div class="lead-history-dialog-body">${leadHistoryView({ ...state.leadHistory, stage: lead.funnelStage || state.leadHistory.stage }, { lead })}</div></dialog>`;
+}
+
+function manualSaleLead() {
+  const leadId = state.saleConfirmation.leadId;
+  const listedLead = [...state.leads, ...state.management.records, ...state.appointments.records]
+    .find((item) => item.id === leadId);
+  const activeLead = state.management.activeLead?.id === leadId ? state.management.activeLead : null;
+  return withManualSaleStatus(listedLead || activeLead);
+}
+
+function manualSaleDialogView() {
+  return renderManualSaleDialog({ state: { ...state.saleConfirmation, profileUid: state.profile?.uid }, lead: manualSaleLead() });
+}
+
+function applyManualSaleUpdate(updated) {
+  if (!updated?.id) return;
+  const replace = (records = []) => records.map((item) => item.id === updated.id ? { ...item, ...updated } : item);
+  state.leads = replace(state.leads);
+  state.management.records = replace(state.management.records);
+  state.appointments.records = replace(state.appointments.records);
+  state.confirmations.records = replace(state.confirmations.records);
+  state.followUps.records = replace(state.followUps.records);
+  state.saleStatuses = [
+    ...state.saleStatuses.filter((item) => item.id !== updated.id),
+    { id: updated.id, leadId: updated.id, storeId: updated.storeId, capturedByUid: updated.capturedByUid, saleStatus: updated.saleStatus, saleDate: updated.saleDate, purchaseCount: updated.purchaseCount, purchaseTotal: updated.purchaseTotal }
+  ];
+  if (state.management.activeLead?.id === updated.id) state.management.activeLead = { ...state.management.activeLead, ...updated };
+}
+
+function closeManualSaleDialog() {
+  state.saleConfirmation = { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '', formOpen: false, action: '', actionPurchaseId: '' };
+  render();
+}
+
+function closeManualSaleForm() {
+  state.saleConfirmation.formOpen = false;
+  state.saleConfirmation.editingId = '';
+  state.saleConfirmation.error = '';
+  render();
+}
+
+function closeManualSaleActionDialog() {
+  state.saleConfirmation.action = '';
+  state.saleConfirmation.actionPurchaseId = '';
+  state.saleConfirmation.error = '';
+  render();
+}
+
+function isDialogBackdropClick(event, dialog) {
+  if (event.target !== dialog) return false;
+  const bounds = dialog.getBoundingClientRect();
+  return event.clientX < bounds.left
+    || event.clientX > bounds.right
+    || event.clientY < bounds.top
+    || event.clientY > bounds.bottom;
 }
 
 function leadAssignmentDialogView() {
@@ -510,7 +582,7 @@ function dashboardView() {
   });
 }
 function appointmentRecords() {
-  return state.appointments.records;
+  return state.appointments.records.map(withManualSaleStatus);
 }
 
 function allowedAppointmentStores() {
@@ -728,6 +800,143 @@ function bindPageEvents() {
     leadHistoryDialog.addEventListener('click', (event) => {
       if (event.target === leadHistoryDialog) {
         state.leadHistoryDialogOpen = false;
+        render();
+      }
+    });
+  }
+  const manualSaleDialog = document.querySelector('#manual-sale-dialog');
+  if (manualSaleDialog) {
+    requestAnimationFrame(() => {
+      if (manualSaleDialog.isConnected && !manualSaleDialog.open) manualSaleDialog.showModal();
+    });
+    manualSaleDialog.addEventListener('cancel', (event) => { event.preventDefault(); closeManualSaleDialog(); });
+    manualSaleDialog.addEventListener('click', (event) => {
+      if (isDialogBackdropClick(event, manualSaleDialog)) closeManualSaleDialog();
+    });
+    manualSaleDialog.querySelector('[data-close-manual-sale]')?.addEventListener('click', closeManualSaleDialog);
+    manualSaleDialog.querySelectorAll('[data-new-purchase]').forEach((button) => button.addEventListener('click', () => {
+      state.saleConfirmation.editingId = '';
+      state.saleConfirmation.formOpen = true;
+      state.saleConfirmation.error = '';
+      render();
+    }));
+    manualSaleDialog.querySelectorAll('[data-edit-purchase]').forEach((button) => button.addEventListener('click', () => {
+      state.saleConfirmation.editingId = button.dataset.editPurchase;
+      state.saleConfirmation.formOpen = true;
+      state.saleConfirmation.error = '';
+      render();
+    }));
+    manualSaleDialog.querySelectorAll('[data-cancel-purchase]').forEach((button) => button.addEventListener('click', () => {
+      state.saleConfirmation.action = 'cancel';
+      state.saleConfirmation.actionPurchaseId = button.dataset.cancelPurchase;
+      state.saleConfirmation.error = '';
+      render();
+    }));
+    manualSaleDialog.querySelectorAll('[data-reactivate-purchase]').forEach((button) => button.addEventListener('click', () => {
+      state.saleConfirmation.action = 'reactivate';
+      state.saleConfirmation.actionPurchaseId = button.dataset.reactivatePurchase;
+      state.saleConfirmation.error = '';
+      render();
+    }));
+    manualSaleDialog.querySelectorAll('[data-delete-purchase]').forEach((button) => button.addEventListener('click', () => {
+      state.saleConfirmation.action = 'delete';
+      state.saleConfirmation.actionPurchaseId = button.dataset.deletePurchase;
+      state.saleConfirmation.error = '';
+      render();
+    }));
+  }
+  const manualSaleFormDialog = document.querySelector('#manual-sale-form-dialog');
+  if (manualSaleFormDialog) {
+    requestAnimationFrame(() => {
+      if (manualSaleFormDialog.isConnected && !manualSaleFormDialog.open) manualSaleFormDialog.showModal();
+    });
+    manualSaleFormDialog.addEventListener('cancel', (event) => { event.preventDefault(); closeManualSaleForm(); });
+    manualSaleFormDialog.addEventListener('click', (event) => {
+      if (isDialogBackdropClick(event, manualSaleFormDialog)) closeManualSaleForm();
+    });
+    manualSaleFormDialog.querySelector('[data-close-purchase-form]')?.addEventListener('click', closeManualSaleForm);
+    const saleForm = manualSaleFormDialog.querySelector('#manual-sale-form');
+    saleForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const lead = manualSaleLead();
+      const values = Object.fromEntries(new FormData(saleForm));
+      const validation = validateManualSale(values);
+      if (!validation.isValid) {
+        revealFirstFormError(setFieldErrors(saleForm, validation.errors));
+        return;
+      }
+      state.saleConfirmation.saving = true;
+      saleForm.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+      try {
+        const result = await confirmManualSale(state.profile, lead, validation.data, state.saleConfirmation.editingId);
+        if (!result.isValid) {
+          revealFirstFormError(setFieldErrors(saleForm, result.errors));
+          return;
+        }
+        applyManualSaleUpdate(result.data);
+        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
+        state.saleConfirmation.editingId = '';
+        state.saleConfirmation.formOpen = false;
+        state.saleConfirmation.error = '';
+        showToast('Compra registrada e vinculada ao colaborador.', 'success', 'badge-check');
+      } catch (error) {
+        state.saleConfirmation.error = error?.code === 'permission-denied'
+          ? 'Seu perfil nao pode confirmar esta compra.'
+          : error?.code === 'offline' ? 'Conecte-se para confirmar a compra.' : 'Nao foi possivel salvar a confirmacao.';
+      } finally {
+        state.saleConfirmation.saving = false;
+        render();
+      }
+    });
+  }
+  const manualSaleActionDialog = document.querySelector('#manual-sale-action-dialog');
+  if (manualSaleActionDialog) {
+    requestAnimationFrame(() => {
+      if (manualSaleActionDialog.isConnected && !manualSaleActionDialog.open) manualSaleActionDialog.showModal();
+    });
+    manualSaleActionDialog.addEventListener('cancel', (event) => { event.preventDefault(); closeManualSaleActionDialog(); });
+    manualSaleActionDialog.addEventListener('click', (event) => {
+      if (isDialogBackdropClick(event, manualSaleActionDialog)) closeManualSaleActionDialog();
+    });
+    manualSaleActionDialog.querySelector('[data-close-purchase-action]')?.addEventListener('click', closeManualSaleActionDialog);
+    manualSaleActionDialog.querySelector('[data-confirm-purchase-action]')?.addEventListener('click', async (event) => {
+      const action = event.currentTarget.dataset.confirmPurchaseAction;
+      const purchaseId = state.saleConfirmation.actionPurchaseId;
+      const lead = manualSaleLead();
+      const operations = {
+        cancel: {
+          execute: removeManualSaleConfirmation,
+          success: 'Compra cancelada. O histórico foi preservado.',
+          failure: 'Nao foi possivel cancelar a compra.', icon: 'circle-minus'
+        },
+        reactivate: {
+          execute: reactivateManualSaleConfirmation,
+          success: 'Compra reativada e incluida novamente nos totais.',
+          failure: 'Nao foi possivel reativar a compra.', icon: 'rotate-ccw'
+        },
+        delete: {
+          execute: deleteManualSaleConfirmation,
+          success: 'Compra excluida. A auditoria foi preservada.',
+          failure: 'Nao foi possivel excluir a compra.', icon: 'trash-2'
+        }
+      };
+      const operation = operations[action];
+      if (!operation || !purchaseId) return;
+      state.saleConfirmation.saving = true;
+      event.currentTarget.disabled = true;
+      try {
+        const result = await operation.execute(state.profile, lead, purchaseId);
+        applyManualSaleUpdate(result.data);
+        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, result.data);
+        state.saleConfirmation.editingId = '';
+        state.saleConfirmation.action = '';
+        state.saleConfirmation.actionPurchaseId = '';
+        state.saleConfirmation.error = '';
+        showToast(operation.success, 'success', operation.icon);
+      } catch {
+        state.saleConfirmation.error = operation.failure;
+      } finally {
+        state.saleConfirmation.saving = false;
         render();
       }
     });
@@ -1141,13 +1350,17 @@ function bindPageEvents() {
     const storeInput = leadFilters.querySelector('#lead-store-filter');
     const startInput = leadFilters.querySelector('#lead-start-date');
     const endInput = leadFilters.querySelector('#lead-end-date');
+    const saleInput = leadFilters.querySelector('#lead-sale-filter');
+    const cityInput = leadFilters.querySelector('#lead-city-filter');
     const clearButton = leadFilters.querySelector('[data-lead-filters-clear]');
     const applyLeadFilters = () => {
       state.leadFilters = {
         query: queryInput?.value || '',
         storeId: storeInput?.value || '',
         startDate: startInput?.value || '',
-        endDate: endInput?.value || ''
+        endDate: endInput?.value || '',
+        saleStatus: saleInput?.value || '',
+        city: cityInput?.value || ''
       };
       const visibleIds = new Set(filterLeadRecords(state.leads, state.leadFilters).map((lead) => lead.id));
       document.querySelectorAll('[data-lead-list-row]').forEach((row) => { row.hidden = !visibleIds.has(row.dataset.openLeadId); });
@@ -1158,9 +1371,9 @@ function bindPageEvents() {
       if (clearButton) clearButton.disabled = !Object.values(state.leadFilters).some(Boolean);
     };
     queryInput?.addEventListener('input', applyLeadFilters);
-    [storeInput, startInput, endInput].forEach((input) => input?.addEventListener('change', applyLeadFilters));
+    [storeInput, startInput, endInput, saleInput, cityInput].forEach((input) => input?.addEventListener('change', applyLeadFilters));
     clearButton?.addEventListener('click', () => {
-      [queryInput, storeInput, startInput, endInput].forEach((input) => { if (input) input.value = ''; });
+      [queryInput, storeInput, startInput, endInput, saleInput, cityInput].forEach((input) => { if (input) input.value = ''; });
       applyLeadFilters();
       queryInput?.focus();
     });
@@ -1612,7 +1825,7 @@ function bindPageEvents() {
 
 function subscribeProfileLeads() {
   state.unsubscribeLeads?.();
-  state.unsubscribeLeads = subscribeToLeads(
+  const unsubscribeLeads = subscribeToLeads(
     state.profile,
     (leads) => {
       state.leads = leads;
@@ -1625,6 +1838,15 @@ function subscribeProfileLeads() {
       render();
     }
   );
+  const unsubscribeStatuses = subscribeToManualSaleStatuses(
+    state.profile,
+    (records) => { state.saleStatuses = records; render(); },
+    () => { state.saleStatuses = []; }
+  );
+  state.unsubscribeLeads = () => {
+    unsubscribeLeads?.();
+    unsubscribeStatuses?.();
+  };
 }
 
 function stopOfflineCaptureSubscription() {
@@ -2084,6 +2306,25 @@ async function handleAction(action) {
 
 export async function startApp() {
   document.addEventListener('click', async (event) => {
+    const openManualSaleButton = event.target.closest('[data-open-manual-sale]');
+    if (openManualSaleButton && !openManualSaleButton.disabled) {
+      const leadId = openManualSaleButton.dataset.openManualSale;
+      const lead = [...state.leads, ...state.management.records, ...state.appointments.records, state.management.activeLead]
+        .find((item) => item?.id === leadId);
+      if (!canConfirmManualSale(state.profile, lead)) return;
+      state.saleConfirmation = { leadId, loading: true, saving: false, error: '', record: null, editingId: '', formOpen: false, action: '', actionPurchaseId: '' };
+      render();
+      try {
+        state.saleConfirmation.record = await loadLeadSaleTracking(state.profile, lead);
+      } catch (error) {
+        state.saleConfirmation.error = error?.code === 'permission-denied'
+          ? 'Seu perfil nao pode consultar esta confirmacao.' : 'Nao foi possivel carregar a confirmacao.';
+      } finally {
+        state.saleConfirmation.loading = false;
+        render();
+      }
+      return;
+    }
     const quickWalkInCreateButton = event.target.closest('[data-walk-in-quick-create]');
     if (quickWalkInCreateButton && hasAccess('leads.create')) {
       const storeId = state.walkIns.storeId || allowedWalkInStores()[0]?.id || '';

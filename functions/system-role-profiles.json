@@ -1,5 +1,5 @@
 {
-  "permissionSchemaVersion": 7,
+  "permissionSchemaVersion": 8,
   "legacyProfileAliases": {
     "system-receptionist": "system-captor",
     "system-telemarketing": "system-captor",
@@ -27,7 +27,8 @@
         "appointments.attendance",
         "walkins.manage",
         "followups.team",
-        "external.operations.read"
+        "external.operations.read",
+        "sales.confirm_manual"
       ]
     },
     {
@@ -87,7 +88,8 @@
         "goals.manage",
         "dashboard.view",
         "external.operations.read",
-        "leads.export"
+        "leads.export",
+        "sales.confirm_manual"
       ]
     },
     {
@@ -116,7 +118,8 @@
         "leads.delete",
         "schedule.manage",
         "access.manage",
-        "roles.manage"
+        "roles.manage",
+        "sales.confirm_manual"
       ]
     }
   ]

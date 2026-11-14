@@ -17,6 +17,8 @@ function accessState(overrides = {}) {
     error: '',
     query: '',
     storeFilter: '',
+    roleFilter: '',
+    statusFilter: '',
     editorOpen: false,
     editingEmail: '',
     pendingDeleteEmail: '',
@@ -47,8 +49,8 @@ afterEach(() => vi.unstubAllGlobals());
 describe('access feature modules', () => {
   it('filters existing access rows without replacing the search field', () => {
     const rows = [
-      { dataset: { accessSearchText: 'maria silva maria@example.com', accessStoreIds: 'loja-02' }, hidden: false },
-      { dataset: { accessSearchText: 'joao souza joao@example.com', accessStoreIds: 'loja-06' }, hidden: false }
+      { dataset: { accessSearchText: 'maria silva maria@example.com', accessStoreIds: 'loja-02', accessRoleProfileId: 'system-manager', accessActive: 'true' }, hidden: false },
+      { dataset: { accessSearchText: 'joao souza joao@example.com', accessStoreIds: 'loja-06', accessRoleProfileId: 'system-captor', accessActive: 'false' }, hidden: false }
     ];
     const count = { textContent: '' };
     const empty = { hidden: true };
@@ -62,7 +64,7 @@ describe('access feature modules', () => {
       })[selector] || null
     };
 
-    applyAccessListFilters({ access: { query: 'Maria', storeFilter: 'loja-02' } }, root);
+    applyAccessListFilters({ access: { query: 'Maria', storeFilter: 'loja-02', roleFilter: 'system-manager', statusFilter: 'active' } }, root);
 
     expect(rows.map((row) => row.hidden)).toEqual([false, true]);
     expect(count.textContent).toBe('1 de 2');
@@ -106,6 +108,8 @@ describe('access feature modules', () => {
     expect(markup).toContain('value="loja-06" checked');
     expect(markup).toContain('data-access-search');
     expect(markup).toContain('data-access-store-filter');
+    expect(markup).toContain('data-access-role-filter');
+    expect(markup).toContain('data-access-status-filter');
     expect(markup).toContain('class="access-toolbar-actions"');
     expect(markup).toContain('class="access-total-summary"');
     expect(markup).not.toContain('Acessos cadastrados');
@@ -138,12 +142,14 @@ describe('access feature modules', () => {
 
   it('filters collaborators by an accent-insensitive name, email, and store', () => {
     const accesses = [
-      { displayName: 'Márcia Souza', email: 'marcia@example.com', role: 'captor', storeIds: ['loja-02'] },
-      { displayName: 'Luan Israel', email: 'luan@example.com', role: 'captor', storeIds: ['loja-04'] }
+      { displayName: 'Márcia Souza', email: 'marcia@example.com', role: 'manager', roleProfileId: 'system-manager', storeIds: ['loja-02'], active: true },
+      { displayName: 'Luan Israel', email: 'luan@example.com', role: 'captor', roleProfileId: 'system-external-leader', storeIds: ['loja-04'], active: false }
     ];
     expect(filterTeamAccesses(accesses, { query: 'marcia' })).toEqual([accesses[0]]);
     expect(filterTeamAccesses(accesses, { query: 'luan@' })).toEqual([accesses[1]]);
     expect(filterTeamAccesses(accesses, { storeId: 'loja-04' })).toEqual([accesses[1]]);
+    expect(filterTeamAccesses(accesses, { roleProfileId: 'system-manager' })).toEqual([accesses[0]]);
+    expect(filterTeamAccesses(accesses, { status: 'inactive' })).toEqual([accesses[1]]);
   });
 
   it('renders system roles and the custom-role editor', () => {

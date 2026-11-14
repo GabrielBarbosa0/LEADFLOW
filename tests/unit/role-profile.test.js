@@ -11,8 +11,8 @@ import {
 
 describe('role profiles', () => {
   it('uses a versioned permission schema shared with Firebase Functions', () => {
-    expect(PERMISSION_SCHEMA_VERSION).toBe(7);
-    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 7)).toBe(true);
+    expect(PERMISSION_SCHEMA_VERSION).toBe(8);
+    expect(SYSTEM_ROLE_PROFILES.every((profile) => profile.permissionSchemaVersion === 8)).toBe(true);
     expect(SYSTEM_ROLE_PROFILES.map((profile) => profile.name)).toEqual([
       'Colaborador Interno',
       'Colaborador Externo',
@@ -44,6 +44,7 @@ describe('role profiles', () => {
     expect(external.permissions).toContain('appointments.view');
     expect(external.permissions).not.toContain('appointments.confirmations');
     expect(external.permissions).not.toContain('appointments.attendance');
+    expect(external.permissions).not.toContain('sales.confirm_manual');
     expect(external.permissions).not.toContain('walkins.manage');
     expect(external.permissions).not.toContain('management.view');
     expect(external.permissions).not.toContain('leads.view_stores');
@@ -61,7 +62,7 @@ describe('role profiles', () => {
     expect(internal.permissions).toEqual(expect.arrayContaining([
       'leads.create', 'leads.view_stores', 'management.view', 'appointments.view',
       'appointments.confirmations', 'appointments.attendance', 'appointments.cancel',
-      'walkins.manage', 'followups.team', 'external.operations.read'
+      'walkins.manage', 'followups.team', 'external.operations.read', 'sales.confirm_manual'
     ]));
     expect(internal.permissions).not.toContain('dashboard.view');
     expect(internal.permissions).not.toContain('leads.export');
@@ -102,6 +103,7 @@ describe('role profiles', () => {
     expect(manager).toMatchObject({ name: 'Gestor', baseRole: 'manager' });
     expect(manager.permissions).toContain('external.operations.read');
     expect(manager.permissions).toContain('appointments.confirmations');
+    expect(manager.permissions).toContain('sales.confirm_manual');
   });
 
   it('keeps internal permissions as a superset of the external profile', () => {

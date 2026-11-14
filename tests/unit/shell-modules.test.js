@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appShellView, currentPageTitle, loginView } from '../../src/app/shell/app-shell-view.js';
+import { appShellView, currentPageTitle, headerView, loginView } from '../../src/app/shell/app-shell-view.js';
 import { homeView } from '../../src/app/shell/home-view.js';
 import { bottomNavigation } from '../../src/app/shell/navigation.js';
 
@@ -127,6 +127,28 @@ describe('application shell modules', () => {
     expect(markup).toContain('LEADFLOW');
     expect(markup).toContain('Conteúdo');
     expect(markup).toContain('bottom-nav');
+  });
+
+  it('renders an ordered dropdown for access to multiple stores', () => {
+    const markup = headerView({
+      state: { ...state, profile: { ...profile, storeIds: ['loja-06', 'loja-02'] } },
+      canManage: () => true
+    });
+
+    expect(markup).toContain('<details class="store-menu">');
+    expect(markup).toContain('<span>Lojas</span>');
+    expect(markup.indexOf('<strong>Loja 02</strong>')).toBeLessThan(markup.indexOf('<strong>Loja 06</strong>'));
+    expect(markup).toContain('Surubim');
+  });
+
+  it('labels full store access as Todas and keeps a single store compact', () => {
+    const allStores = headerView({ state: { ...state, profile: { ...profile, role: 'admin' } }, canManage: () => true });
+    const singleStore = headerView({ state, canManage: () => true });
+
+    expect(allStores).toContain('<span>Todas</span>');
+    expect(allStores.match(/class="store-menu-item"/g)).toHaveLength(4);
+    expect(singleStore).toContain('<span>Loja 06</span>');
+    expect(singleStore).not.toContain('<details class="store-menu">');
   });
 
   it('uses the full-width layout only for the Kanban route', () => {

@@ -52,7 +52,7 @@ describe('reports feature modules', () => {
     expect(markup).toContain('Leads encontrados');
     expect(markup).toContain('Exportar CSV');
     expect(markup).toContain('Arquivar leads');
-    expect(markup).toContain('Arquivar selecionados');
+    expect(markup).toContain('>Arquivar</span>');
     expect(markup).not.toContain('dashboard-panel');
   });
 });

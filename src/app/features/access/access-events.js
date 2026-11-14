@@ -83,16 +83,20 @@ function syncAccessStorePicker(form, state, creatingAccess) {
 export function applyAccessListFilters(state, root = document) {
   const query = normalizeSearchText(state.access.query?.trim());
   const storeId = state.access.storeFilter || '';
+  const roleProfileId = state.access.roleFilter || '';
+  const status = state.access.statusFilter || '';
   const rows = [...root.querySelectorAll('[data-access-filter-row]')];
   let visibleCount = 0;
   rows.forEach((row) => {
     const storeIds = row.dataset.accessStoreIds?.split(',').filter(Boolean) || [];
     const visible = (!query || row.dataset.accessSearchText.includes(query))
-      && (!storeId || storeIds.includes(storeId));
+      && (!storeId || storeIds.includes(storeId))
+      && (!roleProfileId || row.dataset.accessRoleProfileId === roleProfileId)
+      && (!status || (status === 'active') === (row.dataset.accessActive === 'true'));
     row.hidden = !visible;
     if (visible) visibleCount += 1;
   });
-  const filtersActive = Boolean(query || storeId);
+  const filtersActive = Boolean(query || storeId || roleProfileId || status);
   const count = root.querySelector('[data-access-filter-count]');
   if (count) count.textContent = filtersActive ? `${visibleCount} de ${rows.length}` : String(rows.length);
   const empty = root.querySelector('[data-access-filter-empty]');
@@ -109,6 +113,14 @@ export function bindAccessEvents({ state, render, showToast }) {
   });
   document.querySelector('[data-access-store-filter]')?.addEventListener('change', (event) => {
     state.access.storeFilter = event.target.value;
+    applyAccessListFilters(state);
+  });
+  document.querySelector('[data-access-role-filter]')?.addEventListener('change', (event) => {
+    state.access.roleFilter = event.target.value;
+    applyAccessListFilters(state);
+  });
+  document.querySelector('[data-access-status-filter]')?.addEventListener('change', (event) => {
+    state.access.statusFilter = event.target.value;
     applyAccessListFilters(state);
   });
 
@@ -212,6 +224,8 @@ export async function handleAccessClick(event, { state, render, showToast }) {
   if (event.target.closest('[data-access-clear-filters]')) {
     state.access.query = '';
     state.access.storeFilter = '';
+    state.access.roleFilter = '';
+    state.access.statusFilter = '';
     render();
     return true;
   }

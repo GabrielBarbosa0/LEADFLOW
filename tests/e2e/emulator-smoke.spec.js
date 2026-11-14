@@ -15,6 +15,13 @@ test('authenticates an administrator through the Firebase Emulator', async ({ pa
   await signIn(page, 'admin@leadflow.test');
 
   await expect(page.getByText('Administrador Teste')).toBeVisible();
+  const storeMenu = page.locator('.store-menu');
+  await expect(storeMenu.locator('summary')).toContainText('Todas');
+  await expect(storeMenu.locator('summary svg.lucide-chevron-down')).toBeVisible();
+  await storeMenu.locator('summary').click();
+  await expect(storeMenu.locator('.store-menu-popover')).toBeVisible();
+  await expect(storeMenu.locator('.store-menu-item')).toHaveCount(4);
+  await expect(storeMenu.locator('.store-menu-item svg.lucide-building').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /Acessos da equipe/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Configurações/ })).toBeVisible();
 
@@ -37,6 +44,27 @@ test('keeps report search and appointment actions aligned across responsive widt
 
   for (const width of [375, 589, 1024]) {
     await page.setViewportSize({ width, height: 898 });
+    await page.goto('/#/leads');
+    await expect(page.locator('#lead-store-filter')).toContainText('Todas as lojas');
+    const cityFilter = page.locator('#lead-city-filter');
+    await expect(cityFilter).toContainText('Cidade de Teste');
+    await cityFilter.selectOption({ label: 'Cidade de Teste' });
+    await expect(page.locator('[data-lead-filters-clear]')).toBeEnabled();
+    await page.locator('[data-lead-filters-clear]').click();
+    await expect(cityFilter).toHaveValue('');
+    const leadFilterBoxes = await page.locator('.lead-list-filters > .field').evaluateAll((fields) => fields.map((field) => {
+      const { x, y, width: fieldWidth } = field.getBoundingClientRect();
+      return { x, y, width: fieldWidth };
+    }));
+    expect(leadFilterBoxes).toHaveLength(5);
+    if (width > 680) {
+      expect(Math.max(...leadFilterBoxes.map(({ y }) => y)) - Math.min(...leadFilterBoxes.map(({ y }) => y))).toBeLessThanOrEqual(1);
+      expect(Math.max(...leadFilterBoxes.map(({ width: fieldWidth }) => fieldWidth)) - Math.min(...leadFilterBoxes.map(({ width: fieldWidth }) => fieldWidth))).toBeLessThanOrEqual(1);
+    } else {
+      expect(leadFilterBoxes[1].y).toBeGreaterThan(leadFilterBoxes[0].y);
+      expect(Math.abs(leadFilterBoxes[3].y - leadFilterBoxes[4].y)).toBeLessThanOrEqual(1);
+    }
+
     await page.goto('/#/management');
     await expect(page.locator('#management-search')).toBeVisible();
 
@@ -242,6 +270,163 @@ test('loads the real appointment flow for an internal collaborator', async ({ pa
   }
 });
 
+test('registers multiple purchases with responsible collaborators and preserves cancellation history', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'Fluxo transacional executado uma vez por seed.');
+  await signIn(page, 'colaborador@leadflow.test');
+
+  await page.goto('/#/leads');
+  await page.getByRole('button', { name: /Ver cadastro de Cliente Encaixe Aguardando/ }).click();
+  const leadDetail = page.locator('#edit-lead-form');
+  const registerSaleButton = leadDetail.getByRole('button', { name: 'Registrar compra' });
+  await expect(registerSaleButton).toBeVisible();
+  await expect(registerSaleButton).toHaveClass(/button-secondary/);
+  await expect(registerSaleButton).not.toHaveClass(/button-primary/);
+  await expect(registerSaleButton.locator('svg.lucide-badge-dollar-sign')).toBeVisible();
+  await registerSaleButton.click();
+
+  const saleDialog = page.locator('#manual-sale-dialog');
+  await expect(saleDialog).toBeVisible();
+  await expect(saleDialog.locator('.manual-sale-icon svg.lucide-badge-dollar-sign')).toBeVisible();
+  await expect(saleDialog.getByRole('heading', { name: 'Compras de Cliente Encaixe Aguardando' })).toBeVisible();
+  await expect(page.locator('#manual-sale-form-dialog')).toHaveCount(0);
+  await saleDialog.getByRole('button', { name: 'Nova compra' }).click();
+
+  let saleFormDialog = page.locator('#manual-sale-form-dialog');
+  await expect(saleFormDialog.getByRole('heading', { name: 'Registrar nova compra' })).toBeVisible();
+  await expect(saleFormDialog.getByLabel('OS ou pedido')).toBeVisible();
+  await expect(saleFormDialog.getByLabel('Valor da venda')).toBeVisible();
+  const [orderBox, valueBox] = await Promise.all([
+    saleFormDialog.getByLabel('OS ou pedido').boundingBox(),
+    saleFormDialog.getByLabel('Valor da venda').boundingBox()
+  ]);
+  expect(orderBox).not.toBeNull();
+  expect(valueBox).not.toBeNull();
+  expect(Math.abs(orderBox.y - valueBox.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(orderBox.width - valueBox.width)).toBeLessThanOrEqual(1);
+  await saleFormDialog.getByLabel('OS ou pedido').fill('E2E-001');
+  await saleFormDialog.getByLabel('Valor da venda').fill('450,90');
+  await saleFormDialog.getByLabel('Observação').fill('Primeira compra do teste automatizado.');
+  await saleFormDialog.getByRole('button', { name: 'Registrar compra' }).click();
+
+  await expect(page.getByText('Compra registrada e vinculada ao colaborador.')).toBeVisible();
+  await expect(page.locator('#manual-sale-form-dialog')).toHaveCount(0);
+  await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(1);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 450,90', { exact: true })).toBeVisible();
+  await expect(saleDialog.getByRole('button', { name: 'Cancelar compra' }).locator('svg.lucide-circle-minus')).toBeVisible();
+
+  await saleDialog.getByRole('button', { name: 'Editar compra' }).click();
+  saleFormDialog = page.locator('#manual-sale-form-dialog');
+  await expect(saleFormDialog.getByRole('heading', { name: 'Editar compra' })).toBeVisible();
+  await expect(saleFormDialog.getByLabel('OS ou pedido')).toHaveValue('E2E-001');
+  await saleFormDialog.getByRole('button', { name: 'Fechar formulário de compra' }).click();
+  await expect(page.locator('#manual-sale-form-dialog')).toHaveCount(0);
+
+  await saleDialog.getByRole('button', { name: 'Nova compra' }).click();
+  saleFormDialog = page.locator('#manual-sale-form-dialog');
+  await saleFormDialog.getByLabel('Responsável pela venda').selectOption({ label: 'Colaborador Interno Teste' });
+  await saleFormDialog.getByLabel('OS ou pedido').fill('E2E-002');
+  await saleFormDialog.getByLabel('Valor da venda').fill('275,00');
+  await saleFormDialog.getByLabel('Observação').fill('Segunda compra vinculada a outro colaborador.');
+  await saleFormDialog.getByRole('button', { name: 'Registrar compra' }).click();
+
+  await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(2);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('2', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 725,90', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-list').getByText('Colaborador Interno Teste', { exact: true })).toBeVisible();
+
+  await saleDialog.getByRole('button', { name: 'Cancelar compra' }).first().click();
+  let actionDialog = page.locator('#manual-sale-action-dialog');
+  await expect(actionDialog.getByRole('heading', { name: 'Cancelar esta compra?' })).toBeVisible();
+  await actionDialog.getByRole('button', { name: 'Manter compra' }).click();
+  await expect(page.locator('#manual-sale-action-dialog')).toHaveCount(0);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('2', { exact: true })).toBeVisible();
+
+  await saleDialog.getByRole('button', { name: 'Cancelar compra' }).first().click();
+  actionDialog = page.locator('#manual-sale-action-dialog');
+  await actionDialog.getByRole('button', { name: 'Cancelar compra' }).click();
+  await expect(page.getByText('Compra cancelada. O histórico foi preservado.')).toBeVisible();
+  await expect(saleDialog.getByText('Cancelada', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(2);
+  const cancelledCard = saleDialog.locator('.manual-purchase-card.is-cancelled');
+  await expect(cancelledCard.getByRole('button', { name: 'Editar compra' })).toBeVisible();
+  await expect(cancelledCard.getByRole('button', { name: 'Reativar compra' })).toBeVisible();
+  await expect(saleDialog.getByRole('button', { name: 'Excluir compra' })).toHaveCount(2);
+
+  await cancelledCard.getByRole('button', { name: 'Editar compra' }).click();
+  saleFormDialog = page.locator('#manual-sale-form-dialog');
+  await saleFormDialog.getByLabel('Observação').fill('Compra cancelada revisada antes da reativação.');
+  await saleFormDialog.getByRole('button', { name: 'Atualizar compra' }).click();
+  await expect(saleDialog.locator('.manual-purchase-card.is-cancelled')).toHaveCount(1);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
+
+  await saleDialog.getByRole('button', { name: 'Reativar compra' }).click();
+  actionDialog = page.locator('#manual-sale-action-dialog');
+  await expect(actionDialog.getByRole('heading', { name: 'Reativar esta compra?' })).toBeVisible();
+  await actionDialog.getByRole('button', { name: 'Reativar compra' }).click();
+  await expect(saleDialog.locator('.manual-purchase-card.is-cancelled')).toHaveCount(0);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('2', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 725,90', { exact: true })).toBeVisible();
+
+  const secondPurchase = saleDialog.locator('.manual-purchase-card').filter({ hasText: 'E2E-002' });
+  await secondPurchase.getByRole('button', { name: 'Excluir compra' }).click();
+  actionDialog = page.locator('#manual-sale-action-dialog');
+  await expect(actionDialog.getByRole('heading', { name: 'Excluir esta compra?' })).toBeVisible();
+  await actionDialog.getByRole('button', { name: 'Excluir compra' }).click();
+  await expect(saleDialog.locator('.manual-purchase-card')).toHaveCount(1);
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('1', { exact: true })).toBeVisible();
+  await expect(saleDialog.locator('.manual-purchase-summary').getByText('R$ 450,90', { exact: true })).toBeVisible();
+
+  await saleDialog.getByRole('button', { name: 'Fechar compras' }).click();
+  const purchaseSummaryShortcut = page.locator('.lead-detail-summary').getByRole('button', { name: 'Ver compras do cliente' });
+  await expect(purchaseSummaryShortcut).toContainText('1 confirmada');
+  await purchaseSummaryShortcut.click();
+  await expect(saleDialog).toBeVisible();
+});
+
+test('keeps the purchases dialog responsive on mobile and desktop', async ({ page }, testInfo) => {
+  await signIn(page, 'colaborador@leadflow.test');
+  await page.goto('/#/leads');
+  await page.getByRole('button', { name: /Ver cadastro de Cliente Encaixe Aguardando/ }).click();
+  await page.locator('#edit-lead-form').getByRole('button', { name: /Registrar compra|Ver compras do cliente/ }).click();
+
+  const historyDialog = page.locator('#manual-sale-dialog');
+  await expect(historyDialog).toBeVisible();
+  await expect(historyDialog).toHaveCSS('height', '544px');
+  await expect(historyDialog.getByLabel('Data da compra')).toHaveCount(0);
+  expect(await historyDialog.locator('.manual-purchase-scroll').evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
+  await historyDialog.getByRole('button', { name: 'Nova compra' }).click();
+
+  const formDialog = page.locator('#manual-sale-form-dialog');
+  await expect(formDialog.getByLabel('Data da compra')).toBeVisible();
+  await expect(formDialog.getByLabel('Responsável pela venda')).toBeVisible();
+  const formDialogSize = await formDialog.boundingBox();
+  expect(formDialogSize).not.toBeNull();
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await formDialog.click({ position: { x: formDialogSize.width - 8, y: formDialogSize.height / 2 } });
+  }
+  await expect(formDialog).toBeVisible();
+  await expect(formDialog.getByLabel('Data da compra')).toBeVisible();
+  const [dateBox, responsibleBox, dialogBox] = await Promise.all([
+    formDialog.getByLabel('Data da compra').boundingBox(),
+    formDialog.getByLabel('Responsável pela venda').boundingBox(),
+    formDialog.boundingBox()
+  ]);
+  expect(dateBox).not.toBeNull();
+  expect(responsibleBox).not.toBeNull();
+  expect(dialogBox).not.toBeNull();
+  expect(dialogBox.x).toBeGreaterThanOrEqual(0);
+  expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(page.viewportSize().width + 1);
+  expect(await formDialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  if (testInfo.project.name === 'mobile-chrome') {
+    expect(Math.abs(dateBox.x - responsibleBox.x)).toBeLessThanOrEqual(1);
+    expect(responsibleBox.y).toBeGreaterThan(dateBox.y + dateBox.height);
+  } else {
+    expect(Math.abs(dateBox.y - responsibleBox.y)).toBeLessThanOrEqual(1);
+  }
+});
+
 test('keeps the confirmation period beside a compact back button', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
   await page.locator('[data-route="confirmations"]').click();
@@ -253,14 +438,33 @@ test('keeps the confirmation period beside a compact back button', async ({ page
   await expect(backButton).toBeVisible();
   await expect(backButton).toHaveAttribute('aria-label', 'Voltar ao início');
   await expect(backButton.locator('span')).toHaveCount(0);
+  const metrics = page.locator('.confirmation-metrics .metric');
+  const summary = page.locator('.confirmation-metrics');
+  await expect(metrics).toHaveCount(3);
   await expect.poll(async () => {
-    const [periodBox, backBox] = await Promise.all([period.boundingBox(), backButton.boundingBox()]);
-    if (!periodBox || !backBox) return null;
+    const [periodBox, backBox, summaryBox, firstBox, secondBox, thirdBox] = await Promise.all([
+      period.boundingBox(),
+      backButton.boundingBox(),
+      summary.boundingBox(),
+      metrics.nth(0).boundingBox(),
+      metrics.nth(1).boundingBox(),
+      metrics.nth(2).boundingBox()
+    ]);
+    if (!periodBox || !backBox || !summaryBox || !firstBox || !secondBox || !thirdBox) return null;
     return {
       sameRow: Math.abs(periodBox.y - backBox.y) < 2,
-      backWidth: Math.round(backBox.width)
+      backWidth: Math.round(backBox.width),
+      cardsSameRow: Math.max(firstBox.y, secondBox.y, thirdBox.y) - Math.min(firstBox.y, secondBox.y, thirdBox.y) < 2,
+      cardsSameWidth: Math.max(firstBox.width, secondBox.width, thirdBox.width) - Math.min(firstBox.width, secondBox.width, thirdBox.width) < 2,
+      fillsSummary: Math.abs((thirdBox.x + thirdBox.width) - (summaryBox.x + summaryBox.width)) < 2
     };
-  }).toEqual({ sameRow: true, backWidth: 54 });
+  }).toEqual({
+    sameRow: true,
+    backWidth: 54,
+    cardsSameRow: true,
+    cardsSameWidth: true,
+    fillsSummary: true
+  });
 });
 
 test('validates and completes appointment cancellation for an internal collaborator', async ({ page }, testInfo) => {
@@ -297,9 +501,23 @@ test('lets an internal collaborator formally reschedule a legacy cancelled appoi
 
   await page.goto('/#/search');
   await expect(page.getByLabel('Nome ou CPF')).toBeVisible();
+  const searchButton = page.getByRole('button', { name: 'Pesquisar' });
+  await expect(searchButton).toBeVisible();
+  const searchDimensions = await page.locator('#lead-appointment-search').evaluate((form) => {
+    const inputBox = form.querySelector('input').getBoundingClientRect();
+    const buttonBox = form.querySelector('button[type="submit"]').getBoundingClientRect();
+    return {
+      centerDifference: Math.abs((inputBox.y + inputBox.height / 2) - (buttonBox.y + buttonBox.height / 2)),
+      buttonWidth: buttonBox.width
+    };
+  });
+  expect(searchDimensions.centerDifference).toBeLessThanOrEqual(1);
+  expect(searchDimensions.buttonWidth).toBeLessThanOrEqual(48);
+  await expect(searchButton.locator('svg.lucide-search')).toBeVisible();
+  await expect(searchButton.locator('span')).toHaveCount(0);
   await page.waitForTimeout(750);
   await page.getByLabel('Nome ou CPF').fill('Cliente Cancelado');
-  await page.getByRole('button', { name: 'Pesquisar' }).click();
+  await searchButton.click();
   await expect(page.getByText('Cancelado', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Abrir cadastro de Cliente Cancelado' }).click();
 
@@ -364,11 +582,30 @@ test('lets a manager reschedule a legacy appointment from the exam agenda', asyn
   await expect(page.getByText('Agendamento reagendado e histórico atualizado.')).toBeVisible();
 });
 
-test('shows the simplified lead history without a duplicated funnel heading', async ({ page }) => {
+test('keeps the lead summary and actions responsive without duplicating the history heading', async ({ page }) => {
   await signIn(page, 'admin@leadflow.test');
 
   await page.getByRole('button', { name: /Agenda de exames/ }).click();
   await page.getByRole('button', { name: /Abrir cadastro de/ }).first().click();
+  const summaryItems = page.locator('#lead-detail-dialog > .lead-detail-summary > *');
+  await expect(summaryItems).toHaveCount(4);
+  if ((page.viewportSize()?.width || 0) > 760) {
+    const itemRows = await summaryItems.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().y));
+    expect(Math.max(...itemRows) - Math.min(...itemRows)).toBeLessThanOrEqual(1);
+  }
+  const actionButtons = page.locator('#edit-lead-form .lead-detail-actions > .button');
+  expect(await actionButtons.count()).toBeGreaterThanOrEqual(2);
+  const actionBoxes = await actionButtons.evaluateAll((buttons) => buttons.slice(0, 2).map((button) => {
+    const { x, y, width } = button.getBoundingClientRect();
+    return { x, y, width };
+  }));
+  if ((page.viewportSize()?.width || 0) > 600) {
+    expect(Math.abs(actionBoxes[0].y - actionBoxes[1].y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(actionBoxes[0].width - actionBoxes[1].width)).toBeLessThanOrEqual(1);
+  } else {
+    expect(actionBoxes[1].y).toBeGreaterThan(actionBoxes[0].y);
+    expect(Math.abs(actionBoxes[0].x - actionBoxes[1].x)).toBeLessThanOrEqual(1);
+  }
   await page.getByText('Ver histórico', { exact: true }).click();
 
   const dialog = page.locator('#lead-history-dialog');
@@ -491,6 +728,21 @@ test('renders the compact registration fields and product payment options', asyn
   await page.getByLabel('Loja de destino').selectOption('loja-02');
   await expect(page.getByLabel('Interesse principal')).toBeEnabled();
 
+  const familyContactFields = page.locator('.credit-details-fields');
+  await expect(familyContactFields.getByLabel('Nome do pai (opcional)')).toBeVisible();
+  await expect(familyContactFields.getByLabel('Nome da mãe (opcional)')).toBeVisible();
+  await expect(familyContactFields.getByLabel('Telefone auxiliar (opcional)')).toBeVisible();
+  const [demographicBox, familyContactBox, preferredPostalBox] = await Promise.all([
+    page.locator('.demographic-fields').boundingBox(),
+    familyContactFields.boundingBox(),
+    page.locator('.preferred-postal-fields').boundingBox()
+  ]);
+  expect(demographicBox).not.toBeNull();
+  expect(familyContactBox).not.toBeNull();
+  expect(preferredPostalBox).not.toBeNull();
+  expect(familyContactBox.y).toBeGreaterThan(demographicBox.y);
+  expect(preferredPostalBox.y).toBeGreaterThan(familyContactBox.y);
+
   const examPrice = page.getByLabel('Valor do exame');
   expect(Number(await examPrice.inputValue())).toBeGreaterThan(0);
   await expect(examPrice).toHaveCSS('border-top-width', '0px');
@@ -575,6 +827,59 @@ test('opens the lead archive workflow only from active management records', asyn
   await expect(dialog.getByRole('heading', { name: 'Arquivar leads' })).toBeVisible();
   await expect(dialog.getByText('O histórico é preservado.')).toBeVisible();
   await expect(dialog.locator('input[name="leadId"]').first()).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Fechar' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Cancelar' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Arquivar' })).toBeVisible();
+  if ((page.viewportSize()?.width || 0) <= 600) {
+    const viewportWidth = page.viewportSize().width;
+    const horizontalBounds = await dialog.evaluate((element) => ({
+      left: element.getBoundingClientRect().left,
+      right: element.getBoundingClientRect().right,
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth
+    }));
+    expect(horizontalBounds.left).toBeGreaterThanOrEqual(0);
+    expect(horizontalBounds.right).toBeLessThanOrEqual(viewportWidth);
+    expect(horizontalBounds.scrollWidth).toBeLessThanOrEqual(horizontalBounds.clientWidth + 1);
+  }
+});
+
+test('keeps the kanban usable with one swipeable column on mobile', async ({ page }) => {
+  await signIn(page, 'admin@leadflow.test');
+  await page.getByRole('button', { name: /Painel de gestão/ }).click();
+  await page.getByRole('button', { name: 'Kanban' }).click();
+  await expect(page).toHaveURL(/#\/kanban$/);
+
+  const board = page.getByRole('region', { name: 'Kanban do funil' });
+  const columns = board.locator('.kanban-column');
+  await expect(board).toBeVisible();
+  await expect(columns.first()).toBeVisible();
+
+  if ((page.viewportSize()?.width || 0) <= 600) {
+    const dimensions = await board.evaluate((element) => {
+      const firstColumn = element.querySelector('.kanban-column');
+      const boardBounds = element.getBoundingClientRect();
+      const columnBounds = firstColumn.getBoundingClientRect();
+      return {
+        boardLeft: boardBounds.left,
+        boardRight: boardBounds.right,
+        boardWidth: boardBounds.width,
+        columnWidth: columnBounds.width,
+        overflowX: getComputedStyle(element).overflowX,
+        dockDisplay: getComputedStyle(document.querySelector('.kanban-scrollbar-dock')).display
+      };
+    });
+    expect(dimensions.boardLeft).toBeGreaterThanOrEqual(0);
+    expect(dimensions.boardRight).toBeLessThanOrEqual(page.viewportSize().width);
+    expect(dimensions.columnWidth).toBeGreaterThanOrEqual(dimensions.boardWidth - 4);
+    expect(dimensions.overflowX).toBe('auto');
+    expect(dimensions.dockDisplay).toBe('none');
+
+    await board.evaluate((element) => { element.scrollLeft = element.clientWidth; });
+    await expect.poll(() => board.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  } else {
+    await expect(page.locator('.kanban-scrollbar-dock')).toBeVisible();
+  }
 });
 
 test('keeps team access cards compact on mobile', async ({ page }) => {
@@ -592,16 +897,34 @@ test('keeps team access cards compact on mobile', async ({ page }) => {
   expect(roleOptions).toEqual(['Colaborador Interno', 'Colaborador Externo', 'MEI', 'Gestor', 'Administrador']);
   await page.locator('[data-access-editor-close]').first().click();
 
+  const roleFilter = page.locator('[data-access-role-filter]');
+  const statusFilter = page.locator('[data-access-status-filter]');
+  const clearFilters = page.locator('[data-access-clear-filters]');
+  await expect(roleFilter).toContainText('Colaborador Externo');
+  await roleFilter.selectOption({ label: 'Colaborador Externo' });
+  await expect(page.locator('.access-row:visible')).toHaveCount(1);
+  await expect(page.locator('.access-row:visible')).toContainText('Colaborador Externo Teste');
+  await clearFilters.click();
+  await statusFilter.selectOption('inactive');
+  await expect(page.locator('.access-row:visible')).toHaveCount(1);
+  await expect(page.locator('.access-row:visible')).toContainText('Usuario Bloqueado');
+  await clearFilters.click();
+
   if ((page.viewportSize()?.width || 0) <= 600) {
     const cardBox = await firstCard.boundingBox();
     const detailBoxes = await firstCard.locator('.access-detail').evaluateAll((details) => (
       details.map((detail) => detail.getBoundingClientRect()).map(({ x, y, width, height }) => ({ x, y, width, height }))
     ));
     const actionsBox = await firstCard.locator('.access-actions').boundingBox();
+    const filterBoxes = await page.locator('[data-access-role-filter], [data-access-status-filter], .access-clear-filters').evaluateAll((items) => (
+      items.map((item) => item.getBoundingClientRect()).map(({ bottom, right }) => ({ bottom, right }))
+    ));
 
     expect(cardBox.height).toBeLessThan(190);
     expect(Math.max(...detailBoxes.map((box) => box.y)) - Math.min(...detailBoxes.map((box) => box.y))).toBeLessThan(4);
     expect(actionsBox.y).toBeGreaterThan(detailBoxes[0].y + detailBoxes[0].height);
+    expect(Math.max(...filterBoxes.map((box) => box.bottom)) - Math.min(...filterBoxes.map((box) => box.bottom))).toBeLessThanOrEqual(1);
+    expect(Math.max(...filterBoxes.map((box) => box.right))).toBeLessThanOrEqual(page.viewportSize().width);
   }
 
   const searchInput = page.locator('[data-access-search]');

@@ -18,7 +18,7 @@ export function normalizeSearchText(value = '') {
     .toLocaleLowerCase('pt-BR');
 }
 
-export function filterTeamAccesses(accesses = [], { query = '', storeId = '' } = {}) {
+export function filterTeamAccesses(accesses = [], { query = '', storeId = '', roleProfileId = '', status = '' } = {}) {
   const normalizedQuery = normalizeSearchText(query.trim());
   return accesses.filter((item) => {
     const matchesQuery = !normalizedQuery
@@ -26,7 +26,15 @@ export function filterTeamAccesses(accesses = [], { query = '', storeId = '' } =
     const itemStoreIds = item.role === 'admin'
       ? STORES.map((store) => store.id)
       : [...new Set(item.storeIds || [item.storeId].filter(Boolean))];
-    return matchesQuery && (!storeId || itemStoreIds.includes(storeId));
+    const itemRoleProfileId = canonicalRoleProfileId(item.roleProfileId)
+      || systemRoleProfileForRole(item.role).id;
+    const matchesStatus = !status
+      || (status === 'active' && item.active)
+      || (status === 'inactive' && !item.active);
+    return matchesQuery
+      && (!storeId || itemStoreIds.includes(storeId))
+      && (!roleProfileId || itemRoleProfileId === roleProfileId)
+      && matchesStatus;
   });
 }
 
@@ -38,9 +46,11 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
   const { accesses, loading, saving, error } = access;
   const query = access.query || '';
   const storeFilter = access.storeFilter || '';
-  const visibleAccesses = filterTeamAccesses(accesses, { query, storeId: storeFilter });
+  const roleFilter = access.roleFilter || '';
+  const statusFilter = access.statusFilter || '';
+  const visibleAccesses = filterTeamAccesses(accesses, { query, storeId: storeFilter, roleProfileId: roleFilter, status: statusFilter });
   const visibleEmails = new Set(visibleAccesses.map((item) => item.email));
-  const filtersActive = Boolean(query.trim() || storeFilter);
+  const filtersActive = Boolean(query.trim() || storeFilter || roleFilter || statusFilter);
   const editingAccess = accesses.find((item) => item.email === access.editingEmail) || null;
   const deletingAccess = accesses.find((item) => item.email === access.pendingDeleteEmail) || null;
   const editingCurrentUser = editingAccess?.email === profile.email?.toLowerCase();
@@ -50,6 +60,7 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
   const selectedStoreIds = editingAccess?.storeIds || [selectedStoreId];
   const storeOptions = STORES.map((store) => `<option value="${store.id}" ${selectedStoreId === store.id ? 'selected' : ''}>${store.displayLabel}</option>`).join('');
   const storeFilterOptions = STORES.map((store) => `<option value="${store.id}" ${storeFilter === store.id ? 'selected' : ''}>${store.displayLabel}</option>`).join('');
+  const roleFilterOptions = roleProfiles.map((roleProfile) => `<option value="${escapeHtml(roleProfile.id)}" ${roleFilter === roleProfile.id ? 'selected' : ''}>${escapeHtml(roleProfile.name)}</option>`).join('');
   const storeChecks = STORES.map((store) => `<label class="access-store-option checkbox-label"><input type="checkbox" name="storeIds" value="${store.id}" ${selectedStoreIds.includes(store.id) ? 'checked' : ''} /><span>${store.label}</span></label>`).join('');
   const roleProfileOptions = roleProfiles.map((roleProfile) => `<option value="${escapeHtml(roleProfile.id)}" data-base-role="${escapeHtml(roleProfile.baseRole)}" ${selectedRoleProfileId === roleProfile.id ? 'selected' : ''}>${escapeHtml(roleProfile.name)}</option>`).join('');
   const rows = accesses.map((item) => {
@@ -58,7 +69,9 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
     const itemStoreIds = item.role === 'admin'
       ? STORES.map((store) => store.id)
       : [...new Set(item.storeIds || [item.storeId].filter(Boolean))];
-    return `<article class="access-row ${item.active ? '' : 'is-inactive'}" data-access-filter-row data-access-search-text="${escapeHtml(normalizeSearchText(`${item.displayName || ''} ${item.email || ''}`))}" data-access-store-ids="${escapeHtml(itemStoreIds.join(','))}" ${visibleEmails.has(item.email) ? '' : 'hidden'}>
+    const itemRoleProfileId = canonicalRoleProfileId(item.roleProfileId)
+      || systemRoleProfileForRole(item.role).id;
+    return `<article class="access-row ${item.active ? '' : 'is-inactive'}" data-access-filter-row data-access-search-text="${escapeHtml(normalizeSearchText(`${item.displayName || ''} ${item.email || ''}`))}" data-access-store-ids="${escapeHtml(itemStoreIds.join(','))}" data-access-role-profile-id="${escapeHtml(itemRoleProfileId)}" data-access-active="${item.active}" ${visibleEmails.has(item.email) ? '' : 'hidden'}>
       <div class="access-identity">
         <span class="avatar access-avatar">${escapeHtml(profileInitials(item.displayName))}</span>
         <div class="access-identity-copy"><strong>${escapeHtml(item.displayName)}</strong><span>${escapeHtml(item.email)}</span>${item.phone ? `<small>${escapeHtml(formatBrazilianPhone(item.phone))}</small>` : ''}</div>
@@ -90,12 +103,14 @@ export function accessView({ access, profile, roleProfiles, allowed }) {
       <div class="access-list-filters" role="search">
         <div class="field access-list-search"><label for="access-list-search">Nome ou e-mail</label><div class="access-filter-input"><i data-lucide="search"></i><input id="access-list-search" type="search" data-access-search value="${escapeHtml(query)}" placeholder="Pesquisar colaborador" autocomplete="off" /></div></div>
         <div class="field access-list-store-filter"><label for="access-list-store">Loja</label><select id="access-list-store" data-access-store-filter><option value="">Todas as lojas</option>${storeFilterOptions}</select></div>
+        <div class="field access-list-role-filter"><label for="access-list-role">Perfil</label><select id="access-list-role" data-access-role-filter><option value="">Todos</option>${roleFilterOptions}</select></div>
+        <div class="field access-list-status-filter"><label for="access-list-status">Estado</label><select id="access-list-status" data-access-status-filter><option value="">Todos</option><option value="active" ${statusFilter === 'active' ? 'selected' : ''}>Ativos</option><option value="inactive" ${statusFilter === 'inactive' ? 'selected' : ''}>Inativos</option></select></div>
         <button class="icon-button access-clear-filters" type="button" data-access-clear-filters title="Limpar filtros" aria-label="Limpar filtros" ${filtersActive ? '' : 'disabled'}><i data-lucide="x"></i></button>
       </div>
       ${error ? `<div class="notice notice-danger"><i data-lucide="circle-alert"></i><span>${escapeHtml(error)}</span></div>` : ''}
       ${loading && !accesses.length ? '<div class="empty-state"><i data-lucide="refresh-cw"></i><strong>Carregando acessos...</strong></div>' : ''}
       ${!loading && !accesses.length ? '<div class="empty-state"><i data-lucide="users"></i><strong>Nenhum acesso cadastrado</strong><p>Crie o primeiro acesso da equipe.</p></div>' : `<div class="access-list">${rows}</div>`}
-      ${!loading && accesses.length ? `<div class="empty-state access-filter-empty" data-access-filter-empty ${visibleAccesses.length ? 'hidden' : ''}><i data-lucide="search-x"></i><strong>Nenhum colaborador encontrado</strong><p>Revise o nome, o e-mail ou a loja selecionada.</p></div>` : ''}
+      ${!loading && accesses.length ? `<div class="empty-state access-filter-empty" data-access-filter-empty ${visibleAccesses.length ? 'hidden' : ''}><i data-lucide="search-x"></i><strong>Nenhum colaborador encontrado</strong><p>Revise o nome, o e-mail ou os filtros selecionados.</p></div>` : ''}
     </section>
     ${access.editorOpen ? `<dialog id="access-editor-dialog" class="access-editor-dialog" aria-labelledby="access-editor-title">
       <form id="access-form" class="access-form" novalidate>

@@ -4,9 +4,9 @@
 | --- | --- |
 | Documento | Technical Design Document (TDD) |
 | Projeto | FascinLead |
-| Versao | 3.2 |
+| Versao | 3.3 |
 | Status | Em implementacao |
-| Data | 06/11/2026 |
+| Data | 11/11/2026 |
 | Responsavel | Oticas Fascinante |
 
 ### Manutencao deste documento
@@ -41,7 +41,7 @@ O sistema permite cadastro rapido e oferece uma capacidade experimental de capta
 - Atendimento ou campanhas pelo WhatsApp.
 - Confirmacoes automaticas antes de consultas e exames. O pre-agendamento pode ser consultado na agenda, e faltas confirmadas geram retorno interno para o captador.
 - Anamnese, recomendacao de lentes ou provador virtual.
-- Metas de vendas, comissoes, faturamento ou conciliacao de vendas. Metas de quantidade de leads captados estao no escopo.
+- Metas de vendas, comissoes, faturamento ou conciliacao automatica de vendas. A confirmacao manual de compra, sem calculo de comissao ou faturamento, esta no escopo.
 - Integracoes de escrita com SavWin, AppOk ou CRMs externos.
 - Automacoes, funis e operacao de CRM dentro do FascinLead; a API de saida de leads e uma fronteira de integracao aprovada.
 - Envio de notificacoes push na primeira versao.
@@ -51,10 +51,10 @@ O sistema permite cadastro rapido e oferece uma capacidade experimental de capta
 
 | Perfil | Responsabilidade | Permissoes iniciais |
 | --- | --- | --- |
-| Colaborador Interno | Atuar no balcao, telemarketing e demais rotinas internas | Criar e corrigir cadastros das unidades permitidas, consultar agenda, registrar comparecimento ou falta e gerenciar encaixes |
-| Colaborador Externo | Realizar abordagens externas | Criar, consultar e corrigir os proprios cadastros; realizar retornos, acompanhar metas e consultar a Operacao Externa |
+| Colaborador Interno | Atuar no balcao, telemarketing e demais rotinas internas | Criar e corrigir cadastros das unidades permitidas, consultar agenda, registrar comparecimento ou falta, gerenciar encaixes e confirmar compras manualmente |
+| Colaborador Externo | Realizar abordagens externas | Criar, consultar e corrigir os proprios cadastros; realizar retornos, acompanhar metas, consultar a Operacao Externa e visualizar quais clientes proprios compraram |
 | MEI | Atuar como colaborador externo contratado como MEI | Mesmas permissoes do Colaborador Externo, com dias e cotas de agendamento configuraveis por loja e periodo do dia |
-| Gestor | Acompanhar unidades permitidas | Consultar e exportar registros, administrar metas, agenda, relatorios, retornos e Operacao Externa |
+| Gestor | Acompanhar unidades permitidas | Consultar e exportar registros, administrar metas, agenda, relatorios, retornos e Operacao Externa, alem de confirmar compras manualmente |
 | Administrador | Administrar o FascinLead | Todas as permissoes sempre ativas; gerencia acessos, cargos, configuracoes, metas e todos os registros |
 
 Os perfis padrao podem ter permissoes restauradas ao padrao; perfis personalizados possuem nome, alcance (`own` ou `stores`) e permissoes editaveis. O perfil Administrador nao pode perder permissoes. As permissoes sao aplicadas pelas regras do Firestore; ocultar botoes na interface nao substitui a autorizacao no banco.
@@ -154,6 +154,7 @@ O navegador nao garante execucao quando o PWA estiver completamente fechado. Por
 - Listar os registros criados pelo usuario no dispositivo e/ou carregados de sua conta.
 - Buscar por nome ou telefone.
 - Filtrar por estado de sincronizacao e data.
+- Filtrar os cadastros que tiveram compra confirmada e identificar visualmente o resultado.
 - Permitir correcao de dados pelo proprio captador.
 - Nao permitir exclusao definitiva pelo captador no MVP.
 
@@ -166,6 +167,7 @@ O navegador nao garante execucao quando o PWA estiver completamente fechado. Por
 - Permitir que administradores visualizem, corrijam e excluam qualquer lead.
 - Manter gestores somente com consulta e exportacao dos leads da propria loja.
 - Paginar resultados para evitar leituras desnecessarias no Firestore.
+- Permitir que Colaborador Interno, Gestor e Administrador confirmem ou desfacam manualmente uma compra nas unidades autorizadas.
 
 O CSV detalhado inclui identificadores do lead e do captador, dados do cliente, loja, data e hora da captacao, pre-agendamento opcional, tipo e valor calculado do exame, comparecimento, interesse, endereco, origem e observacoes. Nao inclui consentimento, status de funil, etapa de Kanban ou valor de venda, pois esses dados nao sao controlados pelo FascinLead.
 
@@ -706,13 +708,17 @@ Essa colecao evita aumentar a complexidade das regras de atualizacao de `leads`.
 
 Perfis do sistema usam IDs estaveis: `system-captor` para Colaborador Interno, `system-external-leader` para Colaborador Externo, `system-mei`, `system-manager` e `system-admin`. Os IDs antigos `system-telemarketing` e `system-receptionist` sao convertidos automaticamente para Colaborador Interno; `system-supervisor` e convertido para Gestor. Perfis personalizados sao documentos do Firestore. O administrador sempre recebe todas as permissoes conhecidas independentemente do vetor salvo.
 
-O esquema de permissoes atual e a versao 6. `walkins.manage` permite criar, consultar e transicionar a fila de encaixes das unidades permitidas e esta presente em Colaborador Interno, Gestor e Administrador. Colaborador Externo e MEI compartilham as mesmas permissoes e podem consultar a Operacao Externa. Gestor e Administrador tambem possuem essa consulta. A interface aplica o mesmo conjunto de permissoes e as regras do Firestore limitam cada operacao ao cargo e as unidades autorizadas.
+O esquema de permissoes atual e a versao 8. `walkins.manage` permite criar, consultar e transicionar a fila de encaixes das unidades permitidas. `sales.confirm_manual` permite confirmar ou desfazer uma compra manual. Ambas estao presentes em Colaborador Interno, Gestor e Administrador. Colaborador Externo e MEI podem consultar o resumo de compra dos proprios leads, sem acesso aos detalhes privados da confirmacao. A interface aplica o mesmo conjunto de permissoes e as regras do Firestore limitam cada operacao ao cargo e as unidades autorizadas.
 
 A acao de excluir um lead e controlada pela permissao `leads.delete`, disponivel para perfis personalizados de dados proprios e de unidades, e nao pela rota usada para abrir o cadastro. Em qualquer tela de detalhes autorizada, o botao permanece logo abaixo de `Salvar alteracoes` e usa o mesmo modal de confirmacao. O alcance do perfil continua limitando quais leads podem ser visualizados e excluidos. A exclusao definitiva remove no mesmo lote o lead e os blocos reservados em `appointmentSlots`; cadastros ainda exclusivamente locais sao removidos da fila offline.
 
-### 7.8 Colecao `leadSales` - fundacao experimental
+### 7.8 Colecao `leadSales` e resumo manual de compra
 
-O repositorio possui servico e regras para associar, por lead, um CPF e uma venda consultada no SavWin. Essa fundacao ainda nao e importada pela interface principal e nao deve ser tratada como funcionalidade entregue.
+Cada lead pode possuir um documento privado em `leadSales/{leadId}` com a confirmacao manual da compra. Colaborador Interno, Gestor e Administrador podem criar, corrigir e desfazer a confirmacao somente nas unidades autorizadas. Colaborador Externo e MEI nao leem essa colecao; eles recebem apenas `saleStatus` e `saleDate` pela colecao resumida `leadPurchaseStatuses/{leadId}`. Autor, origem, valor, OS e observacao permanecem no documento privado.
+
+A data da compra e obrigatoria. Numero da OS/pedido, valor e observacao sao opcionais e permanecem em `leadSales`. Confirmar e desfazer executam uma sequencia idempotente: persistem o documento privado, publicam o resumo em `leadPurchaseStatuses` e registram um evento imutavel em `leadSaleEvents`. As escritas sao separadas porque combinar as tres regras excede o limite de 1.000 expressoes do Firestore; uma repeticao recupera uma interrupcao sem duplicar a venda. A operacao exige conexao. O estado `manual_reverted` preserva os dados privados para auditoria, mas publica o resumo `pending`.
+
+A futura integracao com SavWin pode reconciliar o mesmo documento por `source` e pelos campos `savwin*`, sem transformar o FascinLead em fonte de faturamento ou comissao.
 
 ```json
 {
@@ -1198,6 +1204,7 @@ O MVP estara apto para piloto quando:
 | ADR-025 | Separar unidades permitidas do usuario e loja de destino do lead | Suporta gestores multi-loja e MEI externo sem perder o isolamento e a atribuicao operacional de cada captacao |
 | ADR-026 | Compartilhar agenda do consultorio e transporte entre Loja 02 e Loja 06 | As duas unidades ficam em Surubim e utilizam os mesmos recursos; Loja 04 e Loja 05 permanecem independentes |
 | ADR-027 | Modelar encaixes como uma fila diaria separada | Preserva a agenda regular e seus blocos de reserva, enquanto registra clientes presenciais, seus estados e a auditoria operacional sem inventar horarios |
+| ADR-028 | Separar detalhes privados da compra e resumo visivel no lead | Permite ao captador saber que seu cliente comprou sem expor valor, observacao ou dados operacionais, mantendo auditoria e futura reconciliacao com o SavWin |
 
 ## 20. Pendencias de produto e operacao
 

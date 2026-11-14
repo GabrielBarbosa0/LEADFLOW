@@ -11,7 +11,8 @@ export function resetSessionState(state, {
 }) {
   state.profile = null;
   state.leads = [];
-  state.leadFilters = { query: '', storeId: '', startDate: '', endDate: '' };
+  state.saleStatuses = [];
+  state.leadFilters = { query: '', storeId: '', startDate: '', endDate: '', saleStatus: '', city: '' };
   state.leadSearch = { query: '', loading: false, searched: false, error: '', results: [] };
   state.management = {
     loading: false,
@@ -117,6 +118,7 @@ export function resetSessionState(state, {
   };
   state.leadDetailDialog = { leadId: '' };
   state.leadHistoryDialogOpen = false;
+  state.saleConfirmation = { leadId: '', loading: false, saving: false, error: '', record: null, editingId: '', formOpen: false };
   state.offlineCapture = { loaded: false, enabled: false };
   state.followUps = {
     loaded: false,
@@ -154,7 +156,14 @@ export function resetSessionState(state, {
     saving: false,
     error: '',
     accesses: [],
-    storeIds: []
+    storeIds: [],
+    query: '',
+    storeFilter: '',
+    roleFilter: '',
+    statusFilter: '',
+    editorOpen: false,
+    editingEmail: '',
+    pendingDeleteEmail: ''
   };
   state.goals = {
     loading: false,
