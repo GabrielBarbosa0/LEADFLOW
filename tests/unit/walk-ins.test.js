@@ -90,6 +90,9 @@ describe('walk-in queue', () => {
       now: new Date('2026-10-30T10:20:00-03:00')
     });
     expect(markup).toContain('Novo encaixe');
+    expect(markup).toContain('class="button button-primary lead-search-submit"');
+    expect(markup).toContain('aria-label="Pesquisar"');
+    expect(markup).not.toContain('<span>Buscar</span>');
     expect(markup).not.toContain('Fila de hoje');
     expect(markup).not.toContain('<i data-lucide="clock-3"></i></header>');
     expect(markup).toContain('Maria Silva');

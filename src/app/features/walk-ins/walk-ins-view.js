@@ -72,7 +72,7 @@ function createPanel({ walkIns, selectedLead, allowedStores, services, canCreate
     <header><div><span class="eyebrow">ENTRADA RÁPIDA</span><h2>Novo encaixe</h2><p>Adicione o cliente à fila sem ocupar um horário da agenda.</p></div></header>
     <div class="walk-in-create-grid">
       <div class="walk-in-client-search">
-        <form id="walk-in-search-form" class="lead-search-form" novalidate><label for="walk-in-search-input">Localizar cliente</label><div class="lead-search-control"><i data-lucide="search"></i><input id="walk-in-search-input" name="query" type="search" value="${escapeHtml(walkIns.searchQuery)}" placeholder="Nome ou CPF" autocomplete="off" required /><button class="button button-secondary" type="submit" ${walkIns.searchLoading ? 'disabled' : ''}><i data-lucide="search"></i><span>Buscar</span></button></div><small id="walk-in-search-error" class="lead-search-error"></small></form>
+        <form id="walk-in-search-form" class="lead-search-form" novalidate><label for="walk-in-search-input">Localizar cliente</label><div class="lead-search-control"><i data-lucide="search"></i><input id="walk-in-search-input" name="query" type="search" value="${escapeHtml(walkIns.searchQuery)}" placeholder="Nome ou CPF" autocomplete="off" required /><button class="button button-primary lead-search-submit" type="submit" aria-label="Pesquisar" title="Pesquisar" ${walkIns.searchLoading ? 'disabled' : ''}><i data-lucide="search"></i></button></div><small id="walk-in-search-error" class="lead-search-error"></small></form>
         ${searchContent}
       </div>
       <form id="walk-in-create-form" class="walk-in-form" novalidate>
